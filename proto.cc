@@ -1,14 +1,14 @@
 #include <iostream>
+#include "Neural.hh"
 
 int main() {
 
-  Entendre::Neural net;
-  auto kernal =
-    Entendre::MakeKernal<Entendre::Neural>()
+  auto net =
+    Entendre::MakeKernal<Entendre::NeuralNet>()
     .AddActivator([](){})
     .AddTransferFunction([](){})
-    .SetEta()
-    .SetMomentum();
+    .SetTrainingRate(0.15)
+    .SetMomentum(0.5);
 
 
   return 0;

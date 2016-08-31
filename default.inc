@@ -27,7 +27,7 @@ LDLIBS   =
 
 # A list of directories containing source files containing "int
 # main()".  Each file will be compiled into a separate executable.
-EXE_DIRECTORIES = tests
+EXE_DIRECTORIES = . tests
 
 # A list of directories containing other source files.  Each file will
 # be compiled, with the resulting source file being linked into each
@@ -98,7 +98,7 @@ CPP_EXT = C cc cpp cxx c++ cp
 # that is not to be compiled in the current build.
 # % can be used to create wildcard exclusions.
 # Note: Files in the base directory are excluded as ./filename.
-EXCLUSIONS =
+EXCLUSIONS = ./proto.cc
 
 # A function that, when given the name of a library, should return the
 # output file of a shared library.  For example, the default version,
