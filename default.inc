@@ -98,7 +98,7 @@ CPP_EXT = C cc cpp cxx c++ cp
 # that is not to be compiled in the current build.
 # % can be used to create wildcard exclusions.
 # Note: Files in the base directory are excluded as ./filename.
-EXCLUSIONS = ./proto.cc
+EXCLUSIONS = ./proto.cc ./proto-neat.cc
 
 # A function that, when given the name of a library, should return the
 # output file of a shared library.  For example, the default version,
