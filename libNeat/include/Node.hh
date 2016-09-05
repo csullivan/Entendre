@@ -1,27 +1,24 @@
 #pragma once
 #include <memory>
 #include <vector>
+#include <iostream>
+
 
 class Link;
-
 class Node {
 public:
 
+  enum class Type {Sensor, Neuron};
+  enum class Function {Bias, Input, Hidden, Output};
+
+  Node(Type,Function);
+  void operator<<(double val) { activation = val; }
+  operator Type() { return type; }
+  operator Function() { return functype; }
 
   std::vector<std::shared_ptr<Link> > input_links;
   std::vector<std::shared_ptr<Link> > output_links;
   double activation;
-
-  enum class Type {
-    Sensor, Neuron
-      };
-  enum class Function {
-    Bias, Input, Hidden, Output
-      };
-
-  Node() { ; }
-  Node(Type,Function);
-
 private:
   Type type;
   Function functype;
