@@ -5,9 +5,9 @@ class Node;
 
 class Link {
 public:
-  Link(std::shared_ptr<Node>& in,std::shared_ptr<Node>& out);
-  std::shared_ptr<Node> input;
-  std::shared_ptr<Node> output;
+  Link(std::shared_ptr<Node>&,std::shared_ptr<Node>&);
+  std::shared_ptr<Node> origin;
+  std::shared_ptr<Node> destination;
   bool isRecurrent;
   bool isDelayed;
 

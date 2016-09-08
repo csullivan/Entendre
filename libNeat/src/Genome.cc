@@ -16,11 +16,11 @@ Genome::Genome(int id_,
 }
 
 Genome& Genome::AddNode(Node::Type t,Node::Function f) {
-  nodes.emplace_back(std::make_shared<Node>(t,f));
+  nodes.push_back(std::make_shared<Node>(t,f));
   return *this;
 }
-Genome& Genome::AddGene(int in, int out, double weight, Gene::Status s, int innovation) {
-  genes.emplace_back(std::make_shared<Gene>(nodes.at(in),nodes.at(out),weight,s,innovation));
+Genome& Genome::AddGene(int origin, int dest, double weight, Gene::Status s, int innovation) {
+  genes.push_back(std::make_shared<Gene>(nodes.at(origin),nodes.at(dest),weight,s,innovation));
   return *this;
 }
 
