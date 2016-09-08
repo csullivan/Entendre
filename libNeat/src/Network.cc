@@ -11,23 +11,26 @@ Network::Network(const std::shared_ptr<Genome>& genome,
 
 
   // sort nodes into inputs & outputs for network
-  for (auto const& node : nodes) {
-    //std::make_shared<Node>()
+  for (auto const& node : genome->nodes) {
+    auto network_node = std::make_shared<Node>(Node::Type(*node),Node::Function(*node));
 
     if (Node::Function(*node) == Node::Function::Bias ||
         Node::Function(*node) == Node::Function::Input ) {
-      inputs.push_back(node);
+      inputs.push_back(network_node);
     }
     else if (Node::Function(*node) == Node::Function::Output) {
-      outputs.push_back(node);
+      outputs.push_back(network_node);
     }
-    nodes.push_back(node);
-
-    // construct network connections
-
-
-
+    nodes.push_back(network_node);
   }
+
+  // construct network connections
+  // for (auto const& gene : genome->genes) {
+  //   if (gene == Gene::Status::Enabled) {
+
+  //   }
+  // }
+
 }
 
 void Network::LoadInputs(const std::vector<double>& sensory_inputs) {

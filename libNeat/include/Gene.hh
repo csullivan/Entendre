@@ -12,7 +12,8 @@ public:
        double weight,
        Gene::Status s,
        int ninnovation);
-
+  operator Status() { return status; }
+  bool operator==(Status s) { return status == s; }
   std::shared_ptr<Link> connection;
   int innovation;
   Status status;

@@ -11,7 +11,10 @@ public:
   enum class Type {Sensor, Neuron};
   enum class Function {Bias, Input, Hidden, Output};
 
+  Node();
   Node(Type,Function);
+  Node(const std::shared_ptr<Node>&);
+
   void operator<<(double val) { activation = val; }
   operator Type() { return type; }
   operator Function() { return functype; }
