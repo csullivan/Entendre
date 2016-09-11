@@ -1,23 +1,41 @@
 #pragma once
-#include <memory>
 #include <vector>
-#include "Node.hh"
-#include "Gene.hh"
+#include "NeuralNet.hh"
+#include "Random.hh"
 
-class Network;
+namespace Constants {
+  const float PerturbWeight = 0.9;
+  const float StepSize = 0.1;
+  const float ResetWeightScale = 4.0;
+}
 
-class Genome { friend class Network;
-  int id;
-  std::vector<std::shared_ptr<Node>> nodes;
-  std::vector<std::shared_ptr<Gene>> genes;
-  std::shared_ptr<Network> phenotype;
-public:
-  Genome(int id_) :id(id_) {;}
-  Genome(int id_, std::vector<std::shared_ptr<Node>>,
-         std::vector<std::shared_ptr<Gene>>);
-  Genome& AddNode(Node::Type,Node::Function);
-  Genome& AddGene(int in, int out, double weight, Gene::Status, int innovation);
-
-  static std::shared_ptr<Network> BuildNetwork(const std::shared_ptr<Genome>&);
+struct Gene {
+  bool enabled;
+  unsigned long innovation_number;
+  Connection link;
 };
-Genome make_genome(int);
+
+class Genome : public uses_random_numbers {
+public:
+  operator NeuralNet() const;
+
+  Genome& AddNode(NodeType type);
+  Genome& AddGene(unsigned int origin, unsigned int dest, ConnectionType type,
+               bool status, double weight);
+  void WeightMutate();
+  void LinkMutate();
+  void NodeMutate();
+  void Mutate();
+  void PrintInnovations();
+
+  static unsigned long Hash(unsigned long origin,
+                            unsigned long dest,
+                            unsigned long previous_hash) {
+    return ((origin*746151647) xor (dest*15141163) xor (previous_hash*94008721));
+  }
+
+
+private:
+  std::vector<Node> nodes;
+  std::vector<Gene> genes;
+};
