@@ -27,39 +27,37 @@ struct Node {
 enum class ConnectionType { Normal, Recurrent };
 
 struct Connection {
-  unsigned int to;
-  unsigned int from;
+  unsigned int origin;
+  unsigned int dest;
   double weight;
   ConnectionType type;
-  Connection(unsigned int _to,
-             unsigned int _from,
+  Connection(unsigned int _origin,
+             unsigned int _dest,
              ConnectionType _type,
              double _weight=0.5)
-    : to(_to), from(_from),
+    : origin(_origin), dest(_dest),
       weight(_weight), type(_type) {;}
 
 };
 
 class NeuralNet {
 public:
-  NeuralNet(std::vector<Node>& Nodes, std::vector<Connection>& Conn) {
-    nodes = std::move(Nodes);
-    connections = std::move(Conn);
+  NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn)
+    : nodes(std::move(Nodes)), connections(std::move(Conn)) { ; }
+
+  NeuralNet(const std::vector<Node>& Nodes) {
+    nodes = Nodes;
   }
   std::vector<double> evaluate(std::vector<double> inputs) {
     sort_connections();
     load_input_vals(inputs);
 
     for(auto& conn : connections) {
-      double input_val = get_node_val(conn.from);
-      add_to_node(conn.to, input_val * conn.weight);
+      double input_val = get_node_val(conn.origin);
+      add_to_node(conn.dest, input_val * conn.weight);
     }
 
     return read_output_vals();
-  }
-
-  void add_to_node(unsigned int to, double val) {
-    nodes[to].value += val;
   }
 
   void load_input_vals(const std::vector<double>& inputs) {
@@ -98,15 +96,56 @@ public:
     return output;
   }
 
+  void add_connection(int origin, int dest, double weight) {
+    if(would_make_loop(dest,origin)) {
+      connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight);
+    } else {
+      connections.emplace_back(origin,dest,ConnectionType::Normal,weight);
+    }
+  }
+
 private:
 
-  // void add_connection(int i, int j) {
-  //   if(would_make_loop(i,j)) {
-  //     add_recurrent_connection(i,j);
-  //   } else {
-  //     add_normal_connection(i,j);
-  //   }
-  // }
+  void add_to_node(unsigned int dest, double val) {
+    nodes[dest].value += val;
+  }
+
+  bool would_make_loop(unsigned int i, unsigned int j) {
+
+    std::vector<bool> reachable(nodes.size(), false);
+    reachable[j] = true;
+
+    while (true) {
+
+      bool found_new_node = false;
+      for (auto const& conn : connections) {
+        // if the origin of this connection is reachable and its
+        // desitination is not, then it should be made reachable
+        // if it is a normal node. if it is the origin of the
+        // proposed additional connection (i->j) then it would be
+        // a loop
+        if (reachable[conn.origin] &&
+            !reachable[conn.dest] &&
+            conn.type == ConnectionType::Normal) {
+          if (conn.dest == i) {
+            // the destination of this reachable connection is
+            // the origin of the proposed connection. thus there
+            // exists a path from j -> i. So this will be a loop.
+            return true;
+          }
+          else {
+            reachable[conn.dest] = true;
+            found_new_node = true;
+          }
+        }
+      }
+      // no loop detected
+      if (!found_new_node) {
+        return false;
+      }
+
+    }
+  }
 
   double sigmoid(double val) const {
     // Logistic curve
@@ -159,7 +198,7 @@ private:
           for(size_t j=0; j<num_connections; j++) {
             Connection& other = connections[j];
             if(!used[j] &&
-               conn.from == other.to) {
+               conn.origin == other.dest) {
               disqualified = true;
               break;
             }
@@ -174,7 +213,7 @@ private:
         for(size_t j=0; j<num_connections; j++) {
           Connection& other = connections[j];
           if(!used[j] &&
-             conn.to == other.from &&
+             conn.dest == other.origin &&
              possible != j &&
              other.type == ConnectionType::Recurrent) {
             disqualified = true;
@@ -252,8 +291,8 @@ protected:
   std::shared_ptr<RNG> generator;
 };
 
-unsigned long Hash(unsigned long to, unsigned long from, unsigned long previous_hash) {
-  return ((to*746151647) xor (from*15141163) xor (previous_hash*94008721)); // % 10000000000u;
+unsigned long Hash(unsigned long origin, unsigned long dest, unsigned long previous_hash) {
+  return ((origin*746151647) xor (dest*15141163) xor (previous_hash*94008721)); // % 10000000000u;
 }
 struct Gene {
   bool enabled;
@@ -264,39 +303,35 @@ struct Gene {
 class Genome : public uses_random_numbers {
 public:
   operator NeuralNet() const {
-    std::vector<Node> net_nodes;
-    std::vector<Connection> net_conn;
-    // add nodes to network
-    for (auto const& node : nodes) {
-      net_nodes.push_back(node);
-    }
+    NeuralNet net(nodes);
     // add network connections where appropriate
+    // std::vector<Connection> net_conn;
     for (auto const& gene : genes) {
       if (gene.enabled) {
-        net_conn.push_back(gene.link);
+        net.add_connection(gene.link.origin,gene.link.dest,gene.link.weight);
       }
     }
 
-    return NeuralNet(net_nodes,net_conn);
+    return net;
   }
 
   auto AddNode(NodeType type) {
     nodes.emplace_back(type);
     return *this;
   }
-  auto AddGene(unsigned int to, unsigned int from, ConnectionType type,
+  auto AddGene(unsigned int origin, unsigned int dest, ConnectionType type,
                bool status, double weight) {
 
     unsigned long innovation = 0;
     if (genes.size()) {
-      innovation = Hash(to,from,genes.back().innovation_number);
+      innovation = Hash(dest,origin,genes.back().innovation_number);
     }
     else {
-      innovation = Hash(to,from,innovation);
+      innovation = Hash(dest,origin,innovation);
     }
 
 
-    genes.push_back({status,innovation,Connection(to,from,type,weight)});
+    genes.push_back({status,innovation,Connection(origin,dest,type,weight)});
     return *this;
   }
 
