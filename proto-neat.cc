@@ -1,14 +1,26 @@
 #include <cmath>
+#include <stdexcept>
+#include <vector>
+#include <iostream>
+#include <limits.h>
+#include <random>
+#include <chrono>
+#include <memory>
+
+namespace Constants {
+  const float PerturbWeight = 0.9;
+  const float StepSize = 0.1;
+  const float ResetWeightScale = 4.0;
+}
 
 enum class NodeType { Input, Hidden, Output, Bias };
 
 struct Node {
-  unsigned int id;
   double value;
   bool is_sigmoid;
   NodeType type;
-  Node(unsigned int _id, NodeType _type)
-    : id(id), value(0.0),
+  Node(NodeType _type)
+    : value(0.0),
       is_sigmoid(false), type(_type) {;}
 };
 
@@ -30,7 +42,11 @@ struct Connection {
 
 class NeuralNet {
 public:
-  double evaluate(std::vector<double> inputs) {
+  NeuralNet(std::vector<Node>& Nodes, std::vector<Connection>& Conn) {
+    nodes = std::move(Nodes);
+    connections = std::move(Conn);
+  }
+  std::vector<double> evaluate(std::vector<double> inputs) {
     sort_connections();
     load_input_vals(inputs);
 
@@ -40,6 +56,10 @@ public:
     }
 
     return read_output_vals();
+  }
+
+  void add_to_node(unsigned int to, double val) {
+    nodes[to].value += val;
   }
 
   void load_input_vals(const std::vector<double>& inputs) {
@@ -79,13 +99,14 @@ public:
   }
 
 private:
-  void add_connection(int i, int j) {
-    if(would_make_loop(i,j)) {
-      add_recurrent_connection(i,j);
-    } else {
-      add_normal_connection(i,j);
-    }
-  }
+
+  // void add_connection(int i, int j) {
+  //   if(would_make_loop(i,j)) {
+  //     add_recurrent_connection(i,j);
+  //   } else {
+  //     add_normal_connection(i,j);
+  //   }
+  // }
 
   double sigmoid(double val) const {
     // Logistic curve
@@ -99,7 +120,7 @@ private:
     //return val/(1+std::abs(val));
   }
 
-  double get_node_val(unsigned int index) {
+  double get_node_val(unsigned int i) {
     if(!nodes[i].is_sigmoid) {
       nodes[i].value = sigmoid(nodes[i].value);
       nodes[i].is_sigmoid = true;
@@ -107,7 +128,7 @@ private:
     return nodes[i].value;
   }
 
-  void add_to_val(unsigned int index, double val) {
+  void add_to_val(unsigned int i, double val) {
     if(nodes[i].is_sigmoid) {
       nodes[i].value = 0;
       nodes[i].is_sigmoid = false;
@@ -170,7 +191,8 @@ private:
 
       if(possible == num_connections) {
         // ERRRROOR!
-        throw SomethingBadHere();
+        //throw SomethingBadHere();
+        throw std::runtime_error("Sorting failed. Replace this with a class specific Exception");
       }
 
       used[possible] = true;
@@ -186,39 +208,153 @@ private:
   bool connections_sorted;
 };
 
+class RNG {
+public:
+  RNG() {
+    std::random_device rd;
+    if (rd.entropy() != 0) {
+      mt = std::make_unique<std::mt19937>(rd());
+    } else {
+      mt = std::make_unique<std::mt19937>
+        (std::chrono::system_clock::now().time_since_epoch().count());
+    }
+  }
+  RNG(unsigned long seed) : mt(std::make_unique<std::mt19937>(seed)) {;}
+  virtual ~RNG() { ; }
+  virtual double operator()() = 0;
+
+protected:
+  std::unique_ptr<std::mt19937> mt;
+};
+
+class Gaussian : public RNG {
+public:
+  Gaussian(double mean, double sigma): RNG(), dist(mean,sigma) {;}
+  double operator()() override { return dist(*mt); }
+private:
+  std::normal_distribution<double> dist;
+};
+
+class Uniform : public RNG {
+public:
+  Uniform(double min, double max): RNG(), dist(min,max) {;}
+  double operator()() override { return dist(*mt); }
+private:
+  std::uniform_real_distribution<double> dist;
+};
+
+class uses_random_numbers {
+public:
+  auto get_generator() const { return generator; }
+  void set_generator(const std::shared_ptr<RNG>& gen) { generator = gen; }
+protected:
+  double random() { return (*generator)(); }
+  std::shared_ptr<RNG> generator;
+};
+
+unsigned long Hash(unsigned long to, unsigned long from, unsigned long previous_hash) {
+  return ((to*746151647) xor (from*15141163) xor (previous_hash*94008721)); // % 10000000000u;
+}
 struct Gene {
   bool enabled;
-  long innovation_number;
+  unsigned long innovation_number;
   Connection link;
-}
+};
 
-class Genome {
+class Genome : public uses_random_numbers {
 public:
-  void BuildNetwork() {
+  operator NeuralNet() const {
+    std::vector<Node> net_nodes;
+    std::vector<Connection> net_conn;
     // add nodes to network
     for (auto const& node : nodes) {
-      network.nodes.push_back(node);
+      net_nodes.push_back(node);
     }
     // add network connections where appropriate
     for (auto const& gene : genes) {
       if (gene.enabled) {
-        network.connections.push_back(gene.link);
+        net_conn.push_back(gene.link);
       }
     }
+
+    return NeuralNet(net_nodes,net_conn);
   }
+
   auto AddNode(NodeType type) {
-    nodes.emplace_back(nodes.back().id+1,type);
+    nodes.emplace_back(type);
     return *this;
   }
   auto AddGene(unsigned int to, unsigned int from, ConnectionType type,
-               bool status, long innovation_num, double weight = 0.5) {
-    Gene g = {status,innovation_num,Connection(to,from,type,weight)};
-    genes.push_back(g);
+               bool status, double weight) {
+
+    unsigned long innovation = 0;
+    if (genes.size()) {
+      innovation = Hash(to,from,genes.back().innovation_number);
+    }
+    else {
+      innovation = Hash(to,from,innovation);
+    }
+
+
+    genes.push_back({status,innovation,Connection(to,from,type,weight)});
     return *this;
+  }
+
+  void WeightMutate() {
+    if (!generator) { throw std::runtime_error("No RNG engine set. Replace this with class specific exception."); }
+    for (auto& gene : genes) {
+      // perturb weight by a small amount
+      if(random()<Constants::PerturbWeight) {
+        gene.link.weight += Constants::StepSize*(2*random()-1);
+      } else { // otherwise randomly set weight within reset range
+        gene.link.weight = (random() - 0.5)*Constants::ResetWeightScale;
+      }
+    }
+  }
+
+  void LinkMutate() {
+
+  }
+
+  void NodeMutate() {
+
+  }
+
+  void Mutate() {
+
+  }
+
+  void PrintInnovations() {
+    for (auto const& gene : genes) {
+      std::cout << gene.innovation_number << std::endl;
+    }
   }
 
 private:
   std::vector<Node> nodes;
   std::vector<Gene> genes;
-  NeuralNet network;
 };
+
+
+int main() {
+
+  auto gnome2 = Genome()
+    .AddNode(NodeType::Bias)
+    .AddNode(NodeType::Input)
+    .AddNode(NodeType::Input)
+    .AddNode(NodeType::Output)
+    .AddGene(0,3,ConnectionType::Normal,true,0.5)
+    .AddGene(1,3,ConnectionType::Normal,true,0.5)
+    .AddGene(2,3,ConnectionType::Normal,true,0.5)
+    .AddGene(2,3,ConnectionType::Normal,true,0.5)
+    .AddNode(NodeType::Hidden)
+    .AddGene(0,4,ConnectionType::Normal,true,0.5)
+    .AddGene(4,3,ConnectionType::Normal,true,0.5);
+
+
+  gnome2.set_generator(std::make_shared<Uniform>(0.,1.));
+  gnome2.WeightMutate();
+  //gnome2.PrintInnovations();
+
+  return 0;
+}
