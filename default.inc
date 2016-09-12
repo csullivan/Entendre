@@ -64,7 +64,7 @@ CFLAGS_EXTRA =
 
 # Mandatory arguments to the C++ compiler.  These arguments will be
 # passed even if CXXFLAGS has been overridden by command-line arguments.
-CXXFLAGS_EXTRA = -std=c++11
+CXXFLAGS_EXTRA = -std=c++14
 
 # Mandatory arguments to the linker, before the listing of object
 # files.  These arguments will be passed even if LDFLAGS has been
@@ -98,7 +98,7 @@ CPP_EXT = C cc cpp cxx c++ cp
 # that is not to be compiled in the current build.
 # % can be used to create wildcard exclusions.
 # Note: Files in the base directory are excluded as ./filename.
-EXCLUSIONS = ./proto.cc ./proto-neat.cc
+EXCLUSIONS = ./proto.cc
 
 # A function that, when given the name of a library, should return the
 # output file of a shared library.  For example, the default version,
