@@ -24,7 +24,6 @@ public:
 
 private:
 
-  void add_to_node(unsigned int dest, double val);
   bool would_make_loop(unsigned int i, unsigned int j);
   double sigmoid(double val) const;
   double get_node_val(unsigned int i);
