@@ -16,7 +16,7 @@ std::vector<double> NeuralNet::evaluate(std::vector<double> inputs) {
 
   for(auto& conn : connections) {
     double input_val = get_node_val(conn.origin);
-    add_to_node(conn.dest, input_val * conn.weight);
+    add_to_val(conn.dest, input_val * conn.weight);
   }
 
   return read_output_vals();
@@ -59,15 +59,11 @@ std::vector<double> NeuralNet::read_output_vals() {
 }
 
 void NeuralNet::add_connection(int origin, int dest, double weight) {
-  if(would_make_loop(dest,origin)) {
+  if(would_make_loop(origin,dest)) {
     connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight);
   } else {
     connections.emplace_back(origin,dest,ConnectionType::Normal,weight);
   }
-}
-
-void NeuralNet::add_to_node(unsigned int dest, double val) {
-  nodes[dest].value += val;
 }
 
 bool NeuralNet::would_make_loop(unsigned int i, unsigned int j) {
