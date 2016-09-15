@@ -97,9 +97,8 @@ TEST(NeuralNet,EvaluateLargeNetwork){
         });
         auto net = NeuralNet(genome);
     }
-    std::cout << std:: endl
-              << "Average time to construct network: "
-              << tperformance/nTrials/1.0e6 << " ms\n"
+    std::cout << "                Average time to construct network: "
+              << tperformance/nTrials/1.0e6 << " ms"
               << std::endl;
     tperformance = 0.0;
 
@@ -116,9 +115,8 @@ TEST(NeuralNet,EvaluateLargeNetwork){
 
         auto result = net.evaluate({0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5});
     }
-    std::cout << std:: endl
-              << "Average time to evaluate network: "
-              << tperformance/nTrials/1.0e6 << " ms\n"
+    std::cout << "                Average time to evaluate network: "
+              << tperformance/nTrials/1.0e6 << " ms"
               << std::endl;
 
 

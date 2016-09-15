@@ -14,10 +14,70 @@ Genome::operator NeuralNet() const {
   return net;
 }
 
+void Genome::operator=(const Genome& rhs) {
+  this->nodes = rhs.nodes;
+  this->genes = rhs.genes;
+  generator = rhs.generator;
+}
+
+// Genome mating
+Genome Genome::operator()(const Genome& father) {
+  // Implicit assumption: if there is a fitness difference
+  // then the mother must be the more fit genome. i.e.
+  // child = mother(father) s.t. fitness(mother) > fitness(father)
+  auto& mother = *this;
+  Genome child;
+
+  auto paternal = father.genes.begin();
+
+  // Mother is most fit, so we will not take
+  // any structure above and beyond what is in
+  // the mother. Thus, when we run out of mother
+  // genes to iterate over, we are done.
+  for (auto& maternal : mother.genes) {
+    const Gene* candidate = nullptr;
+
+    if (paternal != father.genes.end()){
+      if (maternal.innovation_number == paternal->innovation_number) {
+        candidate = (random()<Constants::Match) ? &maternal : &(*paternal);
+      }
+      else {
+        candidate = &maternal;
+      }
+      paternal++;
+    } else {
+      // no paternal genes left
+      candidate =  &maternal;
+    }
+
+    //if (!candidate) { continue; }
+
+    // does child already have a gene like the candidate?
+    bool unique = true;
+    for (auto& gene : child.genes) {
+      if (gene == *candidate) {
+        unique = false; break;
+      }
+    }
+
+    // add gene to child
+    if (unique) {
+      child.genes.push_back(*candidate);
+    }
+  }
+
+  // copy in nodes from more fit parent (mother)
+  child.nodes = mother.nodes;
+
+  // neshima
+  return child;
+}
+
 Genome& Genome::AddNode(NodeType type) {
   nodes.emplace_back(type);
   return *this;
 }
+
 Genome& Genome::AddGene(unsigned int origin, unsigned int dest, ConnectionType type,
              bool status, double weight) {
 
