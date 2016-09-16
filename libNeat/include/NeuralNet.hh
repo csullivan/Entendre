@@ -10,11 +10,12 @@
 
 struct Connection;
 struct Node;
+struct NodeGene;
 
 class NeuralNet {
 public:
   NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn);
-  NeuralNet(const std::vector<Node>& Nodes);
+  NeuralNet(const std::vector<NodeGene>& Nodes);
 
   std::vector<double> evaluate(std::vector<double> inputs);
   void load_input_vals(const std::vector<double>& inputs);

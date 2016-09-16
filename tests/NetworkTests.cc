@@ -11,10 +11,10 @@ TEST(NeuralNet,EvaluateNetwork){
         .AddNode(NodeType::Input)
         .AddNode(NodeType::Hidden)
         .AddNode(NodeType::Output)
-        .AddGene(0,3,ConnectionType::Normal,true,1.)
-        .AddGene(1,3,ConnectionType::Normal,true,1.)
-        .AddGene(1,2,ConnectionType::Normal,true,1.)
-        .AddGene(2,3,ConnectionType::Normal,true,1.);
+        .AddConnection(0,3,true,1.)
+        .AddConnection(1,3,true,1.)
+        .AddConnection(1,2,true,1.)
+        .AddConnection(2,3,true,1.);
     auto net = NeuralNet(genome);
     net.register_sigmoid(sigmoid);
     auto result = net.evaluate({0.5});
@@ -30,11 +30,11 @@ TEST(NeuralNet,EvaluateRecurrentNetwork){
         .AddNode(NodeType::Input)
         .AddNode(NodeType::Hidden)
         .AddNode(NodeType::Output)
-        .AddGene(0,3,ConnectionType::Normal,true,1.)
-        .AddGene(1,3,ConnectionType::Normal,true,1.)
-        .AddGene(1,2,ConnectionType::Normal,true,1.)
-        .AddGene(2,3,ConnectionType::Normal,true,1.)
-        .AddGene(3,2,ConnectionType::Recurrent,true,1.);
+        .AddConnection(0,3,true,1.)
+        .AddConnection(1,3,true,1.)
+        .AddConnection(1,2,true,1.)
+        .AddConnection(2,3,true,1.)
+        .AddConnection(3,2,true,1.); // recurrent
     auto net = NeuralNet(genome);
     net.register_sigmoid(sigmoid);
     auto result = net.evaluate({0.5});
@@ -73,14 +73,14 @@ TEST(NeuralNet,EvaluateLargeNetwork){
     // Connect every input node to every hidden node
     for (auto i=0u;i<nInputs+1; i++) {
         for (auto j=nInputs+1;j<nHidden+nInputs+1; j++) {
-            genome.AddGene(i,j,ConnectionType::Normal,true,1.);
+            genome.AddConnection(i,j,true,1.);
         }
     }
 
     // Connect every hidden node to every output node
     for (auto j=nInputs+1;j<nHidden+nInputs+1; j++) {
         for (auto k=nHidden+nInputs+1; k<nTotal; k++) {
-            genome.AddGene(j,k,ConnectionType::Normal,true,1.);
+            genome.AddConnection(j,k,true,1.);
         }
     }
 
