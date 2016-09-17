@@ -6,14 +6,13 @@
 #include "Genome.hh"
 
 NeuralNet::NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn)
-  : nodes(std::move(Nodes)), connections(std::move(Conn)) { ; }
+  : nodes(std::move(Nodes)), connections(std::move(Conn)), connections_sorted(false) : connections_sorted(false) { ; }
 
 NeuralNet::NeuralNet(const std::vector<NodeGene>& genes) {
   for (auto const& gene : genes) {
     nodes.emplace_back(gene.type);
   }
 }
-
 std::vector<double> NeuralNet::evaluate(std::vector<double> inputs) {
   sort_connections();
   load_input_vals(inputs);
@@ -150,6 +149,9 @@ void NeuralNet::sort_connections() {
   for(size_t i = 0; i<num_connections; i++) {
     size_t possible;
     for(possible = 0; possible<num_connections; possible++) {
+
+      if (used[possible]) { continue; }
+
       Connection& conn = connections[possible];
       bool disqualified = false;
 
