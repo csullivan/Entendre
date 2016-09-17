@@ -1,13 +1,18 @@
 #include "Genome.hh"
 #include <algorithm>
 #include <iostream>
+#include <climits>
 
-Genome::operator NeuralNet() const {
+Genome::operator NeuralNet() const{
   NeuralNet net(node_genes);
   // add network connections where appropriate
   for (auto const& gene : connection_genes) {
     if (gene.second.enabled) {
-      net.add_connection(gene.second.origin,gene.second.dest,gene.second.weight);
+      std::cout << "build: "<<gene.second.origin << " " << gene.second.dest << std::endl;
+      int i = node_lookup.at(gene.second.origin);
+      int j = node_lookup.at(gene.second.dest);
+      std::cout << i <<"->" <<j << std::endl;
+      net.add_connection(i,j,gene.second.weight);
     }
   }
 
@@ -69,33 +74,56 @@ Genome Genome::operator()(const Genome& father) {
 }
 
 Genome& Genome::AddNode(NodeType type) {
-  node_genes.emplace_back(type);
+  static unsigned long last_innov = 0,
+    idxin = 0, idxout = 0, idxhidden = ULONG_MAX/2;
+
+  unsigned long innovation = 0;
+  switch(type) {
+  case NodeType::Bias:
+    innovation = Hash(0,0);
+    break;
+  case NodeType::Input:
+    innovation = Hash(idxin++,last_innov);
+    break;
+  case NodeType::Output:
+    innovation = Hash(idxout--,last_innov);
+    break;
+  case NodeType::Hidden:
+    innovation = Hash(idxhidden,last_innov);
+    break;
+  }
+  node_genes.emplace_back(type,innovation);
+  last_innov = innovation;
   return *this;
 }
 
 // Public API for adding structure, should not used internally
 // Likely this should be performed differently.
-Genome& Genome::AddConnection(unsigned int origin, unsigned int dest,
+Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
                               bool status, double weight) {
   static unsigned long last_innovation = 0;
   unsigned long innovation = 0;
 
+  // first gene only
   if (last_innovation == 0) {
     last_innovation = Hash(origin,dest,0);
   }
 
-  if (node_genes.at(origin).innovation == 0) {
-    origin = node_genes[origin].innovation = Hash(origin,last_innovation);
+  // build look up table from innovation hash to vector index
+  std::cout << node_genes[origin].innovation << " " << origin << std::endl;
+  std::cout << node_genes[dest].innovation << " " << dest << std::endl;
 
-  }
-  if (node_genes.at(dest).innovation == 0) {
-    dest = node_genes[dest].innovation = Hash(dest,last_innovation);
-  }
+  node_lookup[node_genes[origin].innovation] = origin;
+  node_lookup[node_genes[dest].innovation] = dest;
 
-  innovation = Hash(origin,dest,last_innovation);
+  innovation = Hash(node_genes[origin].innovation,
+                    node_genes[dest].innovation,
+                    last_innovation);
+
   last_innovation = innovation;
 
-  connection_genes[innovation] = {origin,dest,weight,status};
+  connection_genes[innovation] = {node_genes[origin].innovation,node_genes[dest].innovation,weight,status};
+
   return *this;
 }
 

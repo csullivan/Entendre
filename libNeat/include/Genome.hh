@@ -7,8 +7,8 @@
 
 
 struct ConnectionGene {
-  unsigned int origin;
-  unsigned int dest;
+  unsigned long origin;
+  unsigned long dest;
   double weight;
   bool enabled;
   bool operator==(const ConnectionGene& other) {
@@ -19,6 +19,7 @@ struct ConnectionGene {
 struct NodeGene {
   NodeGene() = delete;
   NodeGene(NodeType& type_) : type(type_), innovation(0) {;}
+  NodeGene(NodeType& type_, unsigned long innov) : type(type_), innovation(innov) {;}
   NodeType type;
   unsigned long innovation;
 };
@@ -30,7 +31,7 @@ public:
   operator NeuralNet() const;
   void operator=(const Genome&);
   Genome& AddNode(NodeType type);
-  Genome& AddConnection(unsigned int origin, unsigned int dest,
+  Genome& AddConnection(unsigned long origin, unsigned long dest,
                bool status, double weight);
   void WeightMutate();
   void LinkMutate();
@@ -41,16 +42,16 @@ public:
   static unsigned long Hash(unsigned long origin,
                             unsigned long dest,
                             unsigned long previous_hash) {
-    return ((origin*746151647) xor (dest*15141163) xor (previous_hash*94008721));
+    return ((origin*746151647) xor (dest*15141163) xor (previous_hash*94008721) xor (5452515049));
   }
   static unsigned long Hash(unsigned long id,
                             unsigned long previous_hash) {
-    return ((id*10000169) xor (previous_hash*44721359));
+    return ((id*10000169) xor (previous_hash*44721359) xor (111181111));
   }
 
 
 private:
   std::vector<NodeGene> node_genes;
-  //std::vector<ConnectionGene> connection_genes;
+  std::unordered_map<unsigned long,unsigned int> node_lookup;
   std::unordered_map<unsigned long, ConnectionGene> connection_genes;
 };
