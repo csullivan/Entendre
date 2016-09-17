@@ -5,9 +5,9 @@
 #include <vector>
 
 NeuralNet::NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn)
-  : nodes(std::move(Nodes)), connections(std::move(Conn)) { ; }
+  : nodes(std::move(Nodes)), connections(std::move(Conn)), connections_sorted(false) { ; }
 
-NeuralNet::NeuralNet(const std::vector<Node>& Nodes) {
+NeuralNet::NeuralNet(const std::vector<Node>& Nodes) : connections_sorted(false) {
   nodes = Nodes;
 }
 std::vector<double> NeuralNet::evaluate(std::vector<double> inputs) {
@@ -146,6 +146,9 @@ void NeuralNet::sort_connections() {
   for(size_t i = 0; i<num_connections; i++) {
     size_t possible;
     for(possible = 0; possible<num_connections; possible++) {
+
+      if (used[possible]) { continue; }
+
       Connection& conn = connections[possible];
       bool disqualified = false;
 
