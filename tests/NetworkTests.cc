@@ -38,7 +38,7 @@ TEST(NeuralNet,EvaluateRecurrentNetwork){
     auto net = NeuralNet(genome);
     net.register_sigmoid(sigmoid);
     auto result = net.evaluate({0.5});
-    //EXPECT_EQ(result[0],sigmoid(sigmoid(0.5)+1.5));
+    EXPECT_EQ(result[0],sigmoid(sigmoid(0.5+sigmoid(0))+1.5));
     auto result2 = net.evaluate({0.5});
     EXPECT_EQ(
         result2[0],

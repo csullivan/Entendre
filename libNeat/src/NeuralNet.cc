@@ -6,9 +6,9 @@
 #include "Genome.hh"
 
 NeuralNet::NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn)
-  : nodes(std::move(Nodes)), connections(std::move(Conn)) { ; }
+  : nodes(std::move(Nodes)), connections(std::move(Conn)), connections_sorted(false) { ; }
 
-NeuralNet::NeuralNet(const std::vector<NodeGene>& genes) {
+NeuralNet::NeuralNet(const std::vector<NodeGene>& genes) : connections_sorted(false) {
   for (auto const& gene : genes) {
     nodes.emplace_back(gene.type);
   }
