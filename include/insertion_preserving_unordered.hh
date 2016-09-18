@@ -11,20 +11,20 @@ public:
   using std::unordered_map<Key,T>::end;
 
   auto find(const Key& key) const { return std::unordered_map<Key,T>::find(key); }
-  auto operator[](std::size_t pos) const { return insertion_order[pos]; }
+  auto operator[](std::size_t pos) const { return std::unordered_map<Key,T>::at(insertion_order[pos]); }
   auto size() const { return insertion_order.size(); }
 
   std::pair<typename std::unordered_map<Key,T>::iterator,bool> insert( const std::pair<const Key, T>& value ) {
     auto result = std::unordered_map<Key,T>::insert(value);
-    if (result.second) { insertion_order.push_back(value.second); }
+    if (result.second) { insertion_order.push_back(value.first); }
     return result;
   }
   std::pair<typename std::unordered_map<Key,T>::iterator,bool> insert( const std::pair<const Key, T>&& value ) {
     auto result = std::unordered_map<Key,T>::insert(value);
-    if (result.second) { insertion_order.push_back(value.second); }
+    if (result.second) { insertion_order.push_back(value.first); }
     return result;
   }
 
 private:
-  std::vector<T> insertion_order;
+  std::vector<Key> insertion_order;
 };
