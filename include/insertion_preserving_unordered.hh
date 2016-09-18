@@ -4,7 +4,7 @@
 #include <vector>
 
 template<class Key, class T>
-class insertion_ordered_map : public std::unordered_map<Key,T>, private std::vector<T> {
+class insertion_ordered_map : public std::unordered_map<Key,T> {
 public:
   //using std::unordered_map<Key,T>::find;
   using std::unordered_map<Key,T>::begin;

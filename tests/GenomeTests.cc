@@ -14,8 +14,9 @@ TEST(Genome,CompareInnovation){
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.);
     mother.set_generator(std::make_shared<Uniform>(0,1));
-    Probabilities NEAT = {0.5, 1.0, 0.0, 0.9, 0.0, 0.0, 0.1, 4.0, 1.0, 1.0, 3.0};
-    mother.required(std::make_shared<Probabilities>(NEAT));
+    //Probabilities NEAT = {0.5, 1.0, 0.0, 0.9, 0.0, 0.0, 0.1, 4.0, 1.0, 1.0, 3.0};
+    //mother.required(std::make_shared<Probabilities>(NEAT));
+    mother.required(std::make_shared<Probabilities>());
     auto father = mother;
 
     mother.AddConnection(3,2,true,1.);

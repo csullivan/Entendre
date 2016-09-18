@@ -35,12 +35,16 @@ public:
   Genome& AddNode(NodeType type);
   Genome& AddConnection(unsigned long origin, unsigned long dest,
                bool status, double weight);
-  void WeightMutate();
-  void LinkMutate();
-  void NodeMutate();
-  void Mutate();
-  void PrintInnovations();
+
+  void Mutate(const NeuralNet&);
+  void MutateConnection(const NeuralNet&);
+  void MutateNode(const NeuralNet&);
+  void MutateWeights();
+  void MutateRenableGene();
+  void MutateToggleGeneStatus();
+
   float GeneticDistance(const Genome&);
+  void PrintInnovations();
 
 private:
   static unsigned long Hash(unsigned long origin,unsigned long dest,unsigned long previous_hash) { return ((origin*746151647) xor (dest*15141163) xor (previous_hash*94008721) xor (5452515049)); }

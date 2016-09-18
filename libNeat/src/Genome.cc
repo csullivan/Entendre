@@ -156,11 +156,31 @@ Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
   return *this;
 }
 
-void Genome::WeightMutate() {
+void Genome::Mutate(const NeuralNet& net) {
+
+  // structural mutation
+  if (random() < required()->mutate_node) {
+    MutateNode(net);
+  }
+  else if (random() < required()->mutate_link) {
+    MutateConnection(net);
+  }
+  else {
+    // internal mutation (non-topological)
+    if (random() < required()->mutate_weights) { MutateWeights(); }
+    if (random() < required()->toggle_status) { MutateToggleGeneStatus(); }
+    if (random() < required()->mutate_reenable) { MutateRenableGene(); }
+  }
+
+
+
+}
+
+void Genome::MutateWeights() {
   if (!generator) { throw std::runtime_error("No RNG engine set. Replace this with class specific exception."); }
   for (auto& gene : connection_genes) {
     // perturb weight by a small amount
-    if(random()<required()->mutate_weight) {
+    if(random()<required()->perturb_weight) {
       gene.second.weight += required()->step_size*(2*random()-1);
     } else { // otherwise randomly set weight within reset range
       gene.second.weight = (random() - 0.5)*required()->reset_weight;
@@ -168,15 +188,23 @@ void Genome::WeightMutate() {
   }
 }
 
-void Genome::LinkMutate() {
+void Genome::MutateConnection(const NeuralNet& net) {
 
 }
 
-void Genome::NodeMutate() {
+void Genome::MutateNode(const NeuralNet& net) {
 
 }
 
-void Genome::Mutate() {
+void Genome::MutateToggleGeneStatus() {
+  // Randomly toggle on/off a connection gene.
+  // This is in the NEAT implementation but not discussed in the paper
+  // Leaving this unimplemented for now. Note, that when this is added
+  // a check will be needed that disabling a gene can only occur if
+  // the destination node of that gene has other enabled input connections.
+}
+
+void Genome::MutateRenableGene() {
 
 }
 
