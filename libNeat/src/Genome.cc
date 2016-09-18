@@ -1,23 +1,57 @@
 #include "Genome.hh"
 #include <algorithm>
 #include <iostream>
+#include <climits>
 
-Genome::operator NeuralNet() const {
+Genome::operator NeuralNet() const{
   NeuralNet net(node_genes);
   // add network connections where appropriate
-  for (auto const& gene : connection_genes) {
-    if (gene.second.enabled) {
-      net.add_connection(gene.second.origin,gene.second.dest,gene.second.weight);
+  //for (auto const& gene : connection_genes) {
+  for (auto n=0u; n<connection_genes.size(); n++) {
+    if (connection_genes[n].enabled) {
+      int i = node_lookup.at(connection_genes[n].origin);
+      int j = node_lookup.at(connection_genes[n].dest);
+      net.add_connection(i,j,connection_genes[n].weight);
     }
   }
 
   return net;
 }
 
-void Genome::operator=(const Genome& rhs) {
+Genome Genome::operator=(const Genome& rhs) {
   this->node_genes = rhs.node_genes;
   this->connection_genes = rhs.connection_genes;
   generator = rhs.generator;
+  requires<Probabilities>::operator=(rhs);
+  return *this;
+}
+
+float Genome::GeneticDistance(const Genome& other) {
+  double weight_diffs = 0.0;
+  unsigned long nUnshared = 0;
+  auto nGenes = std::max(connection_genes.size(),other.connection_genes.size());
+
+  // loop over this genomes genes
+  for (auto const& gene : connection_genes) {
+    auto other_gene = other.connection_genes.find(gene.first);
+    // sum the absolute weight differences of the shared genes
+    if (other_gene != other.connection_genes.end()) {
+      weight_diffs += std::abs(other_gene->second.weight-gene.second.weight);
+    }
+    // count the number of unshared genes
+    else {
+      nUnshared++;
+    }
+  }
+  // loop over other genomes genes and count the unshared genes
+  for (auto const& other_gene : other.connection_genes) {
+    auto gene = connection_genes.find(other_gene.first);
+    if (gene == connection_genes.end()) {
+      nUnshared++;
+    }
+  }
+
+  return (required()->genetic_c1*nUnshared)/nGenes + required()->genetic_c2*weight_diffs/nGenes;
 }
 
 // Generalized genome crossover
@@ -25,16 +59,16 @@ Genome Genome::operator()(const Genome& father) {
   // Implicit assumption: Mother must always be the more
   // fit genome. i.e. child = mother(father) such that
   // fitness(mother) > fitness(father)
-
   auto& mother = *this;
   Genome child;
+  child.set_generator(mother.get_generator());
+  child.required(mother.required());
 
   const auto& match          = required()->match;
   const auto& single_greater = required()->single_greater;
   const auto& single_lesser  = required()->single_lesser;
 
   for (auto const& maternal : mother.connection_genes) {
-
     // Find all shared genes, look up by hash
     auto paternal = father.connection_genes.find(maternal.first);
     if (paternal != father.connection_genes.end()) {
@@ -69,33 +103,56 @@ Genome Genome::operator()(const Genome& father) {
 }
 
 Genome& Genome::AddNode(NodeType type) {
-  node_genes.emplace_back(type);
+  static unsigned long last_innov = 0,
+    idxin = 0, idxout = 0, idxhidden = ULONG_MAX/2;
+
+  unsigned long innovation = 0;
+  switch(type) {
+  case NodeType::Bias:
+    innovation = Hash(0,0);
+    break;
+  case NodeType::Input:
+    innovation = Hash(idxin++,last_innov);
+    break;
+  case NodeType::Output:
+    innovation = Hash(idxout--,last_innov);
+    break;
+  case NodeType::Hidden:
+    innovation = Hash(idxhidden,last_innov);
+    break;
+  }
+  node_genes.emplace_back(type,innovation);
+  last_innov = innovation;
   return *this;
 }
 
 // Public API for adding structure, should not used internally
 // Likely this should be performed differently.
-Genome& Genome::AddConnection(unsigned int origin, unsigned int dest,
+Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
                               bool status, double weight) {
   static unsigned long last_innovation = 0;
   unsigned long innovation = 0;
 
+  // first gene only
   if (last_innovation == 0) {
     last_innovation = Hash(origin,dest,0);
   }
 
-  if (node_genes.at(origin).innovation == 0) {
-    origin = node_genes[origin].innovation = Hash(origin,last_innovation);
+  // build look up table from innovation hash to vector index
+  //std::cout << node_genes[origin].innovation << " " << origin << std::endl;
+  //std::cout << node_genes[dest].innovation << " " << dest << std::endl;
 
-  }
-  if (node_genes.at(dest).innovation == 0) {
-    dest = node_genes[dest].innovation = Hash(dest,last_innovation);
-  }
+  node_lookup[node_genes[origin].innovation] = origin;
+  node_lookup[node_genes[dest].innovation] = dest;
 
-  innovation = Hash(origin,dest,last_innovation);
+  innovation = Hash(node_genes[origin].innovation,
+                    node_genes[dest].innovation,
+                    last_innovation);
+
   last_innovation = innovation;
 
-  connection_genes[innovation] = {origin,dest,weight,status};
+  connection_genes.insert({innovation,{node_genes[origin].innovation,node_genes[dest].innovation,weight,status}});
+
   return *this;
 }
 
