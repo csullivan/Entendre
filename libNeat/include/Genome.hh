@@ -51,6 +51,5 @@ public:
 
 private:
   std::vector<NodeGene> node_genes;
-  //std::vector<ConnectionGene> connection_genes;
   std::unordered_map<unsigned long, ConnectionGene> connection_genes;
 };
