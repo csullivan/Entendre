@@ -8,10 +8,10 @@ Genome::operator NeuralNet() const{
   // add network connections where appropriate
   //for (auto const& gene : connection_genes) {
   for (auto n=0u; n<connection_genes.size(); n++) {
-    if (connection_genes[n].enabled) {
-      int i = node_lookup.at(connection_genes[n].origin);
-      int j = node_lookup.at(connection_genes[n].dest);
-      net.add_connection(i,j,connection_genes[n].weight);
+    if (connection_genes[n].second.enabled) {
+      int i = node_lookup.at(connection_genes[n].second.origin);
+      int j = node_lookup.at(connection_genes[n].second.dest);
+      net.add_connection(i,j,connection_genes[n].second.weight);
     }
   }
 
@@ -86,7 +86,10 @@ Genome Genome::operator()(const Genome& father) {
   };
 
 
-  for (auto const& maternal : mother.connection_genes) {
+  // NOTICE: This loop needs to be over the interal vector of keys,
+  // since the order is not preserved when looping over the map
+  for (auto i = 0u; i< mother.connection_genes.size(); i++) {
+    auto const& maternal = mother.connection_genes[i];
     // Find all shared genes, look up by hash
     auto paternal = father.connection_genes.find(maternal.first);
     if (paternal != father.connection_genes.end()) {
@@ -115,7 +118,8 @@ Genome Genome::operator()(const Genome& father) {
   if (single_lesser == 0.0) { return child; }
 
   // allow for merging of structure from less fit parent
-  for (auto const& paternal : father.connection_genes) {
+  for (auto i = 0u; i < father.connection_genes.size(); i++) {
+    auto const& paternal = father.connection_genes[i];
     if (random()<single_lesser) {
       child.connection_genes.insert(paternal);
       add_node_to_child(father,paternal,child);
