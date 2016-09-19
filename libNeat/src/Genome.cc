@@ -68,6 +68,24 @@ Genome Genome::operator()(const Genome& father) {
   const auto& single_greater = required()->single_greater;
   const auto& single_lesser  = required()->single_lesser;
 
+  auto add_node_to_child = [](const auto& parent_genome, const auto& parent, auto& child) {
+    auto origin_node_innov = parent.second.origin;
+    auto dest_node_innov = parent.second.dest;
+    if (child.node_lookup.count(origin_node_innov) == 0) {
+      child.node_genes.emplace_back(
+        parent_genome.node_genes[parent_genome.node_lookup.at(origin_node_innov)].type,
+        origin_node_innov);
+      child.node_lookup[origin_node_innov] = child.node_genes.size()-1;
+    }
+    if (child.node_lookup.count(dest_node_innov) == 0) {
+      child.node_genes.emplace_back(
+        parent_genome.node_genes[parent_genome.node_lookup.at(dest_node_innov)].type,
+        dest_node_innov);
+      child.node_lookup[dest_node_innov] = child.node_genes.size()-1;
+    }
+  };
+
+
   for (auto const& maternal : mother.connection_genes) {
     // Find all shared genes, look up by hash
     auto paternal = father.connection_genes.find(maternal.first);
@@ -77,14 +95,18 @@ Genome Genome::operator()(const Genome& father) {
         // if key doesn't already exist in child,
         // then the maternal gene is inserted
         child.connection_genes.insert(maternal);
+        add_node_to_child(mother,maternal,child);
       } else {
+
         // paternal gene is taken
         child.connection_genes.insert(*paternal);
+        add_node_to_child(father,*paternal,child);
       }
     } else {
       // non matching gene, randomly insert maternal gene
       if (random()<single_greater) {
         child.connection_genes.insert(maternal);
+        add_node_to_child(mother,maternal,child);
       }
     }
   }
@@ -96,6 +118,7 @@ Genome Genome::operator()(const Genome& father) {
   for (auto const& paternal : father.connection_genes) {
     if (random()<single_lesser) {
       child.connection_genes.insert(paternal);
+      add_node_to_child(father,paternal,child);
     }
   }
 
@@ -283,6 +306,6 @@ void Genome::MutateRenableGene() {
 void Genome::PrintInnovations() {
   std::cout << std::endl;
   for (auto const& gene : connection_genes) {
-    std::cout << "                Enabled: " << gene.second.enabled << "  |  "<< node_lookup[gene.second.origin] << " -> " << node_lookup[gene.second.dest] << "  Innovation: " << gene.first << std::endl;
+    std::cout << "                Enabled: " << gene.second.enabled << "  |  "<< gene.second.origin << " -> " << gene.second.dest << std::endl;
   } std::cout << std::endl;
 }
