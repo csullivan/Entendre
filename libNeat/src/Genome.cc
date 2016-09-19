@@ -109,7 +109,7 @@ Genome& Genome::AddNode(NodeType type) {
   unsigned long innovation = 0;
   switch(type) {
   case NodeType::Bias:
-    innovation = Hash(0,0);
+    innovation = Hash(0,last_innov);
     break;
   case NodeType::Input:
     innovation = Hash(idxin++,last_innov);
@@ -118,7 +118,7 @@ Genome& Genome::AddNode(NodeType type) {
     innovation = Hash(idxout--,last_innov);
     break;
   case NodeType::Hidden:
-    innovation = Hash(idxhidden,last_innov);
+    innovation = Hash(idxhidden++,last_innov);
     break;
   }
   node_genes.emplace_back(type,innovation);
@@ -139,11 +139,9 @@ Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
   }
 
   // build look up table from innovation hash to vector index
-  //std::cout << node_genes[origin].innovation << " " << origin << std::endl;
-  //std::cout << node_genes[dest].innovation << " " << dest << std::endl;
 
-  node_lookup[node_genes[origin].innovation] = origin;
-  node_lookup[node_genes[dest].innovation] = dest;
+  node_lookup.insert({node_genes[origin].innovation, origin});
+  node_lookup.insert({node_genes[dest].innovation, dest});
 
   innovation = Hash(node_genes[origin].innovation,
                     node_genes[dest].innovation,
@@ -160,7 +158,7 @@ void Genome::Mutate(const NeuralNet& net) {
 
   // structural mutation
   if (random() < required()->mutate_node) {
-    MutateNode(net);
+    MutateNode();
   }
   else if (random() < required()->mutate_link) {
     MutateConnection(net);
@@ -177,7 +175,6 @@ void Genome::Mutate(const NeuralNet& net) {
 }
 
 void Genome::MutateWeights() {
-  if (!generator) { throw std::runtime_error("No RNG engine set. Replace this with class specific exception."); }
   for (auto& gene : connection_genes) {
     // perturb weight by a small amount
     if(random()<required()->perturb_weight) {
@@ -189,11 +186,86 @@ void Genome::MutateWeights() {
 }
 
 void Genome::MutateConnection(const NeuralNet& net) {
+  auto type = (random() < required()->add_recurrent) ?
+    ConnectionType::Recurrent : ConnectionType::Normal;
 
+  unsigned int idxorigin = 0;
+  unsigned int idxdest = 0;
+
+  while (true) {
+    idxorigin = random()*node_genes.size();
+    idxdest = random()*node_genes.size();
+
+    if (IsSensor(node_genes[idxdest].type)) {
+      continue; // this swap is disabled for now, see notice below
+      if (IsSensor(node_genes[idxorigin].type)) {
+        continue; // if both are sensor nodes
+      }
+      else {
+        // swap origin and destination
+        auto idxtemp = idxdest;
+        idxdest = idxorigin;
+        idxorigin = idxtemp;
+        // Notice: this swap makes MutateConnection faster, but I found
+        // that the distribution of found connections was less
+        // uniform. For a small network, this might be an issue,
+        // but I doubt it will make a difference for medium size
+        // networks. Further investigation is necessary.
+      }
+    }
+
+    bool unique = true;
+    for (auto& gene : connection_genes) {
+      if (gene.second.origin == node_genes[idxorigin].innovation &&
+          gene.second.dest == node_genes[idxdest].innovation) {
+        unique = false;
+        break;
+      }
+    }
+    if (unique) {
+      int i = node_lookup[node_genes[idxorigin].innovation];
+      int j = node_lookup[node_genes[idxdest].innovation];
+      bool is_loop = net.would_make_loop(i,j);
+
+      if ( (is_loop && type != ConnectionType::Recurrent) ||
+           (!is_loop && type != ConnectionType::Normal)) { continue; }
+
+      break; // origin and dest found for new connection
+
+    }
+    else { continue; }
+
+  }
+  //std::cout << idxorigin << " -> " << idxdest << std::endl;
+  AddConnection(idxorigin,idxdest,true,(random()-0.5)*required()->reset_weight);
 }
 
-void Genome::MutateNode(const NeuralNet& net) {
+void Genome::MutateNode() {
+  auto selected = connection_genes.begin();
+  // pick random gene to splice
+  do {
+    selected = connection_genes.begin();
+    unsigned int idxgene = random()*connection_genes.size();
+    std::advance(selected,idxgene);
+    // continue searching if the origin of the selected gene is the bias node
+  }
+  while(node_genes[node_lookup[selected->second.origin]].type == NodeType::Bias);
 
+  // add a new node:
+  // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
+  node_genes.emplace_back(NodeType::Hidden,Hash(selected->first,node_genes.back().innovation));
+  // pre-gene: from selected genes origin to new node
+  AddConnection(node_lookup[selected->second.origin],node_genes.size()-1,true,1.0);
+  // post-gene: from new node to selected genes destination
+  AddConnection(node_genes.size()-1,node_lookup[selected->second.dest],true,selected->second.weight);
+  // disable old gene, and we're done
+  selected->second.enabled = false;
+
+  // Notice: since pre-gene is added _first_, if the selected gene is recurrent, the post-gene
+  // will both have the weight of the selected gene, and be the recurrent gene; the pre-gene
+  // will have weight 1.0 and be a normal gene (in NEAT they make the pre-gene be recurrent)
+  // but for the same reason that the post-gene weight = selected-gene weight, I think it should
+  // be the other way around.
 }
 
 void Genome::MutateToggleGeneStatus() {
@@ -209,7 +281,8 @@ void Genome::MutateRenableGene() {
 }
 
 void Genome::PrintInnovations() {
+  std::cout << std::endl;
   for (auto const& gene : connection_genes) {
-    std::cout << gene.first << std::endl;
-  }
+    std::cout << "                Enabled: " << gene.second.enabled << "  |  "<< node_lookup[gene.second.origin] << " -> " << node_lookup[gene.second.dest] << "  Innovation: " << gene.first << std::endl;
+  } std::cout << std::endl;
 }

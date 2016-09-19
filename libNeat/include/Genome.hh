@@ -19,8 +19,8 @@ struct ConnectionGene {
 
 struct NodeGene {
   NodeGene() = delete;
-  NodeGene(NodeType& type_) : type(type_), innovation(0) {;}
-  NodeGene(NodeType& type_, unsigned long innov) : type(type_), innovation(innov) {;}
+  NodeGene(const NodeType& type_) : type(type_), innovation(0) {;}
+  NodeGene(const NodeType& type_, unsigned long innov) : type(type_), innovation(innov) {;}
   NodeType type;
   unsigned long innovation;
 };
@@ -34,11 +34,11 @@ public:
   //Genome& operator=(Genome);
   Genome& AddNode(NodeType type);
   Genome& AddConnection(unsigned long origin, unsigned long dest,
-               bool status, double weight);
+                        bool status, double weight);
 
   void Mutate(const NeuralNet&);
   void MutateConnection(const NeuralNet&);
-  void MutateNode(const NeuralNet&);
+  void MutateNode();
   void MutateWeights();
   void MutateRenableGene();
   void MutateToggleGeneStatus();

@@ -70,7 +70,7 @@ void NeuralNet::add_connection(int origin, int dest, double weight) {
   }
 }
 
-bool NeuralNet::would_make_loop(unsigned int i, unsigned int j) {
+bool NeuralNet::would_make_loop(unsigned int i, unsigned int j) const {
 
   std::vector<bool> reachable(nodes.size(), false);
   reachable[j] = true;
@@ -203,4 +203,8 @@ void NeuralNet::sort_connections() {
 
   connections = sorted;
   connections_sorted = true;
+}
+
+bool IsSensor(NodeType& type) {
+  return (type == NodeType::Input || type == NodeType::Bias) ? true : false;
 }

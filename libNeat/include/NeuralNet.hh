@@ -21,11 +21,11 @@ public:
   void load_input_vals(const std::vector<double>& inputs);
   std::vector<double> read_output_vals();
   void add_connection(int origin, int dest, double weight);
+  bool would_make_loop(unsigned int i, unsigned int j) const;
   void register_sigmoid(std::function<double(double)> sig) {sigma = sig;}
 
 private:
 
-  bool would_make_loop(unsigned int i, unsigned int j);
   double sigmoid(double val) const;
   double get_node_val(unsigned int i);
   void add_to_val(unsigned int i, double val);
@@ -39,6 +39,8 @@ private:
 };
 
 enum class NodeType { Input, Hidden, Output, Bias };
+bool IsSensor(NodeType& type);
+
 
 struct Node {
   double value;
