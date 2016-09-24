@@ -8,11 +8,6 @@ class requires {
 public:
   std::shared_ptr<T> required() const { return required_; }
   void required(const std::shared_ptr<T>& req) { required_ = req; }
-  requires& operator=(const requires& rhs) { required_ = rhs.required_;
-    std::cout << "YAY" << std::endl;
-    exit(0);
-    return *this;
-  }
 
 private:
   std::shared_ptr<T> required_;
