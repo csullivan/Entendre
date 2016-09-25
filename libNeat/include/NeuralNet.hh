@@ -30,6 +30,7 @@ private:
   double get_node_val(unsigned int i);
   void add_to_val(unsigned int i, double val);
   void sort_connections();
+  void reduce();
 
   std::vector<Node> nodes;
   std::vector<Connection> connections;
