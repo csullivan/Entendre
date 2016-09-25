@@ -89,27 +89,27 @@ Genome Genome::operator()(const Genome& father) {
   // NOTICE: This loop needs to be over the interal vector of keys,
   // since the order is not preserved when looping over the map
   for (auto i = 0u; i< mother.connection_genes.size(); i++) {
-    auto const& maternal = mother.connection_genes[i];
+    auto const& maternal_gene = mother.connection_genes[i];
     // Find all shared genes, look up by hash
-    auto paternal = father.connection_genes.find(maternal.first);
-    if (paternal != father.connection_genes.end()) {
+    auto paternal_gene = father.connection_genes.find(maternal_gene.first);
+    if (paternal_gene != father.connection_genes.end()) {
       // matching genes
       if (random()<match) {
         // if key doesn't already exist in child,
-        // then the maternal gene is inserted
-        child.connection_genes.insert(maternal);
-        add_node_to_child(mother,maternal,child);
+        // then the maternal_gene gene is inserted
+        child.connection_genes.insert(maternal_gene);
+        add_node_to_child(mother,maternal_gene,child);
       } else {
 
-        // paternal gene is taken
-        child.connection_genes.insert(*paternal);
-        add_node_to_child(father,*paternal,child);
+        // paternal_gene gene is taken
+        child.connection_genes.insert(*paternal_gene);
+        add_node_to_child(father,*paternal_gene,child);
       }
     } else {
-      // non matching gene, randomly insert maternal gene
+      // non matching gene, randomly insert maternal_gene gene
       if (random()<single_greater) {
-        child.connection_genes.insert(maternal);
-        add_node_to_child(mother,maternal,child);
+        child.connection_genes.insert(maternal_gene);
+        add_node_to_child(mother,maternal_gene,child);
       }
     }
   }
@@ -119,10 +119,10 @@ Genome Genome::operator()(const Genome& father) {
 
   // allow for merging of structure from less fit parent
   for (auto i = 0u; i < father.connection_genes.size(); i++) {
-    auto const& paternal = father.connection_genes[i];
+    auto const& paternal_gene = father.connection_genes[i];
     if (random()<single_lesser) {
-      child.connection_genes.insert(paternal);
-      add_node_to_child(father,paternal,child);
+      child.connection_genes.insert(paternal_gene);
+      add_node_to_child(father,paternal_gene,child);
     }
   }
 
@@ -194,7 +194,7 @@ void Genome::Mutate(const NeuralNet& net) {
     // internal mutation (non-topological)
     if (random() < required()->mutate_weights) { MutateWeights(); }
     if (random() < required()->toggle_status) { MutateToggleGeneStatus(); }
-    if (random() < required()->mutate_reenable) { MutateRenableGene(); }
+    if (random() < required()->mutate_reenable) { MutateReEnableGene(); }
   }
 
 
@@ -298,13 +298,32 @@ void Genome::MutateNode() {
 void Genome::MutateToggleGeneStatus() {
   // Randomly toggle on/off a connection gene.
   // This is in the NEAT implementation but not discussed in the paper
-  // Leaving this unimplemented for now. Note, that when this is added
-  // a check will be needed that disabling a gene can only occur if
-  // the destination node of that gene has other enabled input connections.
+  // Leaving this unimplemented for now. Note, that this could cause a
+  // dangling node such that it has no inputs beyon the to-be disabled gene.
+  // The NeuralNet will handle this by searching for said dangling nodes
+  // and remove them from the derived network. Thus this function is quite
+  // simple.
+
+  unsigned int idx = random()*connection_genes.size();
+  auto selected = connection_genes.begin();
+  std::advance(selected,idx);
+  selected->second.enabled = !selected->second.enabled;
 }
 
-void Genome::MutateRenableGene() {
-
+void Genome::MutateReEnableGene() {
+  std::vector<unsigned int> disabled_indices;
+  // create a list of all disabled connection genes
+  for (auto i = 0u; i <connection_genes.size(); i++) {
+    const auto& gene = connection_genes[i].second;
+    if (gene.enabled == false) { disabled_indices.push_back(i); }
+  }
+  // if no disabled genes exist, bail out
+  if (!disabled_indices.size()) { return; }
+  // pick a random disabled gene to reenable
+  unsigned int idx = random()*disabled_indices.size();
+  auto selected = connection_genes.begin();
+  std::advance(selected,disabled_indices[idx]);
+  selected->second.enabled = true;
 }
 
 void Genome::PrintInnovations() {

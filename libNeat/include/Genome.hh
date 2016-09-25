@@ -40,7 +40,7 @@ public:
   void MutateConnection(const NeuralNet&);
   void MutateNode();
   void MutateWeights();
-  void MutateRenableGene();
+  void MutateReEnableGene();
   void MutateToggleGeneStatus();
 
   float GeneticDistance(const Genome&);
