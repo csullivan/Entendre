@@ -6,7 +6,6 @@
 #include "Requirements.hh"
 #include "insertion_preserving_unordered.hh"
 
-
 struct ConnectionGene {
   unsigned long origin;
   unsigned long dest;
@@ -25,26 +24,31 @@ struct NodeGene {
   unsigned long innovation;
 };
 
+class ReachabilityChecker;
+
 class Genome : public uses_random_numbers,
                public requires<Probabilities> {
 public:
-  Genome operator()(const Genome& father);
   operator NeuralNet() const;
   Genome operator=(const Genome&);
   //Genome& operator=(Genome);
   Genome& AddNode(NodeType type);
   Genome& AddConnection(unsigned long origin, unsigned long dest,
                         bool status, double weight);
-
-  void Mutate(const NeuralNet&);
-  void MutateConnection(const NeuralNet&);
-  void MutateNode();
-  void MutateWeights();
-  void MutateReEnableGene();
-  void MutateToggleGeneStatus();
-
-  float GeneticDistance(const Genome&);
-  void PrintInnovations();
+  Genome& RandomizeWeights();
+  Genome  MateWith(const Genome& father);
+  Genome  MateWith(Genome* father);
+  void    Mutate();
+  void    Mutate(const NeuralNet&);
+  void    MutateConnection(const NeuralNet&);
+  void    MutateNode();
+  void    MutateWeights();
+  void    MutateReEnableGene();
+  void    MutateToggleGeneStatus();
+  bool    ConnectivityCheck(unsigned int node_index, const ReachabilityChecker& checker) const;
+  float   GeneticDistance(const Genome&) const;
+  void    PrintInnovations() const;
+  size_t  Size() { return connection_genes.size(); }
 
 private:
   static unsigned long Hash(unsigned long origin,unsigned long dest,unsigned long previous_hash) { return ((origin*746151647) xor (dest*15141163) xor (previous_hash*94008721) xor (5452515049)); }

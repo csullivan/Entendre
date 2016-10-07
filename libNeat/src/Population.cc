@@ -1,0 +1,145 @@
+#include "Population.hh"
+#include <algorithm>
+
+Population::Population(Genome& first, std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params) {
+  required(params); set_generator(gen);
+  first.required(params); first.set_generator(gen);
+
+  for (auto i=0u; i < required()->population_size; i++) {
+    population.push_back(first.RandomizeWeights());
+  }
+}
+
+
+void Population::Reproduce(std::vector<Organism>& orgs) {
+  // Could consider sorting the most fit first
+  // This would then use the champion of each species
+  // as the representative for genetic distance.
+
+  // NEAT uses a random member as the representative
+  std::random_shuffle(orgs.begin(), orgs.end());
+
+  // speciate
+  std::vector<std::vector<Organism>> all_species;
+  for(auto& genome : orgs) {
+    bool need_new_species = true;
+    for(auto& species : all_species) {
+      double dist = genome->GeneticDistance(*species.front());
+      if(dist < required()->species_delta) {
+        species.push_back(genome);
+        need_new_species = false;
+        break;
+      }
+    }
+
+    if(need_new_species) {
+      all_species.push_back(std::vector<Organism>{genome});
+    }
+  }
+
+
+  // If using std::shuffle to randomize representative,
+  // must sort species first, to find champion
+
+  for(auto& species : all_species) {
+    std::sort(species.begin(), species.end(),
+              [](auto& a, auto& b) { return a.fitness > b.fitness; });
+  }
+
+
+  // Note: Destruction of species due to stagnation not currently implemented
+  //       Species die off slowly, due to baby-stealing.
+
+  // Find adjusted fitness
+  // adj_fitness = fitness/ number_of_genetically_similar_in_species
+  for(auto& species : all_species) {
+    for(auto& genome : species) {
+      int nearby_in_species = 0;
+      for(auto& other : species) {
+        double dist = genome->GeneticDistance(*other);
+        if(dist < required()->species_delta) {
+          nearby_in_species++;
+        }
+      }
+      genome.adj_fitness = genome.fitness/nearby_in_species;
+    }
+  }
+
+  // Determine number of children for each species
+  double total_adj_fitness = 0;
+  std::vector<double> total_adj_fitness_by_species;
+  for(auto& species : all_species) {
+    double t = 0;
+    for(auto& genome : species) {
+      t += genome.adj_fitness;
+    }
+    total_adj_fitness_by_species.push_back(t);
+    total_adj_fitness += t;
+  }
+
+  double children_per_adj_fitness = required()->population_size / total_adj_fitness;
+  std::vector<int> num_children_by_species;
+  for(auto& species_adj_fitness : total_adj_fitness_by_species) {
+    double num_children = children_per_adj_fitness * species_adj_fitness;
+    num_children_by_species.push_back(std::round(num_children));
+    // Rounding differences here can cause slightly more or slightly fewer genomes
+    // to be created than population_size. This is probably ok, but should be studied
+  }
+
+
+  std::vector<Genome> progeny;
+  for (auto i=0u; i < all_species.size(); i++) {
+    auto& species = all_species[i];
+    auto& num_children = num_children_by_species[i];
+
+    for(int i=0; i<num_children; i++) {
+      if(i==0 && species.size() > required()->min_size_for_champion) {
+        // Preserve the champion of large species.
+        progeny.push_back(*species.front());
+      } else {
+        // Everyone else can mate
+
+        // if only one organism in the species
+        if (species.size() == 1) {
+          species.front()->Mutate();
+          progeny.push_back(*species.front());
+          continue;
+        }
+
+        float culling_ratio = required()->culling_ratio;
+        int idx1 = random()*species.size()*culling_ratio;
+        int idx2 = random()*species.size()*culling_ratio;
+        while (idx1 == idx2) {
+          idx1 = random()*species.size()*culling_ratio;
+          idx2 = random()*species.size()*culling_ratio;
+        }
+        Organism& parent1 = species[idx1];
+        Organism& parent2 = species[idx2];
+        Genome* child = new Genome;
+
+        // determine relative fitness for mating
+        if (parent1.fitness > parent2.fitness) {
+          *child = parent1->MateWith(*parent2);
+        } else if (parent2.fitness > parent1.fitness) {
+          *child = parent2->MateWith(*parent1);
+        } else {
+          // break a fitness tie with a check on size
+          if (parent1->Size() > parent2->Size()) {
+            *child = parent1->MateWith(*parent2);
+          }
+          else { // equal size or parent 2 is larger
+            *child = parent2->MateWith(*parent1);
+          }
+        }
+        child->Mutate();
+        progeny.push_back(*child);
+
+
+        //Genome child = parent1.mate_with(parent2);
+
+      }
+    }
+  }
+
+
+}

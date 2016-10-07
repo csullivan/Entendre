@@ -14,6 +14,9 @@ private:
 };
 
 struct Probabilities {
+  const size_t population_size = 100;
+  const size_t min_size_for_champion = 5;
+  const float culling_ratio = 0.5;
   const float match = 0.5;
   const float single_greater = 1.0;
   const float single_lesser = 0.0;

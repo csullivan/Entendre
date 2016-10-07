@@ -2,18 +2,43 @@
 #include <algorithm>
 #include <iostream>
 #include <climits>
+#include <unordered_set>
+#include "ReachabilityChecker.hh"
 
 Genome::operator NeuralNet() const{
-  NeuralNet net(node_genes);
-  // add network connections where appropriate
-  //for (auto const& gene : connection_genes) {
+
+  // populate reachability checker
+  ReachabilityChecker checker(node_genes.size());
   for (auto n=0u; n<connection_genes.size(); n++) {
     if (connection_genes[n].second.enabled) {
       int i = node_lookup.at(connection_genes[n].second.origin);
       int j = node_lookup.at(connection_genes[n].second.dest);
+      checker.AddConnection(i,j);
+    }
+  }
+
+  // use reachability checker to determine if a node is unconnected
+  std::unordered_set<unsigned int> exclusions;
+  for (auto n=0u; n<node_genes.size(); n++) {
+    // if the node is not reachable from either inputs
+    // or outputs, add to the exclusion list
+    if (!ConnectivityCheck(n,checker)) {
+      exclusions.insert(n);
+    }
+  }
+
+  // build neural net from only genes that connect to nodes
+  // which have a path to an output and from an input
+  NeuralNet net(node_genes);
+  for (auto n=0u; n<connection_genes.size(); n++) {
+    if (connection_genes[n].second.enabled) {
+      int i = node_lookup.at(connection_genes[n].second.origin);
+      int j = node_lookup.at(connection_genes[n].second.dest);
+      if (exclusions.count(i) || exclusions.count(j)) { continue; }
       net.add_connection(i,j,connection_genes[n].second.weight);
     }
   }
+
 
   return net;
 }
@@ -26,7 +51,7 @@ Genome Genome::operator=(const Genome& rhs) {
   return *this;
 }
 
-float Genome::GeneticDistance(const Genome& other) {
+float Genome::GeneticDistance(const Genome& other) const {
   double weight_diffs = 0.0;
   unsigned long nUnshared = 0;
   auto nGenes = std::max(connection_genes.size(),other.connection_genes.size());
@@ -54,8 +79,11 @@ float Genome::GeneticDistance(const Genome& other) {
   return (required()->genetic_c1*nUnshared)/nGenes + required()->genetic_c2*weight_diffs/nGenes;
 }
 
+Genome Genome::MateWith(Genome* father) {
+  return MateWith(*father);
+}
 // Generalized genome crossover
-Genome Genome::operator()(const Genome& father) {
+Genome Genome::MateWith(const Genome& father) {
   // Implicit assumption: Mother must always be the more
   // fit genome. i.e. child = mother(father) such that
   // fitness(mother) > fitness(father)
@@ -129,6 +157,13 @@ Genome Genome::operator()(const Genome& father) {
   return child;
 }
 
+Genome& Genome::RandomizeWeights() {
+  for (auto& gene : connection_genes) {
+    gene.second.weight = (random() - 0.5)*required()->reset_weight;
+  }
+  return *this;
+}
+
 Genome& Genome::AddNode(NodeType type) {
   static unsigned long last_innov = 0,
     idxin = 0, idxout = 0, idxhidden = ULONG_MAX/2;
@@ -181,22 +216,22 @@ Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
   return *this;
 }
 
+void Genome::Mutate() {
+  Mutate(NeuralNet(*this));
+}
 void Genome::Mutate(const NeuralNet& net) {
 
   // structural mutation
   if (random() < required()->mutate_node) {
     MutateNode();
   }
-  else if (random() < required()->mutate_link) {
+  if (random() < required()->mutate_link) {
     MutateConnection(net);
   }
-  else {
-    // internal mutation (non-topological)
-    if (random() < required()->mutate_weights) { MutateWeights(); }
-    if (random() < required()->toggle_status) { MutateToggleGeneStatus(); }
-    if (random() < required()->mutate_reenable) { MutateReEnableGene(); }
-  }
-
+  // internal mutation (non-topological)
+  if (random() < required()->mutate_weights) { MutateWeights(); }
+  if (random() < required()->toggle_status) { MutateToggleGeneStatus(); }
+  //if (random() < required()->mutate_reenable) { MutateReEnableGene(); }
 
 
 }
@@ -326,9 +361,34 @@ void Genome::MutateReEnableGene() {
   selected->second.enabled = true;
 }
 
-void Genome::PrintInnovations() {
+void Genome::PrintInnovations() const {
   std::cout << std::endl;
   for (auto const& gene : connection_genes) {
     std::cout << "                Enabled: " << gene.second.enabled << "  |  "<< gene.second.origin << " -> " << gene.second.dest << std::endl;
   } std::cout << std::endl;
+}
+
+
+bool Genome::ConnectivityCheck(unsigned int node_index, const ReachabilityChecker& checker) const {
+  bool path_from_input = false;
+  for (auto input_index = 0u; node_genes.size(); input_index++) {
+    const NodeGene& node = node_genes[input_index];
+    if (node.type != NodeType::Input) { continue; }
+    if (checker.IsReachableEither(input_index,node_index)) {
+      path_from_input = true; break;
+    }
+  }
+  if (!path_from_input) { return false; }
+
+  bool path_from_output = false;
+  for (auto output_index = 0u; node_genes.size(); output_index++) {
+    const NodeGene& node = node_genes[output_index];
+    if (node.type != NodeType::Output) { continue; }
+    if (checker.IsReachableEither(node_index,output_index)) {
+      path_from_output = true; break;
+    }
+  }
+  if (!path_from_output) { return false; }
+
+  return true;
 }

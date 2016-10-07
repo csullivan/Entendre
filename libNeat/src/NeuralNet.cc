@@ -137,86 +137,10 @@ void NeuralNet::add_to_val(unsigned int i, double val) {
   nodes[i].value += val;
 }
 
-void NeuralNet::reduce() {
-  // simple brute-force recursive mark and sweep
-  // to clear out dangling nodes/connections.
-  // could benefit from performance optimization
-
-  std::set<unsigned int> marked;
-
-  std::function<void(unsigned int,std::vector<unsigned int>&,bool)> mark = [&](unsigned int idx, std::vector<unsigned int>& path, bool forward){
-    path.push_back(idx);
-
-    if (forward && nodes[idx].type == NodeType::Output) {
-      for (auto& node_idx : path) { marked.insert(node_idx); }
-      path.pop_back();
-      return;
-    }
-    else if (!forward && IsSensor(nodes[idx].type)) {
-      for (auto& node_idx : path) { marked.insert(node_idx); }
-      path.pop_back();
-      return;
-    }
-    for (auto& conn: connections) {
-      if (forward) { // forward recursive mark
-        if (conn.origin == idx) {
-          if (conn.type == ConnectionType::Recurrent) { continue; }
-          mark(conn.dest,path,forward);
-        }
-      } else { // backward recursive mark
-        if (conn.dest == idx) {
-          if (conn.type == ConnectionType::Recurrent) { continue; }
-          mark(conn.origin,path,forward);
-        }
-      }
-    }
-
-    // an output/input node was not reached in forward/backward search
-    path.pop_back();
-    return;
-  };
-
-  // forward mark
-  for (auto& conn: connections) {
-    if (IsSensor(nodes[conn.origin].type)) {
-      std::vector<unsigned int> path;
-      mark(conn.origin,path,true);
-    }
-  }
-
-  // backward mark
-  for (auto& conn: connections) {
-    if (nodes[conn.dest].type == NodeType::Output) {
-      std::vector<unsigned int> path;
-      mark(conn.dest,path,false);
-    }
-  }
-
-  // sweep connections to dangling nodes
-  for (auto i = 0u; i<nodes.size(); i++) {
-    if (marked.count(i) == 0) { // if not in marked set
-      // for now I won't erase node so as to avoid reindexing problem
-      // instead, we'll delete all connections from the dangling node.
-      while(true) {
-        for (auto n = 0u; n<connections.size(); n++) {
-          if (connections[n].origin == i || connections[n].dest == i) {
-            connections.erase(connections.begin()+n);
-            break;
-          }
-        }
-        // finished deleting all connections to referenced dangling node i
-        break;
-      }
-    }
-  }
-}
-
 void NeuralNet::sort_connections() {
   if(connections_sorted) {
     return;
   }
-
-  reduce();
 
   auto num_connections = connections.size();
 

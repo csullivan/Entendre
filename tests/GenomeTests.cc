@@ -24,7 +24,7 @@ TEST(Genome,CompareInnovation){
 
     EXPECT_FLOAT_EQ(mother.GeneticDistance(father),1.*2/5+0);
 
-    auto child = mother(father);
+    auto child = mother.MateWith(father);
 
     EXPECT_FLOAT_EQ(mother.GeneticDistance(child),0);
     EXPECT_FLOAT_EQ(father.GeneticDistance(child),1.*2/5+0);
@@ -70,7 +70,7 @@ TEST(Genome, GeneticDistanceAfterMutation) {
     father.MutateNode();
     //std::cout << mother.GeneticDistance(father) << std::endl;
 
-    auto child = mother(father);
+    auto child = mother.MateWith(father);
     EXPECT_FLOAT_EQ(mother.GeneticDistance(child),0.0);
     EXPECT_FLOAT_EQ(mother.GeneticDistance(father), child.GeneticDistance(father));
 }
@@ -112,7 +112,7 @@ TEST(Genome, CrossoverAfterManyMutationsNonNEAT) {
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.);
     mother.set_generator(std::make_shared<Uniform>(0,1));
-    Probabilities sNEAT = { 0.5,1.0,1.0,0.8,0.9,0.05,0.03,0.25,0.8,0.05,0.05,0.0,0.1,4.0,1.0,1.0,3.0};
+    Probabilities sNEAT = { 100,5,0.5,0.5,1.0,1.0,0.8,0.9,0.05,0.03,0.25,0.8,0.05,0.05,0.0,0.1,4.0,1.0,1.0,3.0};
     mother.required(std::make_shared<Probabilities>(sNEAT));
     auto father = mother;
 
@@ -126,7 +126,7 @@ TEST(Genome, CrossoverAfterManyMutationsNonNEAT) {
 
     std::cout << "                Genetic Distance after 30 generations: " << mother.GeneticDistance(father) << std::endl << std::endl;
 
-    auto child = mother(father);
+    auto child = mother.MateWith(father);
 
     child.PrintInnovations();
     std::cout << "                Genetic Distance of child with parents: " << mother.GeneticDistance(child) << " " << father.GeneticDistance(child) << std::endl << std::endl;
