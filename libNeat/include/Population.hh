@@ -4,55 +4,69 @@
 #include <vector>
 
 
-struct Organism {
-  // A proxy class for class Genome, containing its
-  // evolutionary and species adjusted fitness
-  Genome* operator->() { return genome; }
-  Genome& operator*() { return *genome; }
-  float fitness;
-  float adj_fitness;
-  Genome* genome;
-  NeuralNet* net;
 
-  // Consider adding a NeuralNet pointer. Justification
-  // would be that the population evaluates the networks
-  // and so already has accessed to these objects, which
-  // can then be passed in to the mutate functions of the
-  // Genome, so that the nets don't need to be regenerated
-};
 
 class Population : public uses_random_numbers,
                    public requires<Probabilities> {
+
+
 public:
-  Population(Genome&,std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
+  /// Construct a population, starting from a seed genome
+  Population(Genome& first,
+             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
-  void BuildNetworks();
+  /// Construct a population, starting from the specified population.
+  Population(std::vector<Genome> population,
+             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
-  void Reproduce(std::vector<Organism>&);
-
-  //std::vector<Organism> Evaluate(std::vector<double>);
-
-  template <class Callable, class... Args>
-  std::vector<Organism> Evaluate(Callable&& fitness, Args&&... args) {
-
-    std::vector<Organism> output;
+  /// Evaluate the fitness function for each neural net.
+  template<class Callable>
+  void Evaluate(Callable&& fitness) {
+    organisms.clear();
     auto n = 0u;
     for (auto& net : networks) {
       Organism org = {};
-      org.fitness = fitness(net,std::forward<Args>(args)...);
+      org.fitness = fitness(net);
       org.genome = &population[n++];
       org.net = &net;
-      output.push_back(org);
+      organisms.push_back(org);
     }
-
-    return output;
   }
 
-  template<typename Callable>
-  void RegisterFitness(Callable fitness) { fitness = fitness; }
+  /// Reproduce, using the fitness function given.
+  template <class Callable>
+  Population Reproduce(Callable&& fitness) {
+    Evaluate(std::forward<Callable>(fitness));
+    return Reproduce();
+  }
+
+  /// Reproduce, using the already evaluated fitness function.
+  /**
+     Assumes that Evaluate() has already been called.
+   */
+  Population Reproduce();
+
 private:
+  struct Organism {
+    // A proxy class for class Genome, containing its
+    // evolutionary and species adjusted fitness
+    Genome* operator->() { return genome; }
+    Genome& operator*() { return *genome; }
+    float fitness;
+    float adj_fitness;
+    Genome* genome;
+    NeuralNet* net;
+
+    // Consider adding a NeuralNet pointer. Justification
+    // would be that the population evaluates the networks
+    // and so already has accessed to these objects, which
+    // can then be passed in to the mutate functions of the
+    // Genome, so that the nets don't need to be regenerated
+  };
+
+  void build_networks();
+
   std::vector<Genome> population;
   std::vector<NeuralNet> networks;
-
-  // std::function<double(const NeuralNet&)> fitness;
+  std::vector<Organism> organisms;
 };

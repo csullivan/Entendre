@@ -19,14 +19,12 @@ TEST(Population,Construct){
 
 
   std::vector<double> input_vals = {1};
-  auto organisms = pop.Evaluate(
+  pop.Reproduce(
     // fitness lambda function
-    [](NeuralNet& net, std::vector<double> inputs) {
-      auto outputs = net.evaluate(inputs);
+    [&](NeuralNet& net) {
+      auto outputs = net.evaluate(input_vals);
       return 1.0;
-    }, input_vals);
-
-  pop.Reproduce(organisms);
+    });
 }
 
 
@@ -48,7 +46,7 @@ TEST(Population,EvaluationTimer){
 
 
   double tperformance = 0.0;
-  auto nTrials = 10000;
+  auto nTrials = 10000u;
   for (auto i=0u; i < nTrials; i++)
   {
 
@@ -58,12 +56,12 @@ TEST(Population,EvaluationTimer){
       });
 
     std::vector<double> input_vals = {1};
-    auto organisms = pop.Evaluate(
+    pop.Evaluate(
       // fitness lambda function
-      [](NeuralNet& net, std::vector<double> inputs) {
-        auto outputs = net.evaluate(inputs);
+      [&](NeuralNet& net) {
+        auto outputs = net.evaluate(input_vals);
         return 1.0;
-      }, input_vals);
+      });
 
   }
   std::cout << "                Total time to evaluate 100 network population 10000 times: "

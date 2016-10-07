@@ -2,29 +2,47 @@
 #include <algorithm>
 #include <cassert>
 
-Population::Population(Genome& first, std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params) {
-  required(params); set_generator(gen);
-  first.required(params); first.set_generator(gen);
+Population::Population(std::vector<Genome> population,
+                       std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params)
+  : population(std::move(population)) {
 
-  for (auto i=0u; i < required()->population_size; i++) {
+  required(params); set_generator(gen);
+
+  for(auto& genome : this->population) {
+    genome.required(params);
+    genome.set_generator(gen);
+  }
+
+  build_networks();
+}
+
+Population::Population(Genome& first,
+                       std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params) {
+
+  required(params);
+  set_generator(gen);
+  first.required(params);
+  first.set_generator(gen);
+
+  for (auto i=0u; i < params->population_size; i++) {
     population.push_back(first.RandomizeWeights());
   }
 
-  BuildNetworks();
+  build_networks();
 }
 
 
-void Population::Reproduce(std::vector<Organism>& orgs) {
+Population Population::Reproduce() {
   // Could consider sorting the most fit first
   // This would then use the champion of each species
   // as the representative for genetic distance.
 
   // NEAT uses a random member as the representative
-  std::random_shuffle(orgs.begin(), orgs.end());
+  std::random_shuffle(organisms.begin(), organisms.end());
 
   // speciate
   std::vector<std::vector<Organism>> all_species;
-  for(auto& genome : orgs) {
+  for(auto& genome : organisms) {
     bool need_new_species = true;
     for(auto& species : all_species) {
       double dist = genome->GeneticDistance(*species.front());
@@ -142,26 +160,13 @@ void Population::Reproduce(std::vector<Organism>& orgs) {
     }
   }
 
-  population = progeny;
-  BuildNetworks();
+  return Population(progeny, get_generator(), required());
 }
 
-void Population::BuildNetworks() {
+void Population::build_networks() {
   networks.clear();
 
   for (auto& genome : population) {
     networks.push_back(NeuralNet(genome));
   }
 }
-
-// std::vector<Organism> Population::Evaluate(std::vector<double> input) {
-//   assert(fitness);
-//   auto n = 0u;
-//   for (auto& net : networks) {
-//     Organism org = {};
-//     org.fitness = fitness(net);
-//     org.genome = &population[n];
-//     org.net = &net;
-//     n++;
-//   }
-// }
