@@ -46,6 +46,7 @@ Genome::operator NeuralNet() const{
 Genome Genome::operator=(const Genome& rhs) {
   this->node_genes = rhs.node_genes;
   this->connection_genes = rhs.connection_genes;
+  this->node_lookup = rhs.node_lookup;
   generator = rhs.generator;
   requires<Probabilities>::operator=(rhs);
   return *this;
@@ -370,8 +371,12 @@ void Genome::PrintInnovations() const {
 
 
 bool Genome::ConnectivityCheck(unsigned int node_index, const ReachabilityChecker& checker) const {
+  // bias node should always be present
+  if (node_genes[node_index].type == NodeType::Bias) { return true; }
+
+  // check that there is a path from at least one input to the current node
   bool path_from_input = false;
-  for (auto input_index = 0u; node_genes.size(); input_index++) {
+  for (auto input_index = 0u; input_index < node_genes.size(); input_index++) {
     const NodeGene& node = node_genes[input_index];
     if (node.type != NodeType::Input) { continue; }
     if (checker.IsReachableEither(input_index,node_index)) {
@@ -380,8 +385,9 @@ bool Genome::ConnectivityCheck(unsigned int node_index, const ReachabilityChecke
   }
   if (!path_from_input) { return false; }
 
+  // check that there is a path from at least one output to the current node
   bool path_from_output = false;
-  for (auto output_index = 0u; node_genes.size(); output_index++) {
+  for (auto output_index = 0u; output_index < node_genes.size(); output_index++) {
     const NodeGene& node = node_genes[output_index];
     if (node.type != NodeType::Output) { continue; }
     if (checker.IsReachableEither(node_index,output_index)) {

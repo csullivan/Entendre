@@ -1,5 +1,6 @@
 #include "Population.hh"
 #include <algorithm>
+#include <cassert>
 
 Population::Population(Genome& first, std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params) {
   required(params); set_generator(gen);
@@ -8,6 +9,8 @@ Population::Population(Genome& first, std::shared_ptr<RNG> gen, std::shared_ptr<
   for (auto i=0u; i < required()->population_size; i++) {
     population.push_back(first.RandomizeWeights());
   }
+
+  BuildNetworks();
 }
 
 
@@ -101,7 +104,7 @@ void Population::Reproduce(std::vector<Organism>& orgs) {
 
         // if only one organism in the species
         if (species.size() == 1) {
-          species.front()->Mutate();
+          species.front()->Mutate(*species.front().net);
           progeny.push_back(*species.front());
           continue;
         }
@@ -135,11 +138,30 @@ void Population::Reproduce(std::vector<Organism>& orgs) {
         progeny.push_back(*child);
 
 
-        //Genome child = parent1.mate_with(parent2);
-
       }
     }
   }
 
-
+  population = progeny;
+  BuildNetworks();
 }
+
+void Population::BuildNetworks() {
+  networks.clear();
+
+  for (auto& genome : population) {
+    networks.push_back(NeuralNet(genome));
+  }
+}
+
+// std::vector<Organism> Population::Evaluate(std::vector<double> input) {
+//   assert(fitness);
+//   auto n = 0u;
+//   for (auto& net : networks) {
+//     Organism org = {};
+//     org.fitness = fitness(net);
+//     org.genome = &population[n];
+//     org.net = &net;
+//     n++;
+//   }
+// }
