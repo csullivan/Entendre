@@ -4,11 +4,8 @@
 #include <vector>
 
 
-
-
 class Population : public uses_random_numbers,
                    public requires<Probabilities> {
-
 
 public:
   /// Construct a population, starting from a seed genome
@@ -56,12 +53,6 @@ private:
     float adj_fitness;
     Genome* genome;
     NeuralNet* net;
-
-    // Consider adding a NeuralNet pointer. Justification
-    // would be that the population evaluates the networks
-    // and so already has accessed to these objects, which
-    // can then be passed in to the mutate functions of the
-    // Genome, so that the nets don't need to be regenerated
   };
 
   void build_networks();
