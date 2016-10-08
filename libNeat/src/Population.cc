@@ -136,24 +136,24 @@ Population Population::Reproduce() {
         }
         Organism& parent1 = species[idx1];
         Organism& parent2 = species[idx2];
-        Genome* child = new Genome;
+        Genome child;
 
         // determine relative fitness for mating
         if (parent1.fitness > parent2.fitness) {
-          *child = parent1->MateWith(*parent2);
+          child = parent1->MateWith(*parent2);
         } else if (parent2.fitness > parent1.fitness) {
-          *child = parent2->MateWith(*parent1);
+          child = parent2->MateWith(*parent1);
         } else {
           // break a fitness tie with a check on size
           if (parent1->Size() > parent2->Size()) {
-            *child = parent1->MateWith(*parent2);
+            child = parent1->MateWith(*parent2);
           }
           else { // equal size or parent 2 is larger
-            *child = parent2->MateWith(*parent1);
+            child = parent2->MateWith(*parent1);
           }
         }
-        child->Mutate();
-        progeny.push_back(*child);
+        child.Mutate();
+        progeny.push_back(child);
 
 
       }
