@@ -16,6 +16,9 @@ public:
   Population(std::vector<Genome> population,
              std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
+  Population(const Population&);
+
+  Population& operator=(Population&&);
   /// Evaluate the fitness function for each neural net.
   template<class Callable>
   void Evaluate(Callable&& fitness) {
@@ -25,7 +28,6 @@ public:
       Organism org = {};
       org.fitness = fitness(net);
       org.genome = &population[n++];
-      org.net = &net;
       organisms.push_back(org);
     }
   }
@@ -43,6 +45,8 @@ public:
    */
   Population Reproduce();
 
+  Population operator=(const Population& rhs);
+
 private:
   struct Organism {
     // A proxy class for class Genome, containing its
@@ -52,7 +56,6 @@ private:
     float fitness;
     float adj_fitness;
     Genome* genome;
-    NeuralNet* net;
   };
 
   void build_networks();

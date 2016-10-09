@@ -9,7 +9,7 @@ public:
   std::shared_ptr<T> required() const { return required_; }
   void required(const std::shared_ptr<T>& req) { required_ = req; }
 
-private:
+protected:
   std::shared_ptr<T> required_;
 };
 

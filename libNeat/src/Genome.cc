@@ -5,10 +5,13 @@
 #include <unordered_set>
 #include "ReachabilityChecker.hh"
 
+Genome::Genome() : num_inputs(0), last_conn_innov(0), last_node_innov(0),
+                   idxinput(0), idxoutput(0), idxhidden(ULONG_MAX/2) { ; }
+
 Genome::operator NeuralNet() const{
 
   // populate reachability checker
-  ReachabilityChecker checker(node_genes.size());
+  ReachabilityChecker checker(node_genes.size(),num_inputs);
   for (auto n=0u; n<connection_genes.size(); n++) {
     if (connection_genes[n].second.enabled) {
       int i = node_lookup.at(connection_genes[n].second.origin);
@@ -44,11 +47,17 @@ Genome::operator NeuralNet() const{
 }
 
 Genome Genome::operator=(const Genome& rhs) {
+  this->num_inputs = rhs.num_inputs;
   this->node_genes = rhs.node_genes;
   this->connection_genes = rhs.connection_genes;
   this->node_lookup = rhs.node_lookup;
-  generator = rhs.generator;
-  requires<Probabilities>::operator=(rhs);
+  this->last_conn_innov = rhs.last_conn_innov;
+  this->last_node_innov = rhs.last_node_innov;
+  this->idxinput = rhs.idxinput;
+  this->idxoutput = rhs.idxoutput;
+  this->idxhidden = rhs.idxhidden;
+  this->generator = rhs.generator;
+  this->required_ = rhs.required_;
   return *this;
 }
 
@@ -92,6 +101,11 @@ Genome Genome::MateWith(const Genome& father) {
   Genome child;
   child.set_generator(mother.get_generator());
   child.required(mother.required());
+  // very first action is to add sensor nodes to child
+  // these are static and unchanging in the evolution
+  for (auto i=0u; i<num_inputs; i++) {
+    child.AddNode(mother.node_genes[i].type);
+  }
 
   const auto& match          = required()->match;
   const auto& single_greater = required()->single_greater;
@@ -143,6 +157,7 @@ Genome Genome::MateWith(const Genome& father) {
     }
   }
 
+
   // Standard NEAT bails out here
   if (single_lesser == 0.0) { return child; }
 
@@ -166,39 +181,42 @@ Genome& Genome::RandomizeWeights() {
 }
 
 Genome& Genome::AddNode(NodeType type) {
-  static unsigned long last_innov = 0,
-    idxin = 0, idxout = 0, idxhidden = ULONG_MAX/2;
+  // TO DO: consider whether idxhidden is appropriately defined
+
+
+  if (IsSensor(type)) { num_inputs++; }
 
   unsigned long innovation = 0;
   switch(type) {
   case NodeType::Bias:
-    innovation = Hash(0,last_innov);
+    innovation = Hash(0,last_node_innov);
     break;
   case NodeType::Input:
-    innovation = Hash(idxin++,last_innov);
+    innovation = Hash(idxinput++,last_node_innov);
     break;
   case NodeType::Output:
-    innovation = Hash(idxout--,last_innov);
+    innovation = Hash(idxoutput--,last_node_innov);
     break;
   case NodeType::Hidden:
-    innovation = Hash(idxhidden++,last_innov);
+    innovation = Hash(idxhidden++,last_node_innov);
     break;
   }
+  // add to lookup table
+  node_lookup.insert({innovation, node_genes.size()});
+  // add to node gene list
   node_genes.emplace_back(type,innovation);
-  last_innov = innovation;
+  last_node_innov = innovation;
   return *this;
 }
 
-// Public API for adding structure, should not used internally
-// Likely this should be performed differently.
 Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
                               bool status, double weight) {
-  static unsigned long last_innovation = 0;
+
   unsigned long innovation = 0;
 
   // first gene only
-  if (last_innovation == 0) {
-    last_innovation = Hash(origin,dest,0);
+  if (last_conn_innov == 0) {
+    last_conn_innov = Hash(origin,dest,0);
   }
 
   // build look up table from innovation hash to vector index
@@ -208,26 +226,21 @@ Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
 
   innovation = Hash(node_genes[origin].innovation,
                     node_genes[dest].innovation,
-                    last_innovation);
+                    last_conn_innov);
 
-  last_innovation = innovation;
-
+  last_conn_innov = innovation;
   connection_genes.insert({innovation,{node_genes[origin].innovation,node_genes[dest].innovation,weight,status}});
-
   return *this;
 }
 
 void Genome::Mutate() {
-  Mutate(NeuralNet(*this));
-}
-void Genome::Mutate(const NeuralNet& net) {
 
   // structural mutation
   if (random() < required()->mutate_node) {
     MutateNode();
   }
   if (random() < required()->mutate_link) {
-    MutateConnection(net);
+    MutateConnection();
   }
   // internal mutation (non-topological)
   if (random() < required()->mutate_weights) { MutateWeights(); }
@@ -248,58 +261,28 @@ void Genome::MutateWeights() {
   }
 }
 
-void Genome::MutateConnection(const NeuralNet& net) {
-  auto type = (random() < required()->add_recurrent) ?
-    ConnectionType::Recurrent : ConnectionType::Normal;
-
-  unsigned int idxorigin = 0;
-  unsigned int idxdest = 0;
-
-  while (true) {
-    idxorigin = random()*node_genes.size();
-    idxdest = random()*node_genes.size();
-
-    if (IsSensor(node_genes[idxdest].type)) {
-      continue; // this swap is disabled for now, see notice below
-      if (IsSensor(node_genes[idxorigin].type)) {
-        continue; // if both are sensor nodes
-      }
-      else {
-        // swap origin and destination
-        auto idxtemp = idxdest;
-        idxdest = idxorigin;
-        idxorigin = idxtemp;
-        // Notice: this swap makes MutateConnection faster, but I found
-        // that the distribution of found connections was less
-        // uniform. For a small network, this might be an issue,
-        // but I doubt it will make a difference for medium size
-        // networks. Further investigation is necessary.
-      }
-    }
-
-    bool unique = true;
-    for (auto& gene : connection_genes) {
-      if (gene.second.origin == node_genes[idxorigin].innovation &&
-          gene.second.dest == node_genes[idxdest].innovation) {
-        unique = false;
-        break;
-      }
-    }
-    if (unique) {
-      int i = node_lookup[node_genes[idxorigin].innovation];
-      int j = node_lookup[node_genes[idxdest].innovation];
-      bool is_loop = net.would_make_loop(i,j);
-
-      if ( (is_loop && type != ConnectionType::Recurrent) ||
-           (!is_loop && type != ConnectionType::Normal)) { continue; }
-
-      break; // origin and dest found for new connection
-
-    }
-    else { continue; }
-
+void Genome::MutateConnection() {
+  ReachabilityChecker checker(node_genes.size(),num_inputs);
+  for (auto n=0u; n<connection_genes.size(); n++) {
+    int i = node_lookup.at(connection_genes[n].second.origin);
+    int j = node_lookup.at(connection_genes[n].second.dest);
+    checker.AddConnection(i,j);
   }
-  //std::cout << idxorigin << " -> " << idxdest << std::endl;
+
+  int idxorigin, idxdest;
+
+  if (random() < required()->add_recurrent) {
+    // recurrent
+    std::tie(idxorigin,idxdest) = checker.RandomRecurrentConnection(*get_generator());
+  }else {
+    // normal
+    std::tie(idxorigin,idxdest) = checker.RandomNormalConnection(*get_generator());
+  }
+
+  if (idxorigin == -1 || idxdest == -1) {
+    return;
+  }
+
   AddConnection(idxorigin,idxdest,true,(random()-0.5)*required()->reset_weight);
 }
 

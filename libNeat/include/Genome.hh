@@ -29,6 +29,7 @@ class ReachabilityChecker;
 class Genome : public uses_random_numbers,
                public requires<Probabilities> {
 public:
+  Genome();
   operator NeuralNet() const;
   Genome operator=(const Genome&);
   //Genome& operator=(Genome);
@@ -39,8 +40,7 @@ public:
   Genome  MateWith(const Genome& father);
   Genome  MateWith(Genome* father);
   void    Mutate();
-  void    Mutate(const NeuralNet&);
-  void    MutateConnection(const NeuralNet&);
+  void    MutateConnection();
   void    MutateNode();
   void    MutateWeights();
   void    MutateReEnableGene();
@@ -56,7 +56,15 @@ private:
 
 
 private:
+  size_t num_inputs;
   std::vector<NodeGene> node_genes;
   std::unordered_map<unsigned long,unsigned int> node_lookup;
   insertion_ordered_map<unsigned long, ConnectionGene> connection_genes;
+
+  // innovation record keeping
+  unsigned long last_conn_innov;
+  unsigned long last_node_innov;
+  unsigned long idxinput;
+  unsigned long idxoutput;
+  unsigned long idxhidden;
 };

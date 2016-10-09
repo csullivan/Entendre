@@ -73,6 +73,8 @@ void NeuralNet::add_connection(int origin, int dest, double weight) {
 }
 
 bool NeuralNet::would_make_loop(unsigned int i, unsigned int j) const {
+  // handle the case of a recurrent connection to itself up front
+  if (i == j) { return true; }
 
   std::vector<bool> reachable(nodes.size(), false);
   reachable[j] = true;
@@ -83,12 +85,12 @@ bool NeuralNet::would_make_loop(unsigned int i, unsigned int j) const {
     for (auto const& conn : connections) {
       // if the origin of this connection is reachable and its
       // desitination is not, then it should be made reachable
-      // if it is a normal node. if it is the origin of the
-      // proposed additional connection (i->j) then it would be
-      // a loop
       if (reachable[conn.origin] &&
           !reachable[conn.dest] &&
           conn.type == ConnectionType::Normal) {
+        // if it is a normal node. if it is the origin of the
+        // proposed additional connection (i->j) then it would be
+        // a loop
         if (conn.dest == i) {
           // the destination of this reachable connection is
           // the origin of the proposed connection. thus there
@@ -194,8 +196,6 @@ void NeuralNet::sort_connections() {
     }
 
     if(possible == num_connections) {
-      // ERRRROOR!
-      //throw SomethingBadHere();
       throw std::runtime_error("Sorting failed. Replace this with a class specific Exception");
     }
 
@@ -205,6 +205,7 @@ void NeuralNet::sort_connections() {
 
   connections = sorted;
   connections_sorted = true;
+
 }
 
 bool IsSensor(NodeType& type) {

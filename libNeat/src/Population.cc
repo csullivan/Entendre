@@ -31,6 +31,35 @@ Population::Population(Genome& first,
   build_networks();
 }
 
+Population::Population(const Population& other) {
+  population = other.population;
+  networks = other.networks;
+  organisms = other.organisms;
+  generator = other.generator;
+  required_ = other.required_;
+  //std::cout << "copy construct" << required()->culling_ratio << std::endl;
+
+}
+
+Population& Population::operator=(Population&& rhs) {
+  population = std::move(rhs.population);
+  networks = std::move(rhs.networks);
+  organisms = std::move(rhs.organisms);
+  generator = rhs.generator;
+  required_ = rhs.required_;
+  //std::cout << "move assign " << required()->culling_ratio << std::endl;
+  return *this;
+}
+
+Population Population::operator=(const Population& rhs) {
+  population = rhs.population;
+  networks = rhs.networks;
+  organisms = rhs.organisms;
+  generator = rhs.generator;
+  required_ = rhs.required_;
+  //std::cout << "copy assign" << required()->culling_ratio << std::endl;
+  return *this;
+}
 
 Population Population::Reproduce() {
   // Could consider sorting the most fit first
@@ -122,12 +151,20 @@ Population Population::Reproduce() {
 
         // if only one organism in the species
         if (species.size() == 1) {
-          species.front()->Mutate(*species.front().net);
+          species.front()->Mutate();
           progeny.push_back(*species.front());
           continue;
         }
 
         float culling_ratio = required()->culling_ratio;
+        // if two organisms in a species and culling ratio is at least half
+        // then just take the more fit of the organisms
+        if (species.size() == 2 && culling_ratio <= 0.5) {
+          species.front()->Mutate();
+          progeny.push_back(*species.front());
+          continue;
+        }
+
         int idx1 = random()*species.size()*culling_ratio;
         int idx2 = random()*species.size()*culling_ratio;
         while (idx1 == idx2) {

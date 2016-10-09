@@ -47,7 +47,7 @@ TEST(Genome,MutateConnection) {
     mother.required(std::make_shared<Probabilities>());
 
     //mother.PrintInnovations();
-    mother.MutateConnection(NeuralNet(mother));
+    mother.MutateConnection();
     mother.MutateNode();
     //mother.PrintInnovations();
 }
@@ -66,7 +66,7 @@ TEST(Genome, GeneticDistanceAfterMutation) {
     mother.required(std::make_shared<Probabilities>());
     auto father = mother;
 
-    father.MutateConnection(NeuralNet(father));
+    father.MutateConnection();
     father.MutateNode();
     //std::cout << mother.GeneticDistance(father) << std::endl;
 
@@ -91,8 +91,8 @@ TEST(Genome, ManyMutations) {
 
 
     for(auto i=0u; i<30; i++) {
-        mother.Mutate(NeuralNet(mother));
-        father.Mutate(NeuralNet(father));
+        mother.Mutate();
+        father.Mutate();
     }
     mother.PrintInnovations();
     father.PrintInnovations();
@@ -118,13 +118,13 @@ TEST(Genome, CrossoverAfterManyMutationsNonNEAT) {
 
 
     for(auto i=0u; i<5; i++) {
-        mother.Mutate(NeuralNet(mother));
-        father.Mutate(NeuralNet(father));
+        mother.Mutate();
+        father.Mutate();
     }
     mother.PrintInnovations();
     father.PrintInnovations();
 
-    std::cout << "                Genetic Distance after 30 generations: " << mother.GeneticDistance(father) << std::endl << std::endl;
+    std::cout << "                Genetic Distance after 5 generations: " << mother.GeneticDistance(father) << std::endl << std::endl;
 
     auto child = mother.MateWith(father);
 

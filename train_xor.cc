@@ -8,16 +8,16 @@ int main() {
 
   std::mt19937 mt(std::chrono::system_clock::now().time_since_epoch().count());
   std::uniform_real_distribution<double> dis(0.0, 2.0);
-  Entendre::FeedForward network({2,4,4,3});
+  Entendre::FeedForward network({2,3,1});
 
   {
     Timer wall([](int elapsed) { std::cout << "Elapsed: " << elapsed/1.e6 << std::endl;});
     for (int i = 0; i < 200000; i++) {
 
-      auto i1 = int(dis(mt));
-      auto i2 = int(dis(mt));
+      double i1 = int(dis(mt));
+      double i2 = int(dis(mt));
 
-      auto result = i1 xor i2;
+      double result = int(i1) xor int(i2);
 
       network.Feed({i1,i2});
 
