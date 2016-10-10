@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstring>
 #include <utility>
 #include <vector>
@@ -110,9 +111,14 @@ private:
   std::vector<MatrixElement> mat;
 
   MatrixElement& at(size_t i, size_t j) {
+    assert(i < num_nodes);
+    assert(j < num_nodes);
     return mat[i*num_nodes + j];
   }
+
   const MatrixElement& at(size_t i, size_t j) const {
+    assert(i < num_nodes);
+    assert(j < num_nodes);
     return mat[i*num_nodes + j];
   }
 

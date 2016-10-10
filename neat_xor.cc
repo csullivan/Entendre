@@ -6,6 +6,12 @@
 #include "Population.hh"
 #include "Timer.hh"
 
+struct XOR_res {
+  double x;
+  double y;
+  double correct;
+};
+
 int main() {
 
   auto seed = Genome()
@@ -17,51 +23,97 @@ int main() {
     .AddConnection(1,3,true,1.)
     .AddConnection(2,3,true,1.);
 
+  auto prob = std::make_shared<Probabilities>();
+  prob->add_recurrent = 0;
+  prob->single_lesser = 0;
+  //prob->population_size = 150;
+
   Population pop(seed,
                  std::make_shared<Uniform>(0,1),
-                 std::make_shared<Probabilities>());
+                 prob);
 
-  auto max_generations = 200u;
 
-  std::vector<vector<double>> possible_inputs = {
-    {0,0},
-    {0,1},
-    {1,0},
-    {1,1}
+  auto max_generations = 1000u;
+
+  std::vector<XOR_res> inputs{
+    {0, 0, 0},
+    {0, 1, 1},
+    {1, 0, 1},
+    {1, 1, 0}
+  };
+  auto shuffled_inputs = inputs;
+
+  std::unique_ptr<NeuralNet> winner = nullptr;
+  unsigned int generation;
+
+  auto show = [&](){
+    auto best = pop.BestNet();
+    if(!best) { return; }
+    std::cout << " ----------- Gen " << generation << " ----------------" << std::endl;
+    std::cout << pop.NumSpecies() << " species total" << std::endl;
+    std::cout << "Best (nodes, conn) = (" << best->num_nodes() << ", " << best->num_connections()
+              << ")" << std::endl;
+    double error = 0;
+    for(auto& input : inputs) {
+      double val = best->evaluate({input.x, input.y})[0];
+      std::cout << input.x << " ^ " << input.y << " = " << val << std::endl;;
+      error += std::abs(val - input.correct);
+    }
+    std::cout << "Error: " << error << std::endl;
   };
 
-  NeuralNet* winner;
-  unsigned int generation;
+  auto fitness = [&](NeuralNet& net) {
+    double error = 0;
+    for(const auto& input : shuffled_inputs) {
+      double val = net.evaluate({input.x, input.y})[0];
+      //error += std::abs(val - input.correct);
+      error += std::pow(val - input.correct, 2);
+    }
+
+    return std::pow(4.0 - error, 2);
+    //return 4 - error;
+  };
+
+
   for (generation = 0u; generation < max_generations; generation++) {
+    std::random_shuffle(shuffled_inputs.begin(), shuffled_inputs.end());
 
+    auto next_gen = pop.Reproduce(fitness);
 
-    pop = pop.Reproduce(
-      // fitness lambda
-      [&](NeuralNet& net) {
-        std::vector<double> output;
-        for (auto& inputs : possible_inputs) {
-          output.push_back(net.evaluate(inputs)[0]);
-        }
-        double error = (
-          std::abs(output[0])+
-          std::abs(1-output[1])+
-          std::abs(1-output[2])+
-          std::abs(output[3]) );
+    auto best = pop.BestNet();
+    bool have_winner = true;
+    for(auto& input : inputs) {
+      double val = best->evaluate({input.x, input.y})[0];
+      if(std::abs(val - input.correct) >= 0.3) {
+        have_winner = false;
+        break;
+      }
+    }
 
-        // look for a winner
-        if ( output[0]<0.5 && output[1]>=0.5 && output[2]>=0.5 && output[3]<0.5 )
-        {
-          winner = &net;
-        }
+    if(have_winner) {
+      winner = std::make_unique<NeuralNet>(*best);
+      break;
+    }
 
-        return std::pow(4.-error,2);
-      });
+    if(generation%10 == 0) {
+      show();
+    }
 
-    if (winner) { break; }
-
+    pop = std::move(next_gen);
   }
 
-  std::cout << "Winner found in generation " << generation  << ".\n";
+
+
+  show();
+
+  if(winner) {
+    std::cout << "Winner found in generation " << generation  << ".\n"
+              << *winner << std::endl;
+  } else {
+    std::cout << "No winner found after " << generation << " generations" << std::endl;
+    pop.Evaluate(fitness);
+    std::cout << "Best: " << *pop.BestNet() << std::endl;
+  }
 
   return 0;
 

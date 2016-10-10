@@ -28,6 +28,7 @@ public:
       Organism org = {};
       org.fitness = fitness(net);
       org.genome = &population[n++];
+      org.network = &net;
       organisms.push_back(org);
     }
   }
@@ -47,6 +48,20 @@ public:
 
   Population operator=(const Population& rhs);
 
+  /// Returns the best neural net in the population.
+  /**
+     Uses the fitness value calculated by the most recent call to Evaluate or Reproduce.
+     If neither has been called, returns nullptr.
+   */
+  NeuralNet* BestNet() const;
+
+  /// Returns the number of species in the population
+  /**
+     Uses the speciation from the most recent call to Reproduce.
+     If Reproduce has not been called, returns 0.
+   */
+  unsigned int NumSpecies() const;
+
 private:
   struct Organism {
     // A proxy class for class Genome, containing its
@@ -55,7 +70,9 @@ private:
     Genome& operator*() { return *genome; }
     float fitness;
     float adj_fitness;
+    unsigned int species;
     Genome* genome;
+    NeuralNet* network;
   };
 
   void build_networks();

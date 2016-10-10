@@ -64,6 +64,7 @@ Genome Genome::operator=(const Genome& rhs) {
 float Genome::GeneticDistance(const Genome& other) const {
   double weight_diffs = 0.0;
   unsigned long nUnshared = 0;
+  unsigned long nShared = 0;
   auto nGenes = std::max(connection_genes.size(),other.connection_genes.size());
 
   // loop over this genomes genes
@@ -72,6 +73,7 @@ float Genome::GeneticDistance(const Genome& other) const {
     // sum the absolute weight differences of the shared genes
     if (other_gene != other.connection_genes.end()) {
       weight_diffs += std::abs(other_gene->second.weight-gene.second.weight);
+      nShared++;
     }
     // count the number of unshared genes
     else {
@@ -87,6 +89,8 @@ float Genome::GeneticDistance(const Genome& other) const {
   }
 
   return (required()->genetic_c1*nUnshared)/nGenes + required()->genetic_c2*weight_diffs/nGenes;
+  //return (required()->genetic_c1*nUnshared)/nGenes + required()->genetic_c2*weight_diffs/nShared;
+  //return (required()->genetic_c1*nUnshared) + required()->genetic_c2*weight_diffs/nShared;
 }
 
 Genome Genome::MateWith(Genome* father) {

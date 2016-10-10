@@ -1,8 +1,11 @@
 #include "NeuralNet.hh"
 
+#include <cassert>
 #include <cmath>
 #include <iostream>
+#include <map>
 #include <set>
+#include <sstream>
 #include <vector>
 
 #include "Genome.hh"
@@ -205,9 +208,59 @@ void NeuralNet::sort_connections() {
 
   connections = sorted;
   connections_sorted = true;
-
 }
 
 bool IsSensor(NodeType& type) {
   return (type == NodeType::Input || type == NodeType::Bias) ? true : false;
+}
+
+std::ostream& operator<<(std::ostream& os, const NeuralNet& net) {
+  std::map<unsigned int, std::string> names;
+  unsigned int num_inputs = 0;
+  unsigned int num_outputs = 0;
+  unsigned int num_hidden = 0;
+  for(unsigned int i=0; i<net.nodes.size(); i++) {
+    std::stringstream ss;
+    switch(net.nodes[i].type) {
+      case NodeType::Input:
+        ss << "I" << num_inputs++;
+        break;
+      case NodeType::Output:
+        ss << "O" << num_outputs++;
+        break;
+      case NodeType::Hidden:
+        ss << "H" << num_hidden++;
+        break;
+      case NodeType::Bias:
+        ss << "B";
+        break;
+
+      default:
+        std::cerr << "Type: " << int(net.nodes[i].type) << std::endl;
+        assert(false);
+        break;
+    }
+    names[i] = ss.str();
+  }
+
+  for(const auto& item : names) {
+    std::cout << "Node " << item.first << " = " << item.second << std::endl;
+  }
+
+  for(auto& conn : net.connections) {
+    os << names[conn.origin];
+    //os << conn.origin;
+    if(conn.type == ConnectionType::Normal) {
+      os << " ---> ";
+    } else {
+      os << " -R-> ";
+    }
+    os << names[conn.dest];
+    //os << conn.dest;
+
+    if(&conn != &net.connections.back()) {
+      os << "\n";
+    }
+  }
+  return os;
 }

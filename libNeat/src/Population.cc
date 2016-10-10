@@ -1,6 +1,8 @@
 #include "Population.hh"
+
 #include <algorithm>
 #include <cassert>
+#include <set>
 
 Population::Population(std::vector<Genome> population,
                        std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params)
@@ -71,19 +73,21 @@ Population Population::Reproduce() {
 
   // speciate
   std::vector<std::vector<Organism>> all_species;
-  for(auto& genome : organisms) {
+  for(auto& organism : organisms) {
     bool need_new_species = true;
     for(auto& species : all_species) {
-      double dist = genome->GeneticDistance(*species.front());
+      double dist = organism->GeneticDistance(*species.front());
       if(dist < required()->species_delta) {
-        species.push_back(genome);
+        organism.species = species.front().species;
+        species.push_back(organism);
         need_new_species = false;
         break;
       }
     }
 
     if(need_new_species) {
-      all_species.push_back(std::vector<Organism>{genome});
+      organism.species = all_species.size();
+      all_species.push_back(std::vector<Organism>{organism});
     }
   }
 
@@ -206,4 +210,24 @@ void Population::build_networks() {
   for (auto& genome : population) {
     networks.push_back(NeuralNet(genome));
   }
+}
+
+NeuralNet* Population::BestNet() const {
+  NeuralNet* output = nullptr;
+  double best_fitness = -std::numeric_limits<double>::max();
+  for(auto& org : organisms) {
+    if(org.fitness > best_fitness) {
+      output = org.network;
+      best_fitness = org.fitness;
+    }
+  }
+  return output;
+}
+
+unsigned int Population::NumSpecies() const {
+  std::set<unsigned int> species;
+  for(auto& org : organisms) {
+    species.insert(org.species);
+  }
+  return species.size();
 }

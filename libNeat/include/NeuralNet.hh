@@ -24,8 +24,10 @@ public:
   bool would_make_loop(unsigned int i, unsigned int j) const;
   void register_sigmoid(std::function<double(double)> sig) {sigma = sig;}
 
-private:
+  unsigned int num_nodes() const { return nodes.size(); }
+  unsigned int num_connections() const { return connections.size(); }
 
+private:
   double sigmoid(double val) const;
   double get_node_val(unsigned int i);
   void add_to_val(unsigned int i, double val);
@@ -36,6 +38,7 @@ private:
   bool connections_sorted;
   std::function<double(double val)> sigma;
 
+  friend std::ostream& operator<<(std::ostream& os, const NeuralNet& net);
 };
 
 enum class NodeType { Input, Hidden, Output, Bias };

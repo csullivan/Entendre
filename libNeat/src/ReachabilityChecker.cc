@@ -9,7 +9,6 @@ ReachabilityChecker::ReachabilityChecker(size_t num_nodes, size_t num_inputs)
     num_possible_normal_connections((num_nodes-num_inputs)*(num_nodes-1)),
     num_possible_recurrent_connections(num_nodes-num_inputs),
     mat(num_nodes*num_nodes) {
-
   // All nodes are reachable from themselves
   // Doesn't count as a connection, though
   for(size_t i=0; i<num_nodes; i++) {
