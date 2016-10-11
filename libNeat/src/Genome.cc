@@ -93,6 +93,25 @@ float Genome::GeneticDistance(const Genome& other) const {
   //return (required()->genetic_c1*nUnshared) + required()->genetic_c2*weight_diffs/nShared;
 }
 
+Genome Genome::GeneticAncestry() const {
+  Genome descendant;
+  descendant.last_conn_innov = this->last_conn_innov;
+  descendant.last_node_innov = this->last_node_innov;
+  descendant.set_generator(this->get_generator());
+  descendant.required(this->required());
+  // add sensor nodes
+  for (auto i=0u; i<num_inputs; i++) {
+    descendant.AddNode(this->node_genes[i].type);
+  }
+  // add outputs
+  for (auto i=0u; i<node_genes.size(); i++) {
+    if (this->node_genes[i].type == NodeType::Output) {
+      descendant.AddNode(this->node_genes[i].type);
+    }
+  }
+  return descendant;
+}
+
 Genome Genome::MateWith(Genome* father) {
   return MateWith(*father);
 }
@@ -102,14 +121,8 @@ Genome Genome::MateWith(const Genome& father) {
   // fit genome. i.e. child = mother(father) such that
   // fitness(mother) > fitness(father)
   auto& mother = *this;
-  Genome child;
-  child.set_generator(mother.get_generator());
-  child.required(mother.required());
-  // very first action is to add sensor nodes to child
-  // these are static and unchanging in the evolution
-  for (auto i=0u; i<num_inputs; i++) {
-    child.AddNode(mother.node_genes[i].type);
-  }
+  auto child = this->GeneticAncestry();
+
 
   const auto& match          = required()->match;
   const auto& single_greater = required()->single_greater;

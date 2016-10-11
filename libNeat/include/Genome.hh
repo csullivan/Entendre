@@ -47,6 +47,7 @@ public:
   void    MutateToggleGeneStatus();
   bool    ConnectivityCheck(unsigned int node_index, const ReachabilityChecker& checker) const;
   float   GeneticDistance(const Genome&) const;
+  Genome  GeneticAncestry() const;
   void    PrintInnovations() const;
   size_t  Size() { return connection_genes.size(); }
 
@@ -60,6 +61,7 @@ private:
   std::vector<NodeGene> node_genes;
   std::unordered_map<unsigned long,unsigned int> node_lookup;
   insertion_ordered_map<unsigned long, ConnectionGene> connection_genes;
+
 
   // innovation record keeping
   unsigned long last_conn_innov;
