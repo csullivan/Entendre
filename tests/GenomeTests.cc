@@ -147,6 +147,11 @@ TEST(Genome, PreserveInnovations) {
 
   parent.set_generator(std::make_shared<Uniform>(0,1));
   auto prob = std::make_shared<Probabilities>();
+  prob->mutate_link = 0;
+  prob->mutate_node = 0;
+  prob->mutate_reenable = 0;
+  prob->toggle_status = 0;
+
   parent.required(prob);
 
   auto child = parent.MateWith(parent);
