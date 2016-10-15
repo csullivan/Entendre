@@ -398,3 +398,24 @@ bool Genome::ConnectivityCheck(unsigned int node_index, const ReachabilityChecke
 
   return true;
 }
+
+bool Genome::IsStructurallyEqual(const Genome& other) const {
+  if(node_genes.size() != other.node_genes.size() ||
+     connection_genes.size() != other.connection_genes.size()) {
+    return false;
+  }
+
+  for(auto& gene : node_genes) {
+    if(other.node_lookup.count(gene.innovation) == 0) {
+      return false;
+    }
+  }
+
+  for(auto& gene : connection_genes) {
+    if(other.connection_genes.count(gene.first) == 0) {
+      return false;
+    }
+  }
+
+  return true;
+}

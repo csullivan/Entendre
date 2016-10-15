@@ -131,3 +131,25 @@ TEST(Genome, CrossoverAfterManyMutationsNonNEAT) {
     child.PrintInnovations();
     std::cout << "                Genetic Distance of child with parents: " << mother.GeneticDistance(child) << " " << father.GeneticDistance(child) << std::endl << std::endl;
 }
+
+TEST(Genome, PreserveInnovations) {
+  auto parent = Genome()
+    .AddNode(NodeType::Bias)
+    .AddNode(NodeType::Input)
+    .AddNode(NodeType::Hidden)
+    .AddNode(NodeType::Output)
+    .AddConnection(0,3,true,1.)
+    .AddConnection(1,3,true,1.)
+    .AddConnection(1,2,true,1.)
+    .AddConnection(2,3,true,1.);
+
+  EXPECT_TRUE(parent.IsStructurallyEqual(parent));
+
+  parent.set_generator(std::make_shared<Uniform>(0,1));
+  auto prob = std::make_shared<Probabilities>();
+  parent.required(prob);
+
+  auto child = parent.MateWith(parent);
+
+  EXPECT_TRUE(parent.IsStructurallyEqual(child));
+}

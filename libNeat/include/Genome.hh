@@ -51,6 +51,8 @@ public:
   void    PrintInnovations() const;
   size_t  Size() { return connection_genes.size(); }
 
+  bool IsStructurallyEqual(const Genome& other) const;
+
 private:
   static unsigned long Hash(unsigned long origin,unsigned long dest,unsigned long previous_hash) { return ((origin*746151647) xor (dest*15141163) xor (previous_hash*94008721) xor (5452515049)); }
   static unsigned long Hash(unsigned long id,unsigned long previous_hash) { return ((id*10000169) xor (previous_hash*44721359) xor (111181111));  }
