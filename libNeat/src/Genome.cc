@@ -1,21 +1,25 @@
 #include "Genome.hh"
+
 #include <algorithm>
+#include <cassert>
 #include <iostream>
-#include <climits>
+#include <map>
 #include <unordered_set>
+#include <sstream>
+
 #include "ReachabilityChecker.hh"
 
-Genome::Genome() : num_inputs(0), last_conn_innov(0), last_node_innov(0),
-                   idxinput(0), idxoutput(0), idxhidden(ULONG_MAX/2) { ; }
+Genome::Genome() : num_inputs(0),
+                   last_conn_innov(0), last_node_innov(0) { ; }
 
 Genome::operator NeuralNet() const{
-
   // populate reachability checker
   ReachabilityChecker checker(node_genes.size(),num_inputs);
   for (auto n=0u; n<connection_genes.size(); n++) {
-    if (connection_genes[n].second.enabled) {
-      int i = node_lookup.at(connection_genes[n].second.origin);
-      int j = node_lookup.at(connection_genes[n].second.dest);
+    auto&& gene = connection_genes[n].second;
+    if (gene.enabled) {
+      int i = node_lookup.at(gene.origin);
+      int j = node_lookup.at(gene.dest);
       checker.AddConnection(i,j);
     }
   }
@@ -46,16 +50,13 @@ Genome::operator NeuralNet() const{
   return net;
 }
 
-Genome Genome::operator=(const Genome& rhs) {
+Genome& Genome::operator=(const Genome& rhs) {
   this->num_inputs = rhs.num_inputs;
   this->node_genes = rhs.node_genes;
   this->connection_genes = rhs.connection_genes;
   this->node_lookup = rhs.node_lookup;
   this->last_conn_innov = rhs.last_conn_innov;
   this->last_node_innov = rhs.last_node_innov;
-  this->idxinput = rhs.idxinput;
-  this->idxoutput = rhs.idxoutput;
-  this->idxhidden = rhs.idxhidden;
   this->generator = rhs.generator;
   this->required_ = rhs.required_;
   return *this;
@@ -99,14 +100,12 @@ Genome Genome::GeneticAncestry() const {
   descendant.last_node_innov = this->last_node_innov;
   descendant.set_generator(this->get_generator());
   descendant.required(this->required());
-  // add sensor nodes
-  for (auto i=0u; i<num_inputs; i++) {
-    descendant.AddNode(this->node_genes[i].type);
-  }
-  // add outputs
-  for (auto i=0u; i<node_genes.size(); i++) {
-    if (this->node_genes[i].type == NodeType::Output) {
-      descendant.AddNode(this->node_genes[i].type);
+  // Add all non-hidden nodes.
+  for(auto& gene : this->node_genes) {
+    if(gene.type == NodeType::Input ||
+       gene.type == NodeType::Bias ||
+       gene.type == NodeType::Output) {
+      descendant.AddNode(gene.type, gene.innovation);
     }
   }
   return descendant;
@@ -187,6 +186,8 @@ Genome Genome::MateWith(const Genome& father) {
     }
   }
 
+  child.AssertNoDuplicateConnections();
+
   return child;
 }
 
@@ -198,31 +199,53 @@ Genome& Genome::RandomizeWeights() {
 }
 
 Genome& Genome::AddNode(NodeType type) {
-  // TO DO: consider whether idxhidden is appropriately defined
+  // User-defined nodes, no real innovation number
+  // Instead, make something up to ensure unique ids for each.
 
-
-  if (IsSensor(type)) { num_inputs++; }
-
-  unsigned long innovation = 0;
+  unsigned long innovation = node_genes.size();
   switch(type) {
   case NodeType::Bias:
-    innovation = Hash(0,last_node_innov);
+    innovation = Hash(0, last_node_innov);
     break;
   case NodeType::Input:
-    innovation = Hash(idxinput++,last_node_innov);
+    innovation = Hash(1, last_node_innov);
     break;
   case NodeType::Output:
-    innovation = Hash(idxoutput--,last_node_innov);
+    innovation = Hash(2, last_node_innov);
     break;
   case NodeType::Hidden:
-    innovation = Hash(idxhidden++,last_node_innov);
+    innovation = Hash(3, last_node_innov);
     break;
   }
-  // add to lookup table
-  node_lookup.insert({innovation, node_genes.size()});
-  // add to node gene list
-  node_genes.emplace_back(type,innovation);
+
+  return AddNode(type, innovation);
+}
+
+Genome& Genome::AddNode(NodeType type, unsigned long innovation) {
+  bool needs_resort = IsSensor(type) && (node_genes.size() != num_inputs);
+
+  if(IsSensor(type)) {
+    num_inputs++;
+  }
+
+  node_genes.emplace_back(type, innovation);
   last_node_innov = innovation;
+
+  if(needs_resort) {
+    // Move all sensor nodes to the front of the list.
+    std::stable_partition(node_genes.begin(), node_genes.end(),
+                          [](const NodeGene& gene) { return IsSensor(gene.type); }
+    );
+    // Regenerate the lookup table.
+    node_lookup.clear();
+    for(unsigned int i=0; i<node_genes.size(); i++) {
+      node_lookup[node_genes[i].innovation] = i;
+    }
+  } else {
+    // Just add the new gene to the lookup.
+    node_lookup[innovation] = node_genes.size()-1;
+  }
+
   return *this;
 }
 
@@ -263,8 +286,6 @@ void Genome::Mutate() {
   if (random() < required()->mutate_weights) { MutateWeights(); }
   if (random() < required()->toggle_status) { MutateToggleGeneStatus(); }
   //if (random() < required()->mutate_reenable) { MutateReEnableGene(); }
-
-
 }
 
 void Genome::MutateWeights() {
@@ -288,7 +309,8 @@ void Genome::MutateConnection() {
 
   int idxorigin, idxdest;
 
-  if (random() < required()->add_recurrent) {
+  bool add_recurrent = random() < required()->add_recurrent;
+  if (add_recurrent) {
     // recurrent
     std::tie(idxorigin,idxdest) = checker.RandomRecurrentConnection(*get_generator());
   }else {
@@ -300,7 +322,9 @@ void Genome::MutateConnection() {
     return;
   }
 
+  AssertNoDuplicateConnections();
   AddConnection(idxorigin,idxdest,true,(random()-0.5)*required()->reset_weight);
+  AssertNoDuplicateConnections();
 }
 
 void Genome::MutateNode() {
@@ -316,7 +340,7 @@ void Genome::MutateNode() {
 
   // add a new node:
   // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
-  node_genes.emplace_back(NodeType::Hidden,Hash(selected->first,node_genes.back().innovation));
+  AddNode(NodeType::Hidden, Hash(selected->first, last_node_innov));
   // pre-gene: from selected genes origin to new node
   AddConnection(node_lookup[selected->second.origin],node_genes.size()-1,true,1.0);
   // post-gene: from new node to selected genes destination
@@ -418,4 +442,62 @@ bool Genome::IsStructurallyEqual(const Genome& other) const {
   }
 
   return true;
+}
+
+void Genome::AssertNoDuplicateConnections() const {
+  for(auto& gene1 : connection_genes) {
+    for(auto& gene2 : connection_genes) {
+      assert( &gene1 == &gene2 ||
+              gene1.second.origin != gene2.second.origin ||
+              gene1.second.dest != gene2.second.dest);
+    }
+  }
+}
+
+std::ostream& operator<<(std::ostream& os, const Genome& genome) {
+  std::map<unsigned int, std::string> names;
+  unsigned int num_inputs = 0;
+  unsigned int num_outputs = 0;
+  unsigned int num_hidden = 0;
+
+  for(unsigned int i=0; i<genome.node_genes.size(); i++) {
+    std::stringstream ss;
+    switch(genome.node_genes[i].type) {
+      case NodeType::Input:
+        ss << "I" << num_inputs++;
+        break;
+      case NodeType::Output:
+        ss << "O" << num_outputs++;
+        break;
+      case NodeType::Hidden:
+        ss << "H" << num_hidden++;
+        break;
+      case NodeType::Bias:
+        ss << "B";
+        break;
+
+      default:
+        std::cerr << "Type: " << int(genome.node_genes[i].type) << std::endl;
+        assert(false);
+        break;
+    }
+    names[genome.node_genes[i].innovation] = ss.str();
+  }
+
+  for(const auto& item : names) {
+    std::cout << "Node " << item.first << " = " << item.second << std::endl;
+  }
+
+  for (auto n=0u; n<genome.connection_genes.size(); n++) {
+    auto&& conn = genome.connection_genes[n];
+
+    os << names[conn.second.origin]
+       << " ---> "
+       << names[conn.second.dest];
+
+    if(n != genome.connection_genes.size()-1) {
+      os << "\n";
+    }
+  }
+  return os;
 }

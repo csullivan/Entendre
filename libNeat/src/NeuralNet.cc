@@ -210,8 +210,8 @@ void NeuralNet::sort_connections() {
   connections_sorted = true;
 }
 
-bool IsSensor(NodeType& type) {
-  return (type == NodeType::Input || type == NodeType::Bias) ? true : false;
+bool IsSensor(const NodeType& type) {
+  return type == NodeType::Input || type == NodeType::Bias;
 }
 
 std::ostream& operator<<(std::ostream& os, const NeuralNet& net) {

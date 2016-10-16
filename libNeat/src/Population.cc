@@ -39,8 +39,6 @@ Population::Population(const Population& other) {
   organisms = other.organisms;
   generator = other.generator;
   required_ = other.required_;
-  //std::cout << "copy construct" << required()->culling_ratio << std::endl;
-
 }
 
 Population& Population::operator=(Population&& rhs) {
@@ -49,17 +47,15 @@ Population& Population::operator=(Population&& rhs) {
   organisms = std::move(rhs.organisms);
   generator = rhs.generator;
   required_ = rhs.required_;
-  //std::cout << "move assign " << required()->culling_ratio << std::endl;
   return *this;
 }
 
-Population Population::operator=(const Population& rhs) {
+Population& Population::operator=(const Population& rhs) {
   population = rhs.population;
   networks = rhs.networks;
   organisms = rhs.organisms;
   generator = rhs.generator;
   required_ = rhs.required_;
-  //std::cout << "copy assign" << required()->culling_ratio << std::endl;
   return *this;
 }
 
@@ -155,7 +151,6 @@ Population Population::Reproduce() {
 
         // if only one organism in the species
         if (species.size() == 1) {
-          species.front()->Mutate();
           progeny.push_back(*species.front());
           continue;
         }
@@ -164,7 +159,6 @@ Population Population::Reproduce() {
         // if two organisms in a species and culling ratio is at least half
         // then just take the more fit of the organisms
         if (species.size() == 2 && culling_ratio <= 0.5) {
-          species.front()->Mutate();
           progeny.push_back(*species.front());
           continue;
         }
@@ -193,12 +187,15 @@ Population Population::Reproduce() {
             child = parent2->MateWith(*parent1);
           }
         }
-        child.Mutate();
         progeny.push_back(child);
 
 
       }
     }
+  }
+
+  for(auto& child : progeny) {
+    child.Mutate();
   }
 
   return Population(progeny, get_generator(), required());

@@ -42,7 +42,7 @@ private:
 };
 
 enum class NodeType { Input, Hidden, Output, Bias };
-bool IsSensor(NodeType& type);
+bool IsSensor(const NodeType& type);
 
 
 struct Node {

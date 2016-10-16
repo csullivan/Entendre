@@ -46,7 +46,7 @@ public:
    */
   Population Reproduce();
 
-  Population operator=(const Population& rhs);
+  Population& operator=(const Population& rhs);
 
   /// Returns the best neural net in the population.
   /**

@@ -1,6 +1,9 @@
 #pragma once
+
 #include <vector>
+#include <ostream>
 #include <unordered_map>
+
 #include "NeuralNet.hh"
 #include "Random.hh"
 #include "Requirements.hh"
@@ -31,8 +34,7 @@ class Genome : public uses_random_numbers,
 public:
   Genome();
   operator NeuralNet() const;
-  Genome operator=(const Genome&);
-  //Genome& operator=(Genome);
+  Genome& operator=(const Genome&);
   Genome& AddNode(NodeType type);
   Genome& AddConnection(unsigned long origin, unsigned long dest,
                         bool status, double weight);
@@ -53,10 +55,15 @@ public:
 
   bool IsStructurallyEqual(const Genome& other) const;
 
+  friend std::ostream& operator<<(std::ostream&, const Genome& genome);
+
 private:
+  Genome& AddNode(NodeType type, unsigned long innovation);
+
   static unsigned long Hash(unsigned long origin,unsigned long dest,unsigned long previous_hash) { return ((origin*746151647) xor (dest*15141163) xor (previous_hash*94008721) xor (5452515049)); }
   static unsigned long Hash(unsigned long id,unsigned long previous_hash) { return ((id*10000169) xor (previous_hash*44721359) xor (111181111));  }
 
+  void AssertNoDuplicateConnections() const;
 
 private:
   size_t num_inputs;
@@ -68,7 +75,4 @@ private:
   // innovation record keeping
   unsigned long last_conn_innov;
   unsigned long last_node_innov;
-  unsigned long idxinput;
-  unsigned long idxoutput;
-  unsigned long idxhidden;
 };
