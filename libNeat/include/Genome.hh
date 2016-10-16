@@ -59,9 +59,15 @@ public:
 
 private:
   Genome& AddNode(NodeType type, unsigned long innovation);
+  void AddConnectionByInnovation(unsigned long origin, unsigned long dest,
+                                 bool status, double weight);
 
-  static unsigned long Hash(unsigned long origin,unsigned long dest,unsigned long previous_hash) { return ((origin*746151647) xor (dest*15141163) xor (previous_hash*94008721) xor (5452515049)); }
-  static unsigned long Hash(unsigned long id,unsigned long previous_hash) { return ((id*10000169) xor (previous_hash*44721359) xor (111181111));  }
+  static unsigned long Hash(unsigned long origin,unsigned long dest,unsigned long previous_hash) {
+    return ((origin*746151647UL) xor (dest*15141163UL) xor (previous_hash*94008721UL) xor (5452515049UL));
+  }
+  static unsigned long Hash(unsigned long id,unsigned long previous_hash) {
+    return ((id*10000169UL) xor (previous_hash*44721359UL) xor (111181111UL));
+  }
 
   void AssertNoDuplicateConnections() const;
 

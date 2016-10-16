@@ -46,7 +46,6 @@ Genome::operator NeuralNet() const{
     }
   }
 
-
   return net;
 }
 
@@ -96,8 +95,6 @@ float Genome::GeneticDistance(const Genome& other) const {
 
 Genome Genome::GeneticAncestry() const {
   Genome descendant;
-  descendant.last_conn_innov = this->last_conn_innov;
-  descendant.last_node_innov = this->last_node_innov;
   descendant.set_generator(this->get_generator());
   descendant.required(this->required());
   // Add all non-hidden nodes.
@@ -108,6 +105,10 @@ Genome Genome::GeneticAncestry() const {
       descendant.AddNode(gene.type, gene.innovation);
     }
   }
+
+  descendant.last_conn_innov = this->last_conn_innov;
+  descendant.last_node_innov = this->last_node_innov;
+
   return descendant;
 }
 
@@ -173,16 +174,15 @@ Genome Genome::MateWith(const Genome& father) {
     }
   }
 
-
   // Standard NEAT bails out here
-  if (single_lesser == 0.0) { return child; }
-
-  // allow for merging of structure from less fit parent
-  for (auto i = 0u; i < father.connection_genes.size(); i++) {
-    auto const& paternal_gene = father.connection_genes[i];
-    if (random()<single_lesser) {
-      child.connection_genes.insert(paternal_gene);
-      add_node_to_child(father,paternal_gene,child);
+  if (single_lesser > 0.0) {
+    // allow for merging of structure from less fit parent
+    for (auto i = 0u; i < father.connection_genes.size(); i++) {
+      auto const& paternal_gene = father.connection_genes[i];
+      if (random()<single_lesser) {
+        child.connection_genes.insert(paternal_gene);
+        add_node_to_child(father,paternal_gene,child);
+      }
     }
   }
 
@@ -222,6 +222,8 @@ Genome& Genome::AddNode(NodeType type) {
 }
 
 Genome& Genome::AddNode(NodeType type, unsigned long innovation) {
+  assert(node_lookup.count(innovation) == 0);
+
   bool needs_resort = IsSensor(type) && (node_genes.size() != num_inputs);
 
   if(IsSensor(type)) {
@@ -251,26 +253,26 @@ Genome& Genome::AddNode(NodeType type, unsigned long innovation) {
 
 Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
                               bool status, double weight) {
-
-  unsigned long innovation = 0;
-
   // first gene only
   if (last_conn_innov == 0) {
     last_conn_innov = Hash(origin,dest,0);
   }
 
   // build look up table from innovation hash to vector index
-
   node_lookup.insert({node_genes[origin].innovation, origin});
   node_lookup.insert({node_genes[dest].innovation, dest});
 
-  innovation = Hash(node_genes[origin].innovation,
-                    node_genes[dest].innovation,
-                    last_conn_innov);
-
-  last_conn_innov = innovation;
-  connection_genes.insert({innovation,{node_genes[origin].innovation,node_genes[dest].innovation,weight,status}});
+  AddConnectionByInnovation(node_genes[origin].innovation,
+                            node_genes[dest].innovation,
+                            status, weight);
   return *this;
+}
+
+void Genome::AddConnectionByInnovation(unsigned long origin, unsigned long dest,
+                                       bool status, double weight) {
+  unsigned long innovation = Hash(origin, dest, last_conn_innov);
+  connection_genes.insert({innovation,{origin,dest,weight,status}});
+  last_conn_innov = innovation;
 }
 
 void Genome::Mutate() {
@@ -322,9 +324,7 @@ void Genome::MutateConnection() {
     return;
   }
 
-  AssertNoDuplicateConnections();
-  AddConnection(idxorigin,idxdest,true,(random()-0.5)*required()->reset_weight);
-  AssertNoDuplicateConnections();
+  AddConnection(idxorigin, idxdest, true, (random()-0.5)*required()->reset_weight);
 }
 
 void Genome::MutateNode() {
@@ -340,11 +340,13 @@ void Genome::MutateNode() {
 
   // add a new node:
   // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
-  AddNode(NodeType::Hidden, Hash(selected->first, last_node_innov));
+  auto new_node_innov = Hash(selected->first, last_node_innov);
+  AddNode(NodeType::Hidden, new_node_innov);
+
   // pre-gene: from selected genes origin to new node
-  AddConnection(node_lookup[selected->second.origin],node_genes.size()-1,true,1.0);
+  AddConnectionByInnovation(selected->second.origin, new_node_innov, true, 1.0);
   // post-gene: from new node to selected genes destination
-  AddConnection(node_genes.size()-1,node_lookup[selected->second.dest],true,selected->second.weight);
+  AddConnectionByInnovation(new_node_innov, selected->second.dest, true, selected->second.weight);
   // disable old gene, and we're done
   selected->second.enabled = false;
 
