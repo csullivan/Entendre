@@ -291,12 +291,14 @@ void Genome::Mutate() {
 }
 
 void Genome::MutateWeights() {
+  bool is_severe = random() > required()->perturb_weight;
+
   for (auto& gene : connection_genes) {
-    // perturb weight by a small amount
-    if(random()<required()->perturb_weight) {
-      gene.second.weight += required()->step_size*(2*random()-1);
-    } else { // otherwise randomly set weight within reset range
+
+    if(is_severe) {// caution to the wind, reset everything!
       gene.second.weight = (random() - 0.5)*required()->reset_weight;
+    } else { // otherwise perturb weight by a small amount
+      gene.second.weight += required()->step_size*(2*random()-1);
     }
   }
 }
