@@ -287,7 +287,7 @@ void Genome::Mutate() {
   // internal mutation (non-topological)
   if (random() < required()->mutate_weights) { MutateWeights(); }
   if (random() < required()->toggle_status) { MutateToggleGeneStatus(); }
-  //if (random() < required()->mutate_reenable) { MutateReEnableGene(); }
+  if (random() < required()->mutate_reenable) { MutateReEnableGene(); }
 }
 
 void Genome::MutateWeights() {
@@ -328,15 +328,27 @@ void Genome::MutateConnection() {
 }
 
 void Genome::MutateNode() {
+  const int n_tries = 20;
+
   auto selected = connection_genes.begin();
+  bool found = false;
   // pick random gene to splice
-  do {
+  for(int i=0; i<n_tries; i++) {
     selected = connection_genes.begin();
     unsigned int idxgene = random()*connection_genes.size();
     std::advance(selected,idxgene);
-    // continue searching if the origin of the selected gene is the bias node
+
+    // can splice any connection gene that is enabled, and doesn't come from the bias node
+    if(node_genes[node_lookup[selected->second.origin]].type != NodeType::Bias &&
+       selected->second.enabled) {
+      found = true;
+      break;
+    }
   }
-  while(node_genes[node_lookup[selected->second.origin]].type == NodeType::Bias);
+
+  if(!found) {
+    return;
+  }
 
   // add a new node:
   // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
