@@ -149,17 +149,15 @@ Population Population::Reproduce() {
       } else {
         // Everyone else can mate
 
-        // if only one organism in the species
-        if (species.size() == 1) {
-          progeny.push_back(*species.front());
-          continue;
-        }
-
         float culling_ratio = required()->culling_ratio;
-        // if two organisms in a species and culling ratio is at least half
+
+        // if only one organism in the species
+        // or if two organisms in a species and culling ratio is at least half
         // then just take the more fit of the organisms
-        if (species.size() == 2 && culling_ratio <= 0.5) {
+        if (species.size() == 1 ||
+            (species.size() == 2 && culling_ratio <= 0.5 )) {
           progeny.push_back(*species.front());
+          progeny.back().Mutate();
           continue;
         }
 
@@ -187,15 +185,12 @@ Population Population::Reproduce() {
             child = parent2->MateWith(*parent1);
           }
         }
+        child.Mutate();
         progeny.push_back(child);
 
 
       }
     }
-  }
-
-  for(auto& child : progeny) {
-    child.Mutate();
   }
 
   return Population(progeny, get_generator(), required());
