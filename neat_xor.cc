@@ -63,6 +63,10 @@ int main() {
   };
 
   auto fitness = [&](NeuralNet& net) {
+    if(net.num_connections() == 0) {
+      return 0.0;
+    }
+
     double error = 0;
     for(const auto& input : shuffled_inputs) {
       double val = net.evaluate({input.x, input.y})[0];
@@ -84,7 +88,7 @@ int main() {
     bool have_winner = true;
     for(auto& input : inputs) {
       double val = best->evaluate({input.x, input.y})[0];
-      if(std::abs(val - input.correct) >= 0.3) {
+      if(std::abs(val - input.correct) >= 0.5) {
         have_winner = false;
         break;
       }
