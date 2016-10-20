@@ -62,6 +62,8 @@ public:
    */
   unsigned int NumSpecies() const;
 
+  std::pair<double, double> MeanStdDev() const;
+
 private:
   struct Organism {
     // A proxy class for class Genome, containing its

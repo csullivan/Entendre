@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <set>
 
 Population::Population(std::vector<Genome> population,
@@ -163,10 +164,10 @@ Population Population::Reproduce() {
 
         int idx1 = random()*species.size()*culling_ratio;
         int idx2 = random()*species.size()*culling_ratio;
-        while (idx1 == idx2) {
-          idx1 = random()*species.size()*culling_ratio;
-          idx2 = random()*species.size()*culling_ratio;
-        }
+        // while (idx1 == idx2) {
+        //   idx1 = random()*species.size()*culling_ratio;
+        //   idx2 = random()*species.size()*culling_ratio;
+        // }
         Organism& parent1 = species[idx1];
         Organism& parent2 = species[idx2];
         Genome child;
@@ -222,4 +223,21 @@ unsigned int Population::NumSpecies() const {
     species.insert(org.species);
   }
   return species.size();
+}
+
+std::pair<double, double> Population::MeanStdDev() const {
+  if(organisms.size() == 0) {
+    return {std::sqrt(-1), std::sqrt(-1)};
+  }
+
+  double cumsum = 0;
+  double cumsum2 = 0;
+  for(auto& org : organisms) {
+    cumsum += org.fitness;
+    cumsum2 += org.fitness*org.fitness;
+  }
+
+  double mean = cumsum/organisms.size();
+  double variance = cumsum2/organisms.size() - mean*mean;
+  return {mean, std::sqrt(variance)};
 }
