@@ -8,7 +8,17 @@ LIBRARY_NAME = $(patsubst lib%,%,$(notdir $(CURDIR)))
 
 # The flag that will be passed to the include the library in
 # executables.
-LIBRARY_FLAG = -l$(LIBRARY_NAME)
+LIBRARY_FLAG =
+
+# The filename of the static library to be generated.
+# By default, uses the pattern registered in the top-level default.inc
+# This shouldn't have any slashes in it.
+STATIC_LIBRARY_FILENAME = $(call STATIC_LIBRARY_NAME,$(LIBRARY_NAME))
+
+# The filename of the shared library to be generated.
+# By default, uses the pattern registered in the top-level default.inc
+# This shouldn't have any slashes in it.
+SHARED_LIBRARY_FILENAME = lib/pyneat.so
 
 # The directories containing source files for the library.
 LIBRARY_SRC_DIRS = src
@@ -16,12 +26,12 @@ LIBRARY_SRC_DIRS = src
 # The directories containing include files for the library. These
 # directories will be added to the include path for all files in the
 # project.
-LIBRARY_INCLUDE_DIRS = include
+LIBRARY_INCLUDE_DIRS = include ../pybind11/include ../../../../../../../../../../usr/include/python3.5m
 
 # The directories containing include files for the library.  These
 # directories will be added to the include path only for files within
 # this library
-LIBRARY_PRIVATE_INCLUDE_DIRS = ../pybind11/include ../../../../../../../../../../usr/include/python3.5m
+LIBRARY_PRIVATE_INCLUDE_DIRS =
 
 # A space-delimited list of file patterns to be excluded
 # For example, this may contain a source file or directory
@@ -33,7 +43,7 @@ LIBRARY_EXCLUSIONS =
 
 # Extra flags that should be present when linking the shared library.
 # This may include other libraries that should be included.
-$(LIBRARY): SHARED_LDLIBS +=
+$(LIBRARY): SHARED_LDLIBS += -lNeat -Wl,-rpath,\$$ORIGIN
 
 # Compiler flag overrides for src files within this library.
 $(LIBRARY):

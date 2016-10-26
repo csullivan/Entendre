@@ -8,8 +8,8 @@
 
 namespace py = pybind11;
 
-PYBIND11_PLUGIN(libNeat) {
-  py::module m("libNeat", "C++ implementation of NEAT");
+PYBIND11_PLUGIN(pyneat) {
+  py::module m("pyneat", "C++ implementation of NEAT");
 
   py::class_<ReachabilityChecker>(m, "ReachabilityChecker")
     .def(py::init<size_t>())
