@@ -13,10 +13,12 @@ Genome::Genome() : num_inputs(0),
                    last_conn_innov(0), last_node_innov(0) { ; }
 
 Genome::operator NeuralNet() const{
+  AssertInputNodesFirst();
+  AssertNoConnectionsToInput();
+
   // populate reachability checker
   ReachabilityChecker checker(node_genes.size(),num_inputs);
-  for (auto n=0u; n<connection_genes.size(); n++) {
-    auto&& gene = connection_genes[n].second;
+  for(auto& gene : connection_genes) {
     if (gene.enabled) {
       int i = node_lookup.at(gene.origin);
       int j = node_lookup.at(gene.dest);
@@ -37,12 +39,14 @@ Genome::operator NeuralNet() const{
   // build neural net from only genes that connect to nodes
   // which have a path to an output and from an input
   NeuralNet net(node_genes);
-  for (auto n=0u; n<connection_genes.size(); n++) {
-    if (connection_genes[n].second.enabled) {
-      int i = node_lookup.at(connection_genes[n].second.origin);
-      int j = node_lookup.at(connection_genes[n].second.dest);
-      if (exclusions.count(i) || exclusions.count(j)) { continue; }
-      net.add_connection(i,j,connection_genes[n].second.weight);
+  for(auto& gene : connection_genes) {
+    if (gene.enabled) {
+      int i = node_lookup.at(gene.origin);
+      int j = node_lookup.at(gene.dest);
+      if(exclusions.count(i) == 0 &&
+         exclusions.count(j) == 0) {
+        net.add_connection(i,j,gene.weight);
+      }
     }
   }
 
@@ -52,8 +56,9 @@ Genome::operator NeuralNet() const{
 Genome& Genome::operator=(const Genome& rhs) {
   this->num_inputs = rhs.num_inputs;
   this->node_genes = rhs.node_genes;
-  this->connection_genes = rhs.connection_genes;
   this->node_lookup = rhs.node_lookup;
+  this->connection_genes = rhs.connection_genes;
+  this->connection_lookup = rhs.connection_lookup;
   this->last_conn_innov = rhs.last_conn_innov;
   this->last_node_innov = rhs.last_node_innov;
   this->generator = rhs.generator;
@@ -68,11 +73,11 @@ float Genome::GeneticDistance(const Genome& other) const {
   auto nGenes = std::max(connection_genes.size(),other.connection_genes.size());
 
   // loop over this genomes genes
-  for (auto const& gene : connection_genes) {
-    auto other_gene = other.connection_genes.find(gene.first);
+  for (auto& gene : connection_genes) {
     // sum the absolute weight differences of the shared genes
-    if (other_gene != other.connection_genes.end()) {
-      weight_diffs += std::abs(other_gene->second.weight-gene.second.weight);
+    auto other_gene = other.GetConnByInnovation(gene.innovation);
+    if(other_gene) {
+      weight_diffs += std::abs(other_gene->weight - gene.weight);
       nShared++;
     }
     // count the number of unshared genes
@@ -81,9 +86,8 @@ float Genome::GeneticDistance(const Genome& other) const {
     }
   }
   // loop over other genomes genes and count the unshared genes
-  for (auto const& other_gene : other.connection_genes) {
-    auto gene = connection_genes.find(other_gene.first);
-    if (gene == connection_genes.end()) {
+  for (auto& other_gene : other.connection_genes) {
+    if (connection_lookup.count(other_gene.innovation) == 0) {
       nUnshared++;
     }
   }
@@ -102,7 +106,7 @@ Genome Genome::GeneticAncestry() const {
     if(gene.type == NodeType::Input ||
        gene.type == NodeType::Bias ||
        gene.type == NodeType::Output) {
-      descendant.AddNode(gene.type, gene.innovation);
+      descendant.AddNodeByInnovation(gene.type, gene.innovation);
     }
   }
 
@@ -128,48 +132,33 @@ Genome Genome::MateWith(const Genome& father) {
   const auto& single_greater = required()->single_greater;
   const auto& single_lesser  = required()->single_lesser;
 
-  auto add_node_to_child = [](const auto& parent_genome, const auto& parent, auto& child) {
-    auto origin_node_innov = parent.second.origin;
-    auto dest_node_innov = parent.second.dest;
-    if (child.node_lookup.count(origin_node_innov) == 0) {
-      child.node_genes.emplace_back(
-        parent_genome.node_genes[parent_genome.node_lookup.at(origin_node_innov)].type,
-        origin_node_innov);
-      child.node_lookup[origin_node_innov] = child.node_genes.size()-1;
-    }
-    if (child.node_lookup.count(dest_node_innov) == 0) {
-      child.node_genes.emplace_back(
-        parent_genome.node_genes[parent_genome.node_lookup.at(dest_node_innov)].type,
-        dest_node_innov);
-      child.node_lookup[dest_node_innov] = child.node_genes.size()-1;
-    }
+  auto add_conn_to_child = [](const auto& parent, const auto& conn_gene, auto& child) {
+    const NodeGene* origin = parent.GetNodeByInnovation(conn_gene.origin);
+    const NodeGene* dest = parent.GetNodeByInnovation(conn_gene.dest);
+    assert(origin);
+    assert(dest);
+    child.AddNodeGene(*origin);
+    child.AddNodeGene(*dest);
+    child.AddConnectionGene(conn_gene);
   };
 
-
-  // NOTICE: This loop needs to be over the interal vector of keys,
-  // since the order is not preserved when looping over the map
-  for (auto i = 0u; i< mother.connection_genes.size(); i++) {
-    auto const& maternal_gene = mother.connection_genes[i];
+  for(auto& maternal_gene : mother.connection_genes) {
     // Find all shared genes, look up by hash
-    auto paternal_gene = father.connection_genes.find(maternal_gene.first);
-    if (paternal_gene != father.connection_genes.end()) {
+    if (father.connection_lookup.count(maternal_gene.innovation) > 0) {
       // matching genes
       if (random()<match) {
         // if key doesn't already exist in child,
         // then the maternal_gene gene is inserted
-        child.connection_genes.insert(maternal_gene);
-        add_node_to_child(mother,maternal_gene,child);
+        add_conn_to_child(mother,maternal_gene,child);
       } else {
-
         // paternal_gene gene is taken
-        child.connection_genes.insert(*paternal_gene);
-        add_node_to_child(father,*paternal_gene,child);
+        auto& paternal_gene = father.connection_genes.at(father.connection_lookup.at(maternal_gene.innovation));
+        add_conn_to_child(father,paternal_gene,child);
       }
     } else {
       // non matching gene, randomly insert maternal_gene gene
       if (random()<single_greater) {
-        child.connection_genes.insert(maternal_gene);
-        add_node_to_child(mother,maternal_gene,child);
+        add_conn_to_child(mother,maternal_gene,child);
       }
     }
   }
@@ -177,15 +166,16 @@ Genome Genome::MateWith(const Genome& father) {
   // Standard NEAT bails out here
   if (single_lesser > 0.0) {
     // allow for merging of structure from less fit parent
-    for (auto i = 0u; i < father.connection_genes.size(); i++) {
-      auto const& paternal_gene = father.connection_genes[i];
-      if (random()<single_lesser) {
-        child.connection_genes.insert(paternal_gene);
-        add_node_to_child(father,paternal_gene,child);
+    for(auto& paternal_gene : father.connection_genes) {
+      if(mother.connection_lookup.count(paternal_gene.innovation) == 0 &&
+         random()<single_lesser) {
+        add_conn_to_child(father,paternal_gene,child);
       }
     }
   }
 
+  assert(child.node_genes.size() == child.node_lookup.size());
+  assert(child.connection_genes.size() == child.connection_lookup.size());
   child.AssertNoDuplicateConnections();
 
   return child;
@@ -193,7 +183,7 @@ Genome Genome::MateWith(const Genome& father) {
 
 Genome& Genome::RandomizeWeights() {
   for (auto& gene : connection_genes) {
-    gene.second.weight = (random() - 0.5)*required()->reset_weight;
+    gene.weight = (random() - 0.5)*required()->reset_weight;
   }
   return *this;
 }
@@ -218,22 +208,60 @@ Genome& Genome::AddNode(NodeType type) {
     break;
   }
 
-  return AddNode(type, innovation);
+  return AddNodeByInnovation(type, innovation);
 }
 
-Genome& Genome::AddNode(NodeType type, unsigned long innovation) {
+Genome& Genome::AddNodeByInnovation(NodeType type, unsigned long innovation) {
   assert(node_lookup.count(innovation) == 0);
+  NodeGene gene(type, innovation);
+  AddNodeGene(gene);
+  return *this;
+}
 
-  bool needs_resort = IsSensor(type) && (node_genes.size() != num_inputs);
+Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
+                              bool status, double weight) {
+  // first gene only
+  if (last_conn_innov == 0) {
+    last_conn_innov = Hash(origin,dest,0);
+  }
 
-  if(IsSensor(type)) {
+  // // build look up table from innovation hash to vector index
+  // node_lookup.insert({node_genes[origin].innovation, origin});
+  // node_lookup.insert({node_genes[dest].innovation, dest});
+
+  AddConnectionByInnovation(node_genes[origin].innovation,
+                            node_genes[dest].innovation,
+                            status, weight);
+  return *this;
+}
+
+void Genome::AddConnectionByInnovation(unsigned long origin, unsigned long dest,
+                                       bool status, double weight) {
+  ConnectionGene gene;
+  gene.innovation = Hash(origin, dest, last_conn_innov);
+  gene.origin = origin;
+  gene.dest = dest;
+  gene.weight = weight;
+  gene.enabled = status;
+
+  AddConnectionGene(gene);
+}
+
+void Genome::AddNodeGene(NodeGene gene) {
+  if(node_lookup.count(gene.innovation) != 0) {
+    return;
+  }
+
+  bool needs_resort = IsSensor(gene.type) && (node_genes.size() != num_inputs);
+
+  if(IsSensor(gene.type)) {
     num_inputs++;
   }
 
-  node_genes.emplace_back(type, innovation);
-  last_node_innov = innovation;
 
   if(needs_resort) {
+    node_genes.push_back(gene);
+
     // Move all sensor nodes to the front of the list.
     std::stable_partition(node_genes.begin(), node_genes.end(),
                           [](const NodeGene& gene) { return IsSensor(gene.type); }
@@ -245,34 +273,63 @@ Genome& Genome::AddNode(NodeType type, unsigned long innovation) {
     }
   } else {
     // Just add the new gene to the lookup.
-    node_lookup[innovation] = node_genes.size()-1;
+    node_lookup[gene.innovation] = node_genes.size();
+    node_genes.push_back(gene);
   }
 
-  return *this;
+  last_node_innov = gene.innovation;
+
+  AssertInputNodesFirst();
 }
 
-Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
-                              bool status, double weight) {
-  // first gene only
-  if (last_conn_innov == 0) {
-    last_conn_innov = Hash(origin,dest,0);
+void Genome::AddConnectionGene(ConnectionGene gene) {
+  if(connection_lookup.count(gene.innovation) != 0 ||
+     node_lookup.count(gene.origin) == 0 ||
+     node_lookup.count(gene.dest) == 0) {
+    return;
   }
 
-  // build look up table from innovation hash to vector index
-  node_lookup.insert({node_genes[origin].innovation, origin});
-  node_lookup.insert({node_genes[dest].innovation, dest});
+  auto dest = GetNodeByInnovation(gene.dest);
+  assert(dest);
+  assert(!IsSensor(dest->type));
 
-  AddConnectionByInnovation(node_genes[origin].innovation,
-                            node_genes[dest].innovation,
-                            status, weight);
-  return *this;
+  connection_lookup[gene.innovation] = connection_genes.size();
+  connection_genes.push_back(gene);
+  last_conn_innov = gene.innovation;
 }
 
-void Genome::AddConnectionByInnovation(unsigned long origin, unsigned long dest,
-                                       bool status, double weight) {
-  unsigned long innovation = Hash(origin, dest, last_conn_innov);
-  connection_genes.insert({innovation,{origin,dest,weight,status}});
-  last_conn_innov = innovation;
+const NodeGene* Genome::GetNodeByN(unsigned int i) const {
+  if(i < node_genes.size()) {
+    return &node_genes[i];
+  } else {
+    return nullptr;
+  }
+}
+
+const NodeGene* Genome::GetNodeByInnovation(unsigned long innovation) const {
+  auto iter = node_lookup.find(innovation);
+  if(iter != node_lookup.end()) {
+    return &node_genes[iter->second];
+  } else {
+    return nullptr;
+  }
+}
+
+const ConnectionGene* Genome::GetConnByN(unsigned int i) const {
+  if(i < connection_genes.size()) {
+    return &connection_genes[i];
+  } else {
+    return nullptr;
+  }
+}
+
+const ConnectionGene* Genome::GetConnByInnovation(unsigned long innovation) const {
+  auto iter = connection_lookup.find(innovation);
+  if(iter != connection_lookup.end()) {
+    return &connection_genes[iter->second];
+  } else {
+    return nullptr;
+  }
 }
 
 void Genome::Mutate() {
@@ -296,18 +353,18 @@ void Genome::MutateWeights() {
   for (auto& gene : connection_genes) {
 
     if(is_severe) {// caution to the wind, reset everything!
-      gene.second.weight = (random() - 0.5)*required()->reset_weight;
+      gene.weight = (random() - 0.5)*required()->reset_weight;
     } else { // otherwise perturb weight by a small amount
-      gene.second.weight += required()->step_size*(2*random()-1);
+      gene.weight += required()->step_size*(2*random()-1);
     }
   }
 }
 
 void Genome::MutateConnection() {
   ReachabilityChecker checker(node_genes.size(),num_inputs);
-  for (auto n=0u; n<connection_genes.size(); n++) {
-    int i = node_lookup.at(connection_genes[n].second.origin);
-    int j = node_lookup.at(connection_genes[n].second.dest);
+  for(auto& gene : connection_genes) {
+    int i = node_lookup.at(gene.origin);
+    int j = node_lookup.at(gene.dest);
     checker.AddConnection(i,j);
   }
 
@@ -341,8 +398,8 @@ void Genome::MutateNode() {
     std::advance(selected,idxgene);
 
     // can splice any connection gene that is enabled, and doesn't come from the bias node
-    if(node_genes[node_lookup[selected->second.origin]].type != NodeType::Bias &&
-       selected->second.enabled) {
+    if(GetNodeByInnovation(selected->origin)->type != NodeType::Bias &&
+       selected->enabled) {
       found = true;
       break;
     }
@@ -354,15 +411,15 @@ void Genome::MutateNode() {
 
   // add a new node:
   // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
-  auto new_node_innov = Hash(selected->first, last_node_innov);
-  AddNode(NodeType::Hidden, new_node_innov);
+  auto new_node_innov = Hash(selected->innovation, last_node_innov);
+  AddNodeByInnovation(NodeType::Hidden, new_node_innov);
 
   // pre-gene: from selected genes origin to new node
-  AddConnectionByInnovation(selected->second.origin, new_node_innov, true, 1.0);
+  AddConnectionByInnovation(selected->origin, new_node_innov, true, 1.0);
   // post-gene: from new node to selected genes destination
-  AddConnectionByInnovation(new_node_innov, selected->second.dest, true, selected->second.weight);
+  AddConnectionByInnovation(new_node_innov, selected->dest, true, selected->weight);
   // disable old gene, and we're done
-  selected->second.enabled = false;
+  selected->enabled = false;
 
   // Notice: since pre-gene is added _first_, if the selected gene is recurrent, the post-gene
   // will both have the weight of the selected gene, and be the recurrent gene; the pre-gene
@@ -383,14 +440,14 @@ void Genome::MutateToggleGeneStatus() {
   unsigned int idx = random()*connection_genes.size();
   auto selected = connection_genes.begin();
   std::advance(selected,idx);
-  selected->second.enabled = !selected->second.enabled;
+  selected->enabled = !selected->enabled;
 }
 
 void Genome::MutateReEnableGene() {
   std::vector<unsigned int> disabled_indices;
   // create a list of all disabled connection genes
   for (auto i = 0u; i <connection_genes.size(); i++) {
-    const auto& gene = connection_genes[i].second;
+    const auto& gene = connection_genes[i];
     if (gene.enabled == false) { disabled_indices.push_back(i); }
   }
   // if no disabled genes exist, bail out
@@ -399,13 +456,13 @@ void Genome::MutateReEnableGene() {
   unsigned int idx = random()*disabled_indices.size();
   auto selected = connection_genes.begin();
   std::advance(selected,disabled_indices[idx]);
-  selected->second.enabled = true;
+  selected->enabled = true;
 }
 
 void Genome::PrintInnovations() const {
   std::cout << std::endl;
   for (auto const& gene : connection_genes) {
-    std::cout << "                Enabled: " << gene.second.enabled << "  |  "<< gene.second.origin << " -> " << gene.second.dest << std::endl;
+    std::cout << "                Enabled: " << gene.enabled << "  |  "<< gene.origin << " -> " << gene.dest << std::endl;
   } std::cout << std::endl;
 }
 
@@ -446,13 +503,13 @@ bool Genome::IsStructurallyEqual(const Genome& other) const {
   }
 
   for(auto& gene : node_genes) {
-    if(other.node_lookup.count(gene.innovation) == 0) {
+    if(!other.GetNodeByInnovation(gene.innovation)) {
       return false;
     }
   }
 
   for(auto& gene : connection_genes) {
-    if(other.connection_genes.count(gene.first) == 0) {
+    if(!other.GetConnByInnovation(gene.innovation)) {
       return false;
     }
   }
@@ -464,9 +521,25 @@ void Genome::AssertNoDuplicateConnections() const {
   for(auto& gene1 : connection_genes) {
     for(auto& gene2 : connection_genes) {
       assert( &gene1 == &gene2 ||
-              gene1.second.origin != gene2.second.origin ||
-              gene1.second.dest != gene2.second.dest);
+              gene1.origin != gene2.origin ||
+              gene1.dest != gene2.dest);
     }
+  }
+}
+
+void Genome::AssertInputNodesFirst() const {
+  for(unsigned int i=0; i<num_inputs; i++) {
+    assert(IsSensor(node_genes[i].type));
+  }
+  for(unsigned int i=num_inputs; i<node_genes.size(); i++) {
+    assert(!IsSensor(node_genes[i].type));
+  }
+}
+
+void Genome::AssertNoConnectionsToInput() const {
+  for(auto& conn_gene : connection_genes) {
+    auto dest = GetNodeByInnovation(conn_gene.dest);
+    assert(!IsSensor(dest->type));
   }
 }
 
@@ -507,9 +580,9 @@ std::ostream& operator<<(std::ostream& os, const Genome& genome) {
   for (auto n=0u; n<genome.connection_genes.size(); n++) {
     auto&& conn = genome.connection_genes[n];
 
-    os << names[conn.second.origin]
+    os << names[conn.origin]
        << " ---> "
-       << names[conn.second.dest];
+       << names[conn.dest];
 
     if(n != genome.connection_genes.size()-1) {
       os << "\n";

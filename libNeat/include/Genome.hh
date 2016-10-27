@@ -10,6 +10,7 @@
 #include "insertion_preserving_unordered.hh"
 
 struct ConnectionGene {
+  unsigned long innovation;
   unsigned long origin;
   unsigned long dest;
   double weight;
@@ -57,8 +58,33 @@ public:
 
   friend std::ostream& operator<<(std::ostream&, const Genome& genome);
 
+  void AssertNoDuplicateConnections() const;
+  void AssertInputNodesFirst() const;
+  void AssertNoConnectionsToInput() const;
+
 private:
-  Genome& AddNode(NodeType type, unsigned long innovation);
+  const NodeGene* GetNodeByN(unsigned int i) const;
+  const NodeGene* GetNodeByInnovation(unsigned long innovation) const;
+  const ConnectionGene* GetConnByN(unsigned int i) const;
+  const ConnectionGene* GetConnByInnovation(unsigned long innovation) const;
+
+  /// Adds the node gene given
+  /**
+     If a node already exists with that innovation number,
+       this function has no effect.
+   */
+  void AddNodeGene(NodeGene gene);
+
+  /// Adds the connection gene given
+  /**
+     If the connection is invalid, this function has no effect.
+     In order to be valid, the following conditions must be met.
+     - The origin and destinations nodes must exist.
+     - No connection exists with identical innovation number.
+   */
+  void AddConnectionGene(ConnectionGene gene);
+
+  Genome& AddNodeByInnovation(NodeType type, unsigned long innovation);
   void AddConnectionByInnovation(unsigned long origin, unsigned long dest,
                                  bool status, double weight);
 
@@ -69,13 +95,16 @@ private:
     return ((id*10000169UL) xor (previous_hash*44721359UL) xor (111181111UL));
   }
 
-  void AssertNoDuplicateConnections() const;
 
 private:
   size_t num_inputs;
+
   std::vector<NodeGene> node_genes;
   std::unordered_map<unsigned long,unsigned int> node_lookup;
-  insertion_ordered_map<unsigned long, ConnectionGene> connection_genes;
+
+  std::vector<ConnectionGene> connection_genes;
+  std::unordered_map<unsigned long,unsigned int> connection_lookup;
+  //insertion_ordered_map<unsigned long, ConnectionGene> connection_genes;
 
 
   // innovation record keeping

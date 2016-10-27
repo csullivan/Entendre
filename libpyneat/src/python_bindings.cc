@@ -32,7 +32,7 @@ PYBIND11_PLUGIN(pyneat) {
 
   py::class_<Genome>(m, "Genome")
     .def(py::init<>())
-    .def("AddNode",(Genome& (Genome::*)(NodeType))&Genome::AddNode)
+    .def("AddNode",&Genome::AddNode)
     .def("AddConnection",&Genome::AddConnection)
     .def("Size",&Genome::Size);
 
