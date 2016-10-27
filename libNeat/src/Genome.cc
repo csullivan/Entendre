@@ -285,7 +285,9 @@ void Genome::AddNodeGene(NodeGene gene) {
 void Genome::AddConnectionGene(ConnectionGene gene) {
   if(connection_lookup.count(gene.innovation) != 0 ||
      node_lookup.count(gene.origin) == 0 ||
-     node_lookup.count(gene.dest) == 0) {
+     node_lookup.count(gene.dest) == 0 ||
+     connections_existing.count({gene.origin, gene.dest}) ||
+     IsSensor(GetNodeByInnovation(gene.dest)->type)) {
     return;
   }
 
@@ -295,6 +297,7 @@ void Genome::AddConnectionGene(ConnectionGene gene) {
 
   connection_lookup[gene.innovation] = connection_genes.size();
   connection_genes.push_back(gene);
+  connections_existing.insert({gene.origin, gene.dest});
   last_conn_innov = gene.innovation;
 }
 

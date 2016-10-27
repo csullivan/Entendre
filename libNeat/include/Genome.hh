@@ -1,13 +1,14 @@
 #pragma once
 
-#include <vector>
 #include <ostream>
+#include <set>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "NeuralNet.hh"
 #include "Random.hh"
 #include "Requirements.hh"
-#include "insertion_preserving_unordered.hh"
 
 struct ConnectionGene {
   unsigned long innovation;
@@ -85,7 +86,9 @@ private:
      If the connection is invalid, this function has no effect.
      In order to be valid, the following conditions must be met.
      - The origin and destinations nodes must exist.
+     - No connection exists with the same origin and destination.
      - No connection exists with identical innovation number.
+     - The destination node is not an input node.
    */
   void AddConnectionGene(ConnectionGene gene);
 
@@ -109,8 +112,7 @@ private:
 
   std::vector<ConnectionGene> connection_genes;
   std::unordered_map<unsigned long,unsigned int> connection_lookup;
-  //insertion_ordered_map<unsigned long, ConnectionGene> connection_genes;
-
+  std::set<std::pair<unsigned long, unsigned long> > connections_existing;
 
   // innovation record keeping
   unsigned long last_conn_innov;

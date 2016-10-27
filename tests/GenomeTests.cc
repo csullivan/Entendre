@@ -158,3 +158,39 @@ TEST(Genome, PreserveInnovations) {
 
   EXPECT_TRUE(parent.IsStructurallyEqual(child));
 }
+
+TEST(Genome, ConnectionOrder) {
+  auto mother = Genome()
+    .AddNode(NodeType::Input)
+    .AddNode(NodeType::Input)
+    .AddNode(NodeType::Output)
+    .AddConnection(0, 2, true, 1.0)
+    .AddConnection(1, 2, true, 1.0);
+
+  // Connections added in different order
+  auto father = Genome()
+    .AddNode(NodeType::Input)
+    .AddNode(NodeType::Input)
+    .AddNode(NodeType::Output)
+    .AddConnection(1, 2, true, 1.0)
+    .AddConnection(0, 2, true, 1.0);
+
+  auto rand = std::make_shared<Uniform>(0,1);
+  mother.set_generator(rand);
+  father.set_generator(rand);
+
+  auto prob = std::make_shared<Probabilities>();
+  prob->match = 0.5;
+  prob->single_greater = 1.0;
+  prob->single_lesser = 1.0;
+  prob->mutate_weights = 0;
+  prob->mutate_link = 0;
+  prob->mutate_node = 0;
+  prob->toggle_status = 0;
+
+  mother.required(prob);
+  father.required(prob);
+
+  auto child = mother.MateWith(father);
+  child.AssertNoDuplicateConnections();
+}
