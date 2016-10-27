@@ -68,6 +68,11 @@ private:
   const ConnectionGene* GetConnByN(unsigned int i) const;
   const ConnectionGene* GetConnByInnovation(unsigned long innovation) const;
 
+  NodeGene* GetNodeByN(unsigned int i);
+  NodeGene* GetNodeByInnovation(unsigned long innovation);
+  ConnectionGene* GetConnByN(unsigned int i);
+  ConnectionGene* GetConnByInnovation(unsigned long innovation);
+
   /// Adds the node gene given
   /**
      If a node already exists with that innovation number,

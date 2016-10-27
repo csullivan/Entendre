@@ -332,6 +332,30 @@ const ConnectionGene* Genome::GetConnByInnovation(unsigned long innovation) cons
   }
 }
 
+NodeGene* Genome::GetNodeByN(unsigned int i) {
+  return const_cast<NodeGene*>(
+    const_cast<const Genome*>(this)->GetNodeByN(i)
+  );
+}
+
+NodeGene* Genome::GetNodeByInnovation(unsigned long innovation) {
+  return const_cast<NodeGene*>(
+    const_cast<const Genome*>(this)->GetNodeByInnovation(innovation)
+  );
+}
+
+ConnectionGene* Genome::GetConnByN(unsigned int i) {
+  return const_cast<ConnectionGene*>(
+    const_cast<const Genome*>(this)->GetConnByN(i)
+  );
+}
+
+ConnectionGene* Genome::GetConnByInnovation(unsigned long innovation) {
+  return const_cast<ConnectionGene*>(
+    const_cast<const Genome*>(this)->GetConnByInnovation(innovation)
+  );
+}
+
 void Genome::Mutate() {
 
   // structural mutation
@@ -389,17 +413,18 @@ void Genome::MutateConnection() {
 void Genome::MutateNode() {
   const int n_tries = 20;
 
-  auto selected = connection_genes.begin();
+  // The connection to be split.
+  // Note that we can't use a pointer or iterator,
+  //    because that would be invalidated when we append to connection_genes.
+  ConnectionGene split_conn;
   bool found = false;
   // pick random gene to splice
   for(int i=0; i<n_tries; i++) {
-    selected = connection_genes.begin();
-    unsigned int idxgene = random()*connection_genes.size();
-    std::advance(selected,idxgene);
+    split_conn = connection_genes[random()*connection_genes.size()];
 
     // can splice any connection gene that is enabled, and doesn't come from the bias node
-    if(GetNodeByInnovation(selected->origin)->type != NodeType::Bias &&
-       selected->enabled) {
+    if(GetNodeByInnovation(split_conn.origin)->type != NodeType::Bias &&
+       split_conn.enabled) {
       found = true;
       break;
     }
@@ -411,15 +436,15 @@ void Genome::MutateNode() {
 
   // add a new node:
   // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
-  auto new_node_innov = Hash(selected->innovation, last_node_innov);
+  auto new_node_innov = Hash(split_conn.innovation, last_node_innov);
   AddNodeByInnovation(NodeType::Hidden, new_node_innov);
 
+  // disable old gene
+  GetConnByInnovation(split_conn.innovation)->enabled = false;
   // pre-gene: from selected genes origin to new node
-  AddConnectionByInnovation(selected->origin, new_node_innov, true, 1.0);
+  AddConnectionByInnovation(split_conn.origin, new_node_innov, true, 1.0);
   // post-gene: from new node to selected genes destination
-  AddConnectionByInnovation(new_node_innov, selected->dest, true, selected->weight);
-  // disable old gene, and we're done
-  selected->enabled = false;
+  AddConnectionByInnovation(new_node_innov, split_conn.dest, true, split_conn.weight);
 
   // Notice: since pre-gene is added _first_, if the selected gene is recurrent, the post-gene
   // will both have the weight of the selected gene, and be the recurrent gene; the pre-gene
