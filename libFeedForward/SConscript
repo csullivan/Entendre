@@ -1,0 +1,7 @@
+Import('env')
+
+env.Append(CPPPATH=[Dir('include')])
+lib = env.SharedLibrary('FeedForward',Glob('src/*.cc'),
+                        LIBS=[])
+
+Return('lib')

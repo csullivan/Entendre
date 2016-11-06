@@ -1,0 +1,15 @@
+Import('env libNeat')
+
+#python3 -c "from distutils.sysconfig import get_python_inc; print (get_python_inc())"
+
+lib_env = env.Clone()
+lib_env.Append(CPPPATH=[Dir('../pybind11/include')])
+lib_env.Append(CPPPATH=['/usr/include/python3.5m'])
+#env.Append(CPPPATH=['/opt/software/Python/2.7.2--GCC-4.4.5/include/python2.7'])
+
+#import IPython; IPython.embed()
+
+lib = lib_env.SharedLibrary('pyneat', Glob('src/*.cc'),
+                            SHLIBPREFIX='', LIBS=[libNeat])
+
+Return('lib')
