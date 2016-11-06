@@ -2,6 +2,7 @@
 #include "Genome.hh"
 #include "NeuralNet.hh"
 #include <vector>
+#include <unordered_map>
 
 
 class Population : public uses_random_numbers,
@@ -60,7 +61,9 @@ public:
      Uses the speciation from the most recent call to Reproduce.
      If Reproduce has not been called, returns 0.
    */
-  unsigned int NumSpecies() const;
+  unsigned int NumSpecies();
+  unsigned int SpeciesSize(size_t i) const;
+
 
   std::pair<double, double> MeanStdDev() const;
 
@@ -82,4 +85,6 @@ private:
   std::vector<Genome> population;
   std::vector<NeuralNet> networks;
   std::vector<Organism> organisms;
+
+  std::unordered_map<unsigned int, unsigned int> species_size;
 };

@@ -92,9 +92,7 @@ float Genome::GeneticDistance(const Genome& other) const {
     }
   }
 
-  return (required()->genetic_c1*nUnshared)/nGenes + required()->genetic_c2*weight_diffs/nGenes;
-  //return (required()->genetic_c1*nUnshared)/nGenes + required()->genetic_c2*weight_diffs/nShared;
-  //return (required()->genetic_c1*nUnshared) + required()->genetic_c2*weight_diffs/nShared;
+  return (required()->genetic_c1*nUnshared) + required()->genetic_c2*weight_diffs/nShared;
 }
 
 Genome Genome::GeneticAncestry() const {

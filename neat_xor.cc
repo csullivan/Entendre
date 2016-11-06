@@ -51,7 +51,11 @@ int main() {
     auto best = pop.BestNet();
     if(!best) { return; }
     std::cout << " ----------- Gen " << generation << " ----------------" << std::endl;
-    std::cout << pop.NumSpecies() << " species total" << std::endl;
+    auto num_species = pop.NumSpecies();
+    std::cout << num_species << " species total" << std::endl;
+    for (auto i=0u; i< std::min(num_species,5u); i++) {
+      std::cout << "- species #" << i << " size: " << pop.SpeciesSize(i) << std::endl;
+    }
     std::cout << "Best (nodes, conn) = (" << best->num_nodes() << ", " << best->num_connections()
               << ")" << std::endl;
     double error = 0;

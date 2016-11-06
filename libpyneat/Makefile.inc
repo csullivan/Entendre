@@ -26,7 +26,7 @@ LIBRARY_SRC_DIRS = src
 # The directories containing include files for the library. These
 # directories will be added to the include path for all files in the
 # project.
-LIBRARY_INCLUDE_DIRS = include ../pybind11/include ../../../../../../../../../../usr/include/python3.5m
+LIBRARY_INCLUDE_DIRS = include ../pybind11/include /usr/include/python3.4m
 
 # The directories containing include files for the library.  These
 # directories will be added to the include path only for files within

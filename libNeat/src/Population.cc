@@ -217,12 +217,18 @@ NeuralNet* Population::BestNet() const {
   return output;
 }
 
-unsigned int Population::NumSpecies() const {
+unsigned int Population::NumSpecies() {
   std::set<unsigned int> species;
+  species_size.clear();
   for(auto& org : organisms) {
     species.insert(org.species);
+    species_size[org.species] += 1;
   }
   return species.size();
+}
+
+unsigned int Population::SpeciesSize(size_t i) const {
+  return species_size.at(i);
 }
 
 std::pair<double, double> Population::MeanStdDev() const {
