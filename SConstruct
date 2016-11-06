@@ -18,6 +18,9 @@ def append_lib(self, *libs):
             self.append_lib(*lib)
 type(env).append_lib = append_lib
 
+if 'PYTHON_VERSION' in ARGUMENTS:
+    env['PYTHON_VERSION'] = ARGUMENTS['PYTHON_VERSION']
+
 # More readable output
 if not ARGUMENTS.get('VERBOSE'):
     env['CXXCOMSTR'] = 'Compiling C++ object $TARGETS'

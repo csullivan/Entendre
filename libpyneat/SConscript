@@ -1,15 +1,32 @@
 Import('env libNeat')
 
-#python3 -c "from distutils.sysconfig import get_python_inc; print (get_python_inc())"
+def find_python_include():
+    import distutils.spawn
+    import subprocess
+
+    if 'PYTHON_VERSION' in env:
+        python_versions = [env['PYTHON_VERSION']]
+    else:
+        python_versions = ['python3','python','python2']
+
+    for version in python_versions:
+        exe = distutils.spawn.find_executable(version)
+        if exe:
+            break
+    else:
+        raise RuntimeError("Could not find python executable")
+
+    output = subprocess.check_output([exe, '-c', 'from distutils.sysconfig import get_python_inc; print (get_python_inc())'])
+    return output[:-1] # remove training newline
 
 lib_env = env.Clone()
 lib_env.Append(CPPPATH=[Dir('../pybind11/include')])
-lib_env.Append(CPPPATH=['/usr/include/python3.5m'])
-#env.Append(CPPPATH=['/opt/software/Python/2.7.2--GCC-4.4.5/include/python2.7'])
+lib_env.Append(CPPPATH=[find_python_include()])
 
-#import IPython; IPython.embed()
+lib_env.Append(LIBPATH=[libNeat[0].dir])
+lib_env.Append(LIBS=[libNeat[0].name])
 
 lib = lib_env.SharedLibrary('pyneat', Glob('src/*.cc'),
-                            SHLIBPREFIX='', LIBS=[libNeat])
+                            SHLIBPREFIX='')
 
 Return('lib')
