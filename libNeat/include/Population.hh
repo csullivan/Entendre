@@ -75,12 +75,9 @@ private:
     NeuralNet network;
   };
 
-  void build_networks();
-
   //std::vector<Organism> new_pop;
 
   std::vector<Genome> population;
-  std::vector<NeuralNet> networks;
   std::vector<Organism> organisms;
 
   std::unordered_map<unsigned int, unsigned int> species_size;

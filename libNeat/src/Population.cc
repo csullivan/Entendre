@@ -16,7 +16,6 @@ Population::Population(std::vector<Genome> population,
     genome.set_generator(gen);
   }
 
-  //build_networks();
 }
 
 Population::Population(Genome& first,
@@ -31,12 +30,10 @@ Population::Population(Genome& first,
     population.push_back(first.RandomizeWeights());
   }
 
-  build_networks();
 }
 
 Population::Population(const Population& other) {
   population = other.population;
-  networks = other.networks;
   organisms = other.organisms;
   generator = other.generator;
   required_ = other.required_;
@@ -44,7 +41,6 @@ Population::Population(const Population& other) {
 
 Population& Population::operator=(Population&& rhs) {
   population = std::move(rhs.population);
-  networks = std::move(rhs.networks);
   organisms = std::move(rhs.organisms);
   generator = rhs.generator;
   required_ = rhs.required_;
@@ -53,7 +49,6 @@ Population& Population::operator=(Population&& rhs) {
 
 Population& Population::operator=(const Population& rhs) {
   population = rhs.population;
-  networks = rhs.networks;
   organisms = rhs.organisms;
   generator = rhs.generator;
   required_ = rhs.required_;
@@ -197,13 +192,7 @@ Population Population::Reproduce() {
   return Population(progeny, get_generator(), required());
 }
 
-void Population::build_networks() {
-  networks.clear();
 
-  for (auto& genome : population) {
-    networks.push_back(NeuralNet(genome));
-  }
-}
 
 NeuralNet* Population::BestNet() const {
   NeuralNet* output = nullptr;
