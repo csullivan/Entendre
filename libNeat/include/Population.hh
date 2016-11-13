@@ -23,12 +23,8 @@ public:
   /// Evaluate the fitness function for each neural net.
   template<class Callable>
   void Evaluate(Callable&& fitness) {
-    organisms.clear();
-    auto n = 0u;
-    for (auto& genome : population) {
-      Organism org(genome);
+    for (auto& org : organisms) {
       org.fitness = fitness(org.network);
-      organisms.push_back(org);
     }
   }
 
@@ -75,7 +71,6 @@ private:
     NeuralNet network;
   };
 
-  //std::vector<Organism> new_pop;
 
   std::vector<Genome> population;
   std::vector<Organism> organisms;

@@ -14,6 +14,7 @@ Population::Population(std::vector<Genome> population,
   for(auto& genome : this->population) {
     genome.required(params);
     genome.set_generator(gen);
+    organisms.emplace_back(genome);
   }
 
 }
@@ -28,6 +29,7 @@ Population::Population(Genome& first,
 
   for (auto i=0u; i < params->population_size; i++) {
     population.push_back(first.RandomizeWeights());
+    organisms.emplace_back(population.back());
   }
 
 }
