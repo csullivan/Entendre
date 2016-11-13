@@ -25,11 +25,9 @@ public:
   void Evaluate(Callable&& fitness) {
     organisms.clear();
     auto n = 0u;
-    for (auto& net : networks) {
-      Organism org = {};
-      org.fitness = fitness(net);
-      org.genome = &population[n++];
-      org.network = &net;
+    for (auto& genome : population) {
+      Organism org(genome);
+      org.fitness = fitness(org.network);
       organisms.push_back(org);
     }
   }
@@ -69,18 +67,17 @@ public:
 
 private:
   struct Organism {
-    // A proxy class for class Genome, containing its
-    // evolutionary and species adjusted fitness
-    Genome* operator->() { return genome; }
-    Genome& operator*() { return *genome; }
+    Organism(Genome& gen) : genome(gen) , network(NeuralNet(gen)) { ; }
     float fitness;
     float adj_fitness;
     unsigned int species;
-    Genome* genome;
-    NeuralNet* network;
+    Genome genome;
+    NeuralNet network;
   };
 
   void build_networks();
+
+  //std::vector<Organism> new_pop;
 
   std::vector<Genome> population;
   std::vector<NeuralNet> networks;

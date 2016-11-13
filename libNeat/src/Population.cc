@@ -16,7 +16,7 @@ Population::Population(std::vector<Genome> population,
     genome.set_generator(gen);
   }
 
-  build_networks();
+  //build_networks();
 }
 
 Population::Population(Genome& first,
@@ -73,7 +73,7 @@ Population Population::Reproduce() {
   for(auto& organism : organisms) {
     bool need_new_species = true;
     for(auto& species : all_species) {
-      double dist = organism->GeneticDistance(*species.front());
+      double dist = organism.genome.GeneticDistance(species.front().genome);
       if(dist < required()->species_delta) {
         organism.species = species.front().species;
         species.push_back(organism);
@@ -104,15 +104,15 @@ Population Population::Reproduce() {
   // Find adjusted fitness
   // adj_fitness = fitness/ number_of_genetically_similar_in_species
   for(auto& species : all_species) {
-    for(auto& genome : species) {
+    for(auto& org : species) {
       int nearby_in_species = 0;
       for(auto& other : species) {
-        double dist = genome->GeneticDistance(*other);
+        double dist = org.genome.GeneticDistance(other.genome);
         if(dist < required()->species_delta) {
           nearby_in_species++;
         }
       }
-      genome.adj_fitness = genome.fitness/nearby_in_species;
+      org.adj_fitness = org.fitness/nearby_in_species;
     }
   }
 
@@ -146,7 +146,7 @@ Population Population::Reproduce() {
     for(int i=0; i<num_children; i++) {
       if(i==0 && species.size() > required()->min_size_for_champion) {
         // Preserve the champion of large species.
-        progeny.push_back(*species.front());
+        progeny.push_back(species.front().genome);
       } else {
         // Everyone else can mate
 
@@ -157,7 +157,7 @@ Population Population::Reproduce() {
         // then just take the more fit of the organisms
         if (species.size() == 1 ||
             (species.size() == 2 && culling_ratio <= 0.5 )) {
-          progeny.push_back(*species.front());
+          progeny.push_back(species.front().genome);
           progeny.back().Mutate();
           continue;
         }
@@ -174,16 +174,16 @@ Population Population::Reproduce() {
 
         // determine relative fitness for mating
         if (parent1.fitness > parent2.fitness) {
-          child = parent1->MateWith(*parent2);
+          child = parent1.genome.MateWith(parent2.genome);
         } else if (parent2.fitness > parent1.fitness) {
-          child = parent2->MateWith(*parent1);
+          child = parent2.genome.MateWith(parent1.genome);
         } else {
           // break a fitness tie with a check on size
-          if (parent1->Size() > parent2->Size()) {
-            child = parent1->MateWith(*parent2);
+          if (parent1.genome.Size() > parent2.genome.Size()) {
+            child = parent1.genome.MateWith(parent2.genome);
           }
           else { // equal size or parent 2 is larger
-            child = parent2->MateWith(*parent1);
+            child = parent2.genome.MateWith(parent1.genome);
           }
         }
         child.Mutate();
@@ -210,7 +210,7 @@ NeuralNet* Population::BestNet() const {
   double best_fitness = -std::numeric_limits<double>::max();
   for(auto& org : organisms) {
     if(org.fitness > best_fitness) {
-      output = org.network;
+      output = const_cast<NeuralNet*>(&org.network);
       best_fitness = org.fitness;
     }
   }
