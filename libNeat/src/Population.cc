@@ -5,18 +5,11 @@
 #include <cmath>
 #include <set>
 
-Population::Population(std::vector<Genome> population,
+Population::Population(std::vector<Organism> organisms,
                        std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params)
-  : population(std::move(population)) {
+  : organisms(std::move(organisms)) {
 
   required(params); set_generator(gen);
-
-  for(auto& genome : this->population) {
-    genome.required(params);
-    genome.set_generator(gen);
-    organisms.emplace_back(genome);
-  }
-
 }
 
 Population::Population(Genome& first,
@@ -28,21 +21,18 @@ Population::Population(Genome& first,
   first.set_generator(gen);
 
   for (auto i=0u; i < params->population_size; i++) {
-    population.push_back(first.RandomizeWeights());
-    organisms.emplace_back(population.back());
+    organisms.emplace_back(first.RandomizeWeights());
   }
 
 }
 
 Population::Population(const Population& other) {
-  population = other.population;
   organisms = other.organisms;
   generator = other.generator;
   required_ = other.required_;
 }
 
 Population& Population::operator=(Population&& rhs) {
-  population = std::move(rhs.population);
   organisms = std::move(rhs.organisms);
   generator = rhs.generator;
   required_ = rhs.required_;
@@ -50,7 +40,6 @@ Population& Population::operator=(Population&& rhs) {
 }
 
 Population& Population::operator=(const Population& rhs) {
-  population = rhs.population;
   organisms = rhs.organisms;
   generator = rhs.generator;
   required_ = rhs.required_;
@@ -135,7 +124,8 @@ Population Population::Reproduce() {
   }
 
 
-  std::vector<Genome> progeny;
+  std::vector<Organism> progeny;
+  //std::vector<Genome> progeny;
   for (auto i=0u; i < all_species.size(); i++) {
     auto& species = all_species[i];
     auto& num_children = num_children_by_species[i];
@@ -143,7 +133,7 @@ Population Population::Reproduce() {
     for(int i=0; i<num_children; i++) {
       if(i==0 && species.size() > required()->min_size_for_champion) {
         // Preserve the champion of large species.
-        progeny.push_back(species.front().genome);
+        progeny.emplace_back(species.front().genome);
       } else {
         // Everyone else can mate
 
@@ -154,8 +144,9 @@ Population Population::Reproduce() {
         // then just take the more fit of the organisms
         if (species.size() == 1 ||
             (species.size() == 2 && culling_ratio <= 0.5 )) {
-          progeny.push_back(species.front().genome);
-          progeny.back().Mutate();
+          auto mutant = species.front().genome;
+          mutant.Mutate();
+          progeny.emplace_back(mutant);
           continue;
         }
 
@@ -184,7 +175,7 @@ Population Population::Reproduce() {
           }
         }
         child.Mutate();
-        progeny.push_back(child);
+        progeny.emplace_back(child);
 
 
       }

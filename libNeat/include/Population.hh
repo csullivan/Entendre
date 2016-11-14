@@ -13,10 +13,6 @@ public:
   Population(Genome& first,
              std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
-  /// Construct a population, starting from the specified population.
-  Population(std::vector<Genome> population,
-             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
-
   Population(const Population&);
 
   Population& operator=(Population&&);
@@ -71,8 +67,11 @@ private:
     NeuralNet network;
   };
 
+  /// Construct a population, starting from the specified population of organisms.
+  Population(std::vector<Organism> organisms,
+             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
-  std::vector<Genome> population;
+
   std::vector<Organism> organisms;
 
   std::unordered_map<unsigned int, unsigned int> species_size;
