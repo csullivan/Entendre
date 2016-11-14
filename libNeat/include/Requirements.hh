@@ -34,4 +34,5 @@ struct Probabilities {
   float genetic_c1 = 1.0;
   float genetic_c2 = 1.0;
   float species_delta = 3.0;
+  size_t stale_species = 15;
 };

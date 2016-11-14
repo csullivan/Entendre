@@ -52,8 +52,9 @@ public:
      If Reproduce has not been called, returns 0.
    */
   unsigned int NumSpecies();
-  unsigned int SpeciesSize(size_t i) const;
+  unsigned int NumViableSpecies();
 
+  unsigned int SpeciesSize(size_t i) const;
 
   std::pair<double, double> MeanStdDev() const;
 
@@ -67,12 +68,20 @@ private:
     NeuralNet network;
   };
 
-  /// Construct a population, starting from the specified population of organisms.
-  Population(std::vector<Organism> organisms,
+  struct Species {
+    unsigned int id;
+    Genome representative;
+    unsigned int age;
+    double best_fitness;
+    unsigned int size;
+  };
+
+  /// Construct a population, starting from the specified population of organisms and species
+  Population(std::vector<Organism> organisms, std::vector<Species> species,
              std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
 
   std::vector<Organism> organisms;
+  std::vector<Species> population_species;
 
-  std::unordered_map<unsigned int, unsigned int> species_size;
 };
