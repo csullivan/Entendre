@@ -59,6 +59,7 @@ Genome& Genome::operator=(const Genome& rhs) {
   this->node_lookup = rhs.node_lookup;
   this->connection_genes = rhs.connection_genes;
   this->connection_lookup = rhs.connection_lookup;
+  this->connections_existing = rhs.connections_existing;
   this->last_conn_innov = rhs.last_conn_innov;
   this->last_node_innov = rhs.last_node_innov;
   this->generator = rhs.generator;
@@ -92,9 +93,7 @@ float Genome::GeneticDistance(const Genome& other) const {
     }
   }
 
-  return (required()->genetic_c1*nUnshared)/nGenes + required()->genetic_c2*weight_diffs/nGenes;
-  //return (required()->genetic_c1*nUnshared)/nGenes + required()->genetic_c2*weight_diffs/nShared;
-  //return (required()->genetic_c1*nUnshared) + required()->genetic_c2*weight_diffs/nShared;
+  return (required()->genetic_c1*nUnshared) + required()->genetic_c2*weight_diffs/nShared;
 }
 
 Genome Genome::GeneticAncestry() const {

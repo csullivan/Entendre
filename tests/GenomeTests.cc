@@ -22,14 +22,14 @@ TEST(Genome,CompareInnovation){
     mother.AddConnection(3,2,true,1.);
     father.AddConnection(0,2,true,1.);
 
-    EXPECT_FLOAT_EQ(mother.GeneticDistance(father),1.*2/5+0);
+    EXPECT_FLOAT_EQ(mother.GeneticDistance(father),1.*2+0);
 
     auto child = mother.MateWith(father);
 
     EXPECT_FLOAT_EQ(mother.GeneticDistance(child),0);
-    EXPECT_FLOAT_EQ(father.GeneticDistance(child),1.*2/5+0);
+    EXPECT_FLOAT_EQ(father.GeneticDistance(child),1.*2+0);
     EXPECT_FLOAT_EQ(child.GeneticDistance(mother),0);
-    EXPECT_FLOAT_EQ(child.GeneticDistance(father),1.*2/5+0);
+    EXPECT_FLOAT_EQ(child.GeneticDistance(father),1.*2+0);
 
 }
 

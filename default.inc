@@ -36,7 +36,7 @@ SRC_DIRECTORIES = src
 
 # A list of directories containing include files.  Each directory will
 # be made available for #include directives for included files.
-INC_DIRECTORIES = include
+INC_DIRECTORIES = include /usr/include/python3.4m
 
 # A list of directories that contain libraries.  The list can also
 # contain patterns that expand to directories that contain libraries.

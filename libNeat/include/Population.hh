@@ -2,6 +2,7 @@
 #include "Genome.hh"
 #include "NeuralNet.hh"
 #include <vector>
+#include <unordered_map>
 
 
 class Population : public uses_random_numbers,
@@ -12,24 +13,14 @@ public:
   Population(Genome& first,
              std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
-  /// Construct a population, starting from the specified population.
-  Population(std::vector<Genome> population,
-             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
-
   Population(const Population&);
 
   Population& operator=(Population&&);
   /// Evaluate the fitness function for each neural net.
   template<class Callable>
   void Evaluate(Callable&& fitness) {
-    organisms.clear();
-    auto n = 0u;
-    for (auto& net : networks) {
-      Organism org = {};
-      org.fitness = fitness(net);
-      org.genome = &population[n++];
-      org.network = &net;
-      organisms.push_back(org);
+    for (auto& org : organisms) {
+      org.fitness = fitness(org.network);
     }
   }
 
@@ -60,26 +51,37 @@ public:
      Uses the speciation from the most recent call to Reproduce.
      If Reproduce has not been called, returns 0.
    */
-  unsigned int NumSpecies() const;
+  unsigned int NumSpecies();
+  unsigned int NumViableSpecies();
+
+  unsigned int SpeciesSize(size_t i) const;
 
   std::pair<double, double> MeanStdDev() const;
 
 private:
   struct Organism {
-    // A proxy class for class Genome, containing its
-    // evolutionary and species adjusted fitness
-    Genome* operator->() { return genome; }
-    Genome& operator*() { return *genome; }
+    Organism(Genome& gen) : genome(gen) , network(NeuralNet(gen)) { ; }
     float fitness;
     float adj_fitness;
     unsigned int species;
-    Genome* genome;
-    NeuralNet* network;
+    Genome genome;
+    NeuralNet network;
   };
 
-  void build_networks();
+  struct Species {
+    unsigned int id;
+    Genome representative;
+    unsigned int age;
+    double best_fitness;
+    unsigned int size;
+  };
 
-  std::vector<Genome> population;
-  std::vector<NeuralNet> networks;
+  /// Construct a population, starting from the specified population of organisms and species
+  Population(std::vector<Organism> organisms, std::vector<Species> species,
+             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
+
+
   std::vector<Organism> organisms;
+  std::vector<Species> population_species;
+
 };
