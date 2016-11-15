@@ -71,9 +71,9 @@ Population Population::Reproduce() {
       if(dist < required()->species_delta) {
         organism.species = id;
         // only add organism to species if the species is viable
-        if (population_species.at(id).age >= required()->stale_species) { continue; }
-        species.second.push_back(organism);
         need_new_species = false;
+        if (population_species.at(id).age >= required()->stale_species) { break; }
+        species.second.push_back(organism);
         population_species[id].size++;
         break;
       }
