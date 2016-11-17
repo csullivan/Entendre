@@ -27,14 +27,10 @@ int main() {
   auto prob = std::make_shared<Probabilities>();
   prob->add_recurrent = 0;
   prob->single_lesser = 0;
-  //prob->population_size = 150;
-  prob->stale_species = 15;
-  //prob->species_delta = 5.0;
 
   Population pop(seed,
                  std::make_shared<Uniform>(0,1),
                  prob);
-
 
   auto max_generations = 1000u;
 
