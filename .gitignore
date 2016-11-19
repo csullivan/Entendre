@@ -1,0 +1,6 @@
+*~
+bin
+build
+lib
+.build-target
+.sconsign.dblite

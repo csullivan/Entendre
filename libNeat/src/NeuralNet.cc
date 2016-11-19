@@ -1,15 +1,24 @@
 #include "NeuralNet.hh"
 
+#include <cassert>
 #include <cmath>
 #include <iostream>
+#include <map>
+#include <set>
+#include <sstream>
 #include <vector>
 
-NeuralNet::NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn)
-  : nodes(std::move(Nodes)), connections(std::move(Conn)) { ; }
+#include "Genome.hh"
 
-NeuralNet::NeuralNet(const std::vector<Node>& Nodes) {
-  nodes = Nodes;
+NeuralNet::NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn)
+  : nodes(std::move(Nodes)), connections(std::move(Conn)), connections_sorted(false) { ; }
+
+NeuralNet::NeuralNet(const std::vector<NodeGene>& genes) : connections_sorted(false) {
+  for (auto const& gene : genes) {
+    nodes.emplace_back(gene.type);
+  }
 }
+
 std::vector<double> NeuralNet::evaluate(std::vector<double> inputs) {
   sort_connections();
   load_input_vals(inputs);
@@ -66,7 +75,9 @@ void NeuralNet::add_connection(int origin, int dest, double weight) {
   }
 }
 
-bool NeuralNet::would_make_loop(unsigned int i, unsigned int j) {
+bool NeuralNet::would_make_loop(unsigned int i, unsigned int j) const {
+  // handle the case of a recurrent connection to itself up front
+  if (i == j) { return true; }
 
   std::vector<bool> reachable(nodes.size(), false);
   reachable[j] = true;
@@ -77,12 +88,12 @@ bool NeuralNet::would_make_loop(unsigned int i, unsigned int j) {
     for (auto const& conn : connections) {
       // if the origin of this connection is reachable and its
       // desitination is not, then it should be made reachable
-      // if it is a normal node. if it is the origin of the
-      // proposed additional connection (i->j) then it would be
-      // a loop
       if (reachable[conn.origin] &&
           !reachable[conn.dest] &&
           conn.type == ConnectionType::Normal) {
+        // if it is a normal node. if it is the origin of the
+        // proposed additional connection (i->j) then it would be
+        // a loop
         if (conn.dest == i) {
           // the destination of this reachable connection is
           // the origin of the proposed connection. thus there
@@ -146,6 +157,9 @@ void NeuralNet::sort_connections() {
   for(size_t i = 0; i<num_connections; i++) {
     size_t possible;
     for(possible = 0; possible<num_connections; possible++) {
+
+      if (used[possible]) { continue; }
+
       Connection& conn = connections[possible];
       bool disqualified = false;
 
@@ -185,8 +199,6 @@ void NeuralNet::sort_connections() {
     }
 
     if(possible == num_connections) {
-      // ERRRROOR!
-      //throw SomethingBadHere();
       throw std::runtime_error("Sorting failed. Replace this with a class specific Exception");
     }
 
@@ -196,4 +208,59 @@ void NeuralNet::sort_connections() {
 
   connections = sorted;
   connections_sorted = true;
+}
+
+bool IsSensor(const NodeType& type) {
+  return type == NodeType::Input || type == NodeType::Bias;
+}
+
+std::ostream& operator<<(std::ostream& os, const NeuralNet& net) {
+  std::map<unsigned int, std::string> names;
+  unsigned int num_inputs = 0;
+  unsigned int num_outputs = 0;
+  unsigned int num_hidden = 0;
+  for(unsigned int i=0; i<net.nodes.size(); i++) {
+    std::stringstream ss;
+    switch(net.nodes[i].type) {
+      case NodeType::Input:
+        ss << "I" << num_inputs++;
+        break;
+      case NodeType::Output:
+        ss << "O" << num_outputs++;
+        break;
+      case NodeType::Hidden:
+        ss << "H" << num_hidden++;
+        break;
+      case NodeType::Bias:
+        ss << "B";
+        break;
+
+      default:
+        std::cerr << "Type: " << int(net.nodes[i].type) << std::endl;
+        assert(false);
+        break;
+    }
+    names[i] = ss.str();
+  }
+
+  for(const auto& item : names) {
+    std::cout << "Node " << item.first << " = " << item.second << std::endl;
+  }
+
+  for(auto& conn : net.connections) {
+    os << names[conn.origin];
+    //os << conn.origin;
+    if(conn.type == ConnectionType::Normal) {
+      os << " ---> ";
+    } else {
+      os << " -R-> ";
+    }
+    os << names[conn.dest];
+    //os << conn.dest;
+
+    if(&conn != &net.connections.back()) {
+      os << "\n";
+    }
+  }
+  return os;
 }
