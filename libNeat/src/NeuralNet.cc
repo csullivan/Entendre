@@ -264,3 +264,13 @@ std::ostream& operator<<(std::ostream& os, const NeuralNet& net) {
   }
   return os;
 }
+
+std::vector<NodeType> NeuralNet::node_types() const {
+  std::vector<NodeType> output;
+
+  for(auto& node : nodes) {
+    output.push_back(node.type);
+  }
+
+  return output;
+}

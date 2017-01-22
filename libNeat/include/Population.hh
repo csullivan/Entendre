@@ -1,7 +1,9 @@
 #pragma once
 #include "Genome.hh"
 #include "NeuralNet.hh"
+
 #include <vector>
+#include <limits>
 #include <unordered_map>
 
 
@@ -9,6 +11,19 @@ class Population : public uses_random_numbers,
                    public requires<Probabilities> {
 
 public:
+  struct Organism {
+    Organism(Genome& gen)
+      : fitness(std::numeric_limits<double>::quiet_NaN()),
+        adj_fitness(std::numeric_limits<double>::quiet_NaN()),
+        species(-1),
+        genome(gen) , network(NeuralNet(gen)) { ; }
+    float fitness;
+    float adj_fitness;
+    unsigned int species;
+    Genome genome;
+    NeuralNet network;
+  };
+
   /// Construct a population, starting from a seed genome
   Population(Genome& first,
              std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
@@ -58,16 +73,9 @@ public:
 
   std::pair<double, double> MeanStdDev() const;
 
-private:
-  struct Organism {
-    Organism(Genome& gen) : genome(gen) , network(NeuralNet(gen)) { ; }
-    float fitness;
-    float adj_fitness;
-    unsigned int species;
-    Genome genome;
-    NeuralNet network;
-  };
+  const std::vector<Organism>& GetOrganisms() const { return organisms; }
 
+private:
   struct Species {
     unsigned int id;
     Genome representative;
