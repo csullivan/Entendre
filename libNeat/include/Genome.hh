@@ -35,6 +35,8 @@ class Genome : public uses_random_numbers,
                public requires<Probabilities> {
 public:
   Genome();
+  static Genome ConnectedSeed(int num_inputs, int num_outputs);
+
   operator NeuralNet() const;
   Genome& operator=(const Genome&);
   Genome& AddNode(NodeType type);

@@ -15,14 +15,7 @@ struct XOR_res {
 
 int main() {
 
-  auto seed = Genome()
-    .AddNode(NodeType::Bias)
-    .AddNode(NodeType::Input)
-    .AddNode(NodeType::Input)
-    .AddNode(NodeType::Output)
-    .AddConnection(0,3,true,1.)
-    .AddConnection(1,3,true,1.)
-    .AddConnection(2,3,true,1.);
+  auto seed = Genome::ConnectedSeed(2,1);
 
   auto prob = std::make_shared<Probabilities>();
   prob->new_connection_is_recurrent = 0;

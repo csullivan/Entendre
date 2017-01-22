@@ -12,6 +12,26 @@
 Genome::Genome() : num_inputs(0),
                    last_conn_innov(0), last_node_innov(0) { ; }
 
+Genome Genome::ConnectedSeed(int num_inputs, int num_outputs) {
+  Genome output;
+
+  output.AddNode(NodeType::Bias);
+  for(int i=0; i<num_inputs; i++) {
+    output.AddNode(NodeType::Input);
+  }
+  for(int i=0; i<num_outputs; i++) {
+    output.AddNode(NodeType::Output);
+  }
+
+  for(int from=0; from<num_inputs+1; from++) {
+    for(int to=num_inputs+1; to<num_inputs+1+num_outputs; to++) {
+      output.AddConnection(from, to, true, 1.0);
+    }
+  }
+
+  return output;
+}
+
 Genome::operator NeuralNet() const{
   AssertInputNodesFirst();
   AssertNoConnectionsToInput();
