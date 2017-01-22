@@ -25,8 +25,8 @@ int main() {
     .AddConnection(2,3,true,1.);
 
   auto prob = std::make_shared<Probabilities>();
-  prob->add_recurrent = 0;
-  prob->single_lesser = 0;
+  prob->new_connection_is_recurrent = 0;
+  prob->keep_non_matching_father_gene = 0;
 
   Population pop(seed,
                  std::make_shared<RNG_MersenneTwister>(),

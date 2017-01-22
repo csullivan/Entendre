@@ -68,11 +68,11 @@ Population Population::Reproduce() {
     for(auto& species : all_species) {
       unsigned int id = species.first;
       double dist = organism.genome.GeneticDistance(population_species[id].representative);
-      if(dist < required()->species_delta) {
+      if(dist < required()->genetic_distance_species_threshold) {
         organism.species = id;
         // only add organism to species if the species is viable
         need_new_species = false;
-        if (population_species.at(id).age >= required()->stale_species) { break; }
+        if (population_species.at(id).age >= required()->stale_species_num_generations) { break; }
         species.second.push_back(organism);
         population_species[id].size++;
         break;
@@ -118,7 +118,7 @@ Population Population::Reproduce() {
       int nearby_in_species = 0;
       for(auto& other : species.second) {
         double dist = org.genome.GeneticDistance(other.genome);
-        if(dist < required()->species_delta) {
+        if(dist < required()->genetic_distance_species_threshold) {
           nearby_in_species++;
         }
       }

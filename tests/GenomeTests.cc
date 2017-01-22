@@ -112,7 +112,8 @@ TEST(Genome, CrossoverAfterManyMutationsNonNEAT) {
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.);
     mother.set_generator(std::make_shared<RNG_MersenneTwister>());
-    Probabilities sNEAT = { 100,5,0.5,0.5,1.0,1.0,0.8,0.9,0.05,0.03,0.25,0.8,0.05,0.05,0.0,0.1,4.0,1.0,1.0,3.0};
+    Probabilities sNEAT;
+    sNEAT.keep_non_matching_father_gene = 1.0;
     mother.required(std::make_shared<Probabilities>(sNEAT));
     auto father = mother;
 
@@ -147,10 +148,10 @@ TEST(Genome, PreserveInnovations) {
 
   parent.set_generator(std::make_shared<RNG_MersenneTwister>());
   auto prob = std::make_shared<Probabilities>();
-  prob->mutate_link = 0;
-  prob->mutate_node = 0;
-  prob->mutate_reenable = 0;
-  prob->toggle_status = 0;
+  prob->mutation_prob_add_connection = 0;
+  prob->mutation_prob_add_node = 0;
+  prob->mutation_prob_reenable_connection = 0;
+  prob->mutation_prob_toggle_connection = 0;
 
   parent.required(prob);
 
@@ -180,13 +181,13 @@ TEST(Genome, ConnectionOrder) {
   father.set_generator(rand);
 
   auto prob = std::make_shared<Probabilities>();
-  prob->match = 0.5;
-  prob->single_greater = 1.0;
-  prob->single_lesser = 1.0;
-  prob->mutate_weights = 0;
-  prob->mutate_link = 0;
-  prob->mutate_node = 0;
-  prob->toggle_status = 0;
+  prob->matching_gene_choose_mother = 0.5;
+  prob->keep_non_matching_mother_gene = 1.0;
+  prob->keep_non_matching_father_gene = 1.0;
+  prob->mutation_prob_adjust_weights = 0;
+  prob->mutation_prob_add_connection = 0;
+  prob->mutation_prob_add_node = 0;
+  prob->mutation_prob_toggle_connection = 0;
 
   mother.required(prob);
   father.required(prob);
