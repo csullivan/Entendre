@@ -25,7 +25,7 @@ PYBIND11_PLUGIN(pyneat) {
          })
     .def("Reproduce",
          [](Population& pop, std::function<double(const NeuralNet&)> func) {
-           pop.Reproduce(func);
+           return pop.Reproduce(func);
          })
     .def("Reproduce",(Population (Population::*)())&Population::Reproduce)
     .def_property_readonly("organisms", &Population::GetOrganisms,
