@@ -5,7 +5,16 @@
 
 class RNG {
 public:
-  RNG() {
+  virtual ~RNG() { }
+
+  double operator()() { return uniform(0, 1); }
+  virtual double uniform(double min=0, double max=1) = 0;
+  virtual double gaussian(double mean=0, double sigma=1) = 0;
+};
+
+class RNG_MersenneTwister : public RNG {
+public:
+  RNG_MersenneTwister() {
     std::random_device rd;
     if (rd.entropy() != 0) {
       mt = std::make_unique<std::mt19937>(rd());
@@ -14,32 +23,25 @@ public:
         (std::chrono::system_clock::now().time_since_epoch().count());
     }
   }
-  RNG(unsigned long seed) : mt(std::make_unique<std::mt19937>(seed)) {;}
-  virtual ~RNG() { ; }
-  virtual double operator()() = 0;
+
+  RNG_MersenneTwister(unsigned long seed)
+    : mt(std::make_unique<std::mt19937>(seed)) { }
+
+  virtual ~RNG_MersenneTwister() { }
+
+  virtual double uniform(double min=0, double max=1) {
+    std::uniform_real_distribution<double> dist(min, max);
+    return dist(*mt);
+  }
+
+  virtual double gaussian(double mean=0, double sigma=1) {
+    std::normal_distribution<double> dist(mean, sigma);
+    return dist(*mt);
+  }
 
 protected:
   std::unique_ptr<std::mt19937> mt;
 };
-
-
-class Gaussian : public RNG {
-public:
-  Gaussian(double mean, double sigma): RNG(), dist(mean,sigma) {;}
-  double operator()() override { return dist(*mt); }
-private:
-  std::normal_distribution<double> dist;
-};
-
-
-class Uniform : public RNG {
-public:
-  Uniform(double min, double max): RNG(), dist(min,max) {;}
-  double operator()() override { return dist(*mt); }
-private:
-  std::uniform_real_distribution<double> dist;
-};
-
 
 class uses_random_numbers {
 public:

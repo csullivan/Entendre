@@ -11,6 +11,10 @@ namespace py = pybind11;
 PYBIND11_PLUGIN(pyneat) {
   py::module m("pyneat", "C++ implementation of NEAT");
 
+  py::class_<Population>(m, "Population");
+
+  py::class_<RNG>(m, "RNG");
+
   py::class_<ReachabilityChecker>(m, "ReachabilityChecker")
     .def(py::init<size_t>())
     .def(py::init<size_t, size_t>())

@@ -14,7 +14,7 @@ TEST(Population,Construct){
     .AddConnection(2,3,true,1.);
 
   Population pop(adam,
-                 std::make_shared<Uniform>(0,1),
+                 std::make_shared<RNG_MersenneTwister>(),
                  std::make_shared<Probabilities>());
 
 
@@ -41,7 +41,7 @@ TEST(Population,EvaluationTimer){
 
 
   Population pop(adam,
-                 std::make_shared<Uniform>(0,1),
+                 std::make_shared<RNG_MersenneTwister>(),
                  std::make_shared<Probabilities>());
 
 

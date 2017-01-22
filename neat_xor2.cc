@@ -45,7 +45,7 @@ int main() {
 
 
   Population pop(seed,
-                 std::make_shared<Uniform>(0,1),
+                 std::make_shared<RNG_MersenneTwister>(),
                  std::make_shared<Probabilities>(params));
 
   auto max_generations = 2000u;

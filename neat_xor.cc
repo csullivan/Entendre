@@ -30,7 +30,7 @@ int main() {
   //prob->population_size = 150;
 
   Population pop(seed,
-                 std::make_shared<Uniform>(0,1),
+                 std::make_shared<RNG_MersenneTwister>(),
                  prob);
 
 

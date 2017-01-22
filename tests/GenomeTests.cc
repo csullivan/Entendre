@@ -13,7 +13,7 @@ TEST(Genome,CompareInnovation){
         .AddConnection(1,3,true,1.)
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.);
-    mother.set_generator(std::make_shared<Uniform>(0,1));
+    mother.set_generator(std::make_shared<RNG_MersenneTwister>());
     //Probabilities NEAT = {0.5, 1.0, 0.0, 0.9, 0.0, 0.0, 0.1, 4.0, 1.0, 1.0, 3.0};
     //mother.required(std::make_shared<Probabilities>(NEAT));
     mother.required(std::make_shared<Probabilities>());
@@ -43,7 +43,7 @@ TEST(Genome,MutateConnection) {
         .AddConnection(1,3,true,1.)
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.);
-    mother.set_generator(std::make_shared<Uniform>(0,1));
+    mother.set_generator(std::make_shared<RNG_MersenneTwister>());
     mother.required(std::make_shared<Probabilities>());
 
     //mother.PrintInnovations();
@@ -62,7 +62,7 @@ TEST(Genome, GeneticDistanceAfterMutation) {
         .AddConnection(1,3,true,1.)
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.);
-    mother.set_generator(std::make_shared<Uniform>(0,1));
+    mother.set_generator(std::make_shared<RNG_MersenneTwister>());
     mother.required(std::make_shared<Probabilities>());
     auto father = mother;
 
@@ -85,7 +85,7 @@ TEST(Genome, ManyMutations) {
         .AddConnection(1,3,true,1.)
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.);
-    mother.set_generator(std::make_shared<Uniform>(0,1));
+    mother.set_generator(std::make_shared<RNG_MersenneTwister>());
     mother.required(std::make_shared<Probabilities>());
     auto father = mother;
 
@@ -111,7 +111,7 @@ TEST(Genome, CrossoverAfterManyMutationsNonNEAT) {
         .AddConnection(1,3,true,1.)
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.);
-    mother.set_generator(std::make_shared<Uniform>(0,1));
+    mother.set_generator(std::make_shared<RNG_MersenneTwister>());
     Probabilities sNEAT = { 100,5,0.5,0.5,1.0,1.0,0.8,0.9,0.05,0.03,0.25,0.8,0.05,0.05,0.0,0.1,4.0,1.0,1.0,3.0};
     mother.required(std::make_shared<Probabilities>(sNEAT));
     auto father = mother;
@@ -145,7 +145,7 @@ TEST(Genome, PreserveInnovations) {
 
   EXPECT_TRUE(parent.IsStructurallyEqual(parent));
 
-  parent.set_generator(std::make_shared<Uniform>(0,1));
+  parent.set_generator(std::make_shared<RNG_MersenneTwister>());
   auto prob = std::make_shared<Probabilities>();
   prob->mutate_link = 0;
   prob->mutate_node = 0;
@@ -175,7 +175,7 @@ TEST(Genome, ConnectionOrder) {
     .AddConnection(1, 2, true, 1.0)
     .AddConnection(0, 2, true, 1.0);
 
-  auto rand = std::make_shared<Uniform>(0,1);
+  auto rand = std::make_shared<RNG_MersenneTwister>();
   mother.set_generator(rand);
   father.set_generator(rand);
 
