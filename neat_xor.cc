@@ -27,12 +27,10 @@ int main() {
   auto prob = std::make_shared<Probabilities>();
   prob->add_recurrent = 0;
   prob->single_lesser = 0;
-  //prob->population_size = 150;
 
   Population pop(seed,
                  std::make_shared<RNG_MersenneTwister>(),
                  prob);
-
 
   auto max_generations = 1000u;
 
@@ -51,7 +49,16 @@ int main() {
     auto best = pop.BestNet();
     if(!best) { return; }
     std::cout << " ----------- Gen " << generation << " ----------------" << std::endl;
-    std::cout << pop.NumSpecies() << " species total" << std::endl;
+    auto num_species = pop.NumSpecies();
+    std::cout << num_species << " species total" << std::endl;
+    std::cout << pop.NumViableSpecies() << " viable species" << std::endl;
+    //for (auto i=0u; i< std::min(num_species,5u); i++) {
+    for (auto i=0u; i< num_species; i++) {
+      size_t size = pop.SpeciesSize(i);
+      if (size>0) {
+        std::cout << "- species #" << i << " size: " << pop.SpeciesSize(i) << std::endl;
+      }
+    }
     std::cout << "Best (nodes, conn) = (" << best->num_nodes() << ", " << best->num_connections()
               << ")" << std::endl;
     double error = 0;

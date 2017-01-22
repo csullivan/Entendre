@@ -29,9 +29,10 @@ struct Probabilities {
   float mutate_reenable = 0.05;
   float add_recurrent = 0.05;
   float toggle_status = 0.0; // 0.1 NEAT
-  float step_size = 0.1;
-  float reset_weight = 4.0;
+  float step_size = 0.5;
+  float reset_weight = 20.0;
   float genetic_c1 = 1.0;
-  float genetic_c2 = 1.0;
+  float genetic_c2 = 0.2;
   float species_delta = 3.0;
+  size_t stale_species = 15;
 };
