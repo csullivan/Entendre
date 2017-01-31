@@ -31,12 +31,12 @@ PYBIND11_PLUGIN(pyneat) {
     .def_property_readonly("organisms", &Population::GetOrganisms,
                            py::return_value_policy::reference_internal);
 
-  py::class_<Population::Organism>(m, "Organism")
-    .def_readwrite("fitness", &Population::Organism::fitness)
-    .def_readwrite("adj_fitness", &Population::Organism::adj_fitness)
-    .def_readwrite("species", &Population::Organism::species)
-    .def_readwrite("genome", &Population::Organism::genome)
-    .def_readwrite("network", &Population::Organism::network);
+  py::class_<Organism>(m, "Organism")
+    .def_readwrite("fitness", &Organism::fitness)
+    .def_readwrite("adj_fitness", &Organism::adj_fitness)
+    .def_readwrite("species", &Organism::species)
+    .def_readwrite("genome", &Organism::genome)
+    .def_readwrite("network", &Organism::network);
 
   py::class_<RNG, std::shared_ptr<RNG> >(m, "RNG")
     .def("uniform",&RNG::uniform,
