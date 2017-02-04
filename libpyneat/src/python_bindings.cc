@@ -28,13 +28,13 @@ PYBIND11_PLUGIN(pyneat) {
            return pop.Reproduce(func);
          })
     .def("Reproduce",(Population (Population::*)())&Population::Reproduce)
-    .def_property_readonly("organisms", &Population::GetOrganisms,
-                           py::return_value_policy::reference_internal);
+    // .def_property_readonly("organisms", &Population::GetOrganisms,
+    //                        py::return_value_policy::reference_internal)
+    ;
 
   py::class_<Organism>(m, "Organism")
     .def_readwrite("fitness", &Organism::fitness)
     .def_readwrite("adj_fitness", &Organism::adj_fitness)
-    .def_readwrite("species", &Organism::species)
     .def_readwrite("genome", &Organism::genome)
     .def_readwrite("network", &Organism::network);
 

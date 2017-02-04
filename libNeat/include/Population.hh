@@ -7,24 +7,23 @@
 #include <unordered_map>
 
 struct Organism {
-  Organism(Genome& gen)
+  Organism(const Genome& gen)
     : fitness(std::numeric_limits<double>::quiet_NaN()),
       adj_fitness(std::numeric_limits<double>::quiet_NaN()),
-      species(-1),
       genome(gen) , network(NeuralNet(gen)) { ; }
   float fitness;
   float adj_fitness;
-  unsigned int species;
   Genome genome;
   NeuralNet network;
 };
 
 struct Species {
+  std::vector<Organism> organisms;
+
   unsigned int id;
   Genome representative;
   unsigned int age;
   double best_fitness;
-  unsigned int size;
 };
 
 class Population : public uses_random_numbers,
@@ -42,8 +41,10 @@ public:
   /// Evaluate the fitness function for each neural net.
   template<class Callable>
   void Evaluate(Callable&& fitness) {
-    for (auto& org : organisms) {
-      org.fitness = fitness(org.network);
+    for(auto& spec : species) {
+      for(auto& org : spec.organisms) {
+        org.fitness = fitness(org.network);
+      }
     }
     CalculateAdjustedFitness();
   }
@@ -80,19 +81,14 @@ public:
 
   std::pair<double, double> MeanStdDev() const;
 
-  const std::vector<Organism>& GetOrganisms() const { return organisms; }
-
 private:
   /// Construct a population, starting from the specified population of organisms and species
-  Population(std::vector<Organism> organisms, std::vector<Species> species,
+  Population(std::vector<Species> species,
              std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
-  void AdvanceSpeciesAge();
-  void Speciate();
+  void Speciate(std::vector<Species>& species,
+                const std::vector<Genome>& genomes);
   void CalculateAdjustedFitness();
 
-
-  std::vector<Organism> organisms;
-  std::vector<Species> population_species;
-
+  std::vector<Species> species;
 };

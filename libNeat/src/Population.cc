@@ -6,14 +6,11 @@
 #include <set>
 #include <map>
 
-Population::Population(std::vector<Organism> organisms, std::vector<Species> species,
+Population::Population(std::vector<Species> species,
                        std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params)
-  : organisms(std::move(organisms)), population_species(std::move(species)) {
+  : species(std::move(species)) {
 
   required(params); set_generator(gen);
-
-  AdvanceSpeciesAge();
-  Speciate();
 }
 
 Population::Population(Genome& first,
@@ -24,173 +21,152 @@ Population::Population(Genome& first,
   first.required(params);
   first.set_generator(gen);
 
+  std::vector<Genome> genomes;
+
   for (auto i=0u; i < params->population_size; i++) {
-    organisms.emplace_back(first.RandomizeWeights());
+    genomes.push_back(first.RandomizeWeights());
   }
 
-  AdvanceSpeciesAge();
-  Speciate();
+  Speciate(species, genomes);
 }
 
-void Population::AdvanceSpeciesAge() {
-  for(auto& species : population_species) {
-    species.age++;
-  }
-}
-
-void Population::Speciate() {
-  // NEAT uses a random member as the representative
-  std::random_shuffle(organisms.begin(), organisms.end());
-
-  for(auto& species : population_species) {
-    species.size = 0;
-  }
-
-  for(auto& organism : organisms) {
+void Population::Speciate(std::vector<Species>& species,
+                          const std::vector<Genome>& genomes) {
+  for(auto& genome : genomes) {
     bool need_new_species = true;
-    for(auto& species : population_species) {
-      double dist = organism.genome.GeneticDistance(species.representative);
+    for(auto& spec : species) {
+      double dist = genome.GeneticDistance(spec.representative);
       if(dist < required()->genetic_distance_species_threshold) {
-        organism.species = species.id;
-        species.size++;
+        spec.organisms.push_back(genome);
         need_new_species = false;
         break;
       }
     }
 
     if(need_new_species) {
-      unsigned int id = population_species.size();
-      organism.species = id;
-      population_species.push_back({id, organism.genome, 0, -1, 1});
+      Species new_spec;
+      new_spec.id = random()*(1<<24);
+      new_spec.representative = genome;
+      new_spec.age = 0;
+      new_spec.best_fitness = 0;
+      new_spec.organisms.push_back(genome);
+
+      species.push_back(new_spec);
     }
   }
-
-
 }
 
 void Population::CalculateAdjustedFitness() {
   // // adj_fitness = fitness / number_in_species
-  // for(auto& organism : organisms) {
-  //   auto num_in_species = population_species.at(organism.species).size;
-  //   organism.adj_fitness = organism.fitness/num_in_species;
+  // for(auto& spec : species) {
+  //   auto num_in_species = spec.organisms.size();
+  //   for(auto& org : spec.organisms) {
+  //     org.adj_fitness = org.fitness / num_in_species
+  //   }
   // }
 
-  // adj_fitness = fitness/ number_of_genetically_similar_in_species
-  for(auto& org : organisms) {
-    int nearby_in_species = 0;
 
-    for(auto& other : organisms) {
-      if(org.species == other.species) {
+  // adj_fitness = fitness/ number_of_genetically_similar_in_species
+  for(auto& spec : species) {
+    for(auto& org : spec.organisms) {
+      int nearby_in_species = 0;
+
+      for(auto& other : spec.organisms) {
         double dist = org.genome.GeneticDistance(other.genome);
         if(dist < required()->genetic_distance_species_threshold) {
           nearby_in_species++;
         }
       }
-    }
 
-    org.adj_fitness = org.fitness/nearby_in_species;
+      org.adj_fitness = org.fitness/nearby_in_species;
+    }
   }
 }
 
 Population Population::Reproduce() {
-  // Little helper struct, local to function only
-  struct species_info {
-    double total_adj_fitness;
-    int num_children;
-    std::vector<Organism> orgs;
-
-    int id() { return orgs.front().species; }
-  };
-
-  std::map<unsigned int, species_info> all_species;
-
-  for(auto& organism : organisms) {
-    bool species_is_stale =
-      (population_species.at(organism.species).age >=
-       required()->stale_species_num_generations);
-
-    if(!species_is_stale) {
-      all_species[organism.species].orgs.push_back(organism);
-    }
-  }
-
-
-  for(auto& species_pair : all_species) {
-    species_info& info = species_pair.second;
-
-    // If using std::shuffle to randomize representative,
-    // must sort species first, to find champion
-    std::sort(info.orgs.begin(), info.orgs.end(),
+  // Generate the list of species for the next generation.
+  std::vector<Species> next_gen_species;
+  for(auto& spec : species) {
+    std::sort(spec.organisms.begin(), spec.organisms.end(),
               [](auto& a, auto& b) { return a.fitness > b.fitness; });
 
-    // if a species has improved (ie it's champion has better fitness than)
-    // the previous champion of that species, then revitalize the species
-    auto& champion = info.orgs.front();
-    auto& species = population_species.at(info.id());
-    if(champion.fitness > species.best_fitness) {
-      species.age = 0;
-      species.best_fitness = champion.fitness;
+    Species new_spec;
+    new_spec.id = spec.id;
+    new_spec.age = spec.age + 1;
+    new_spec.best_fitness = spec.best_fitness;
+
+    if(spec.organisms.size() > 0) {
+      auto& champion = spec.organisms.front();
+      if(champion.fitness > spec.best_fitness) {
+        new_spec.age = 0;
+        new_spec.best_fitness = champion.fitness;
+      }
+    }
+
+    if(spec.organisms.size() > 0) {
+      unsigned int rep_id = random()*spec.organisms.size();
+      new_spec.representative = spec.organisms[rep_id].genome;
+      next_gen_species.push_back(new_spec);
     }
   }
 
-
-  // Determine number of children for each species
+  // Determine total adjusted fitness for each species, and for the
+  // entire population.
   double total_adj_fitness = 0;
   std::vector<double> total_adj_fitness_by_species;
-  for(auto& species_pair : all_species) {
-    species_info& info = species_pair.second;
-
-    info.total_adj_fitness = 0;
-    for(auto& org : info.orgs) {
-      info.total_adj_fitness += org.adj_fitness;
+  for(auto& spec : species) {
+    double species_total_adj_fitness = 0;
+    for(auto& org : spec.organisms) {
+      species_total_adj_fitness += org.adj_fitness;
     }
-    total_adj_fitness += info.total_adj_fitness;
+    total_adj_fitness += species_total_adj_fitness;
+    total_adj_fitness_by_species.push_back(species_total_adj_fitness);
   }
 
+  // Determine number of children for each species.
   double children_per_adj_fitness = required()->population_size / total_adj_fitness;
-  for(auto& species_pair : all_species) {
-    species_info& info = species_pair.second;
-    info.num_children = std::round(children_per_adj_fitness *
-                                   info.total_adj_fitness);
-    // Rounding differences here can cause slightly more or slightly fewer genomes
-    // to be created than population_size. This is probably ok, but should be studied
+  std::vector<int> num_children_by_species;
+  for(double spec_total_adj_fitness : total_adj_fitness_by_species) {
+    // Rounding differences here can cause slightly more or slightly
+    // fewer genomes to be created than population_size. This is
+    // probably ok, but should be studied.
+    int num_children = std::round(children_per_adj_fitness *
+                                  spec_total_adj_fitness);
+    num_children_by_species.push_back(num_children);
   }
 
 
-  std::vector<Organism> progeny;
+  std::vector<Genome> progeny;
   //std::vector<Genome> progeny;
-  for (auto& species_pair : all_species) {
-    auto& species = species_pair.second.orgs;
-    auto& num_children = species_pair.second.num_children;
+  for(unsigned int i=0; i<species.size(); i++) {
+    auto& org_list = species[i].organisms;
+    double num_children = num_children_by_species[i];
 
     for(int i=0; i<num_children; i++) {
-      if(i==0 && species.size() > required()->min_size_for_champion) {
+      if(i==0 && org_list.size() > required()->min_size_for_champion) {
         // Preserve the champion of large species.
-        progeny.emplace_back(species.front().genome);
+        progeny.emplace_back(org_list.front().genome);
       } else {
         // Everyone else can mate
-
         float culling_ratio = required()->culling_ratio;
 
-        // if only one organism in the species
-        // or if two organisms in a species and culling ratio is at least half
-        // then just take the more fit of the organisms
-        if (species.size() == 1 ||
-            (species.size() == 2 && culling_ratio <= 0.5 )) {
-          auto mutant = species.front().genome;
+        // If only one organisms would be allowed to reproduce, just
+        // take that one organism.
+        if (org_list.size()*culling_ratio <= 1) {
+          auto mutant = org_list.front().genome;
           mutant.Mutate();
           progeny.emplace_back(mutant);
           continue;
         }
 
-        int idx1 = random()*species.size()*culling_ratio;
-        int idx2 = random()*species.size()*culling_ratio;
+        int idx1 = random()*org_list.size()*culling_ratio;
+        int idx2 = random()*org_list.size()*culling_ratio;
         // while (idx1 == idx2) {
-        //   idx1 = random()*species.size()*culling_ratio;
-        //   idx2 = random()*species.size()*culling_ratio;
+        //   idx1 = random()*org_list.size()*culling_ratio;
+        //   idx2 = random()*org_list.size()*culling_ratio;
         // }
-        Organism& parent1 = species[idx1];
-        Organism& parent2 = species[idx2];
+        Organism& parent1 = org_list[idx1];
+        Organism& parent2 = org_list[idx2];
         Genome child;
 
         // determine relative fitness for mating
@@ -215,7 +191,9 @@ Population Population::Reproduce() {
     }
   }
 
-  return Population(progeny, population_species, get_generator(), required());
+  Speciate(next_gen_species, progeny);
+
+  return Population(next_gen_species, get_generator(), required());
 }
 
 
@@ -223,10 +201,12 @@ Population Population::Reproduce() {
 NeuralNet* Population::BestNet() const {
   NeuralNet* output = nullptr;
   double best_fitness = -std::numeric_limits<double>::max();
-  for(auto& org : organisms) {
-    if(org.fitness > best_fitness) {
-      output = const_cast<NeuralNet*>(&org.network);
-      best_fitness = org.fitness;
+  for(auto& spec : species) {
+    for(auto& org : spec.organisms) {
+      if(org.fitness > best_fitness) {
+        output = const_cast<NeuralNet*>(&org.network);
+        best_fitness = org.fitness;
+      }
     }
   }
   return output;
@@ -234,32 +214,38 @@ NeuralNet* Population::BestNet() const {
 
 unsigned int Population::NumViableSpecies() {
   size_t num_viable = 0;
-  for(auto& species : population_species) {
-    if (species.size > 0) { num_viable++; }
+  for(auto& spec : species) {
+    if (spec.organisms.size() > 0) {
+      num_viable++;
+    }
   }
   return num_viable;
 }
 unsigned int Population::NumSpecies() {
-  return population_species.size();
+  return species.size();
 }
 
 unsigned int Population::SpeciesSize(size_t i) const {
-  return population_species.at(i).size;
+  return species.at(i).organisms.size();
 }
 
 std::pair<double, double> Population::MeanStdDev() const {
-  if(organisms.size() == 0) {
+  double cumsum = 0;
+  double cumsum2 = 0;
+  int n = 0;
+  for(auto& spec : species) {
+    n += spec.organisms.size();
+    for(auto& org : spec.organisms) {
+      cumsum += org.fitness;
+      cumsum2 += org.fitness*org.fitness;
+    }
+  }
+
+  if(n == 0) {
     return {std::sqrt(-1), std::sqrt(-1)};
   }
 
-  double cumsum = 0;
-  double cumsum2 = 0;
-  for(auto& org : organisms) {
-    cumsum += org.fitness;
-    cumsum2 += org.fitness*org.fitness;
-  }
-
-  double mean = cumsum/organisms.size();
-  double variance = cumsum2/organisms.size() - mean*mean;
+  double mean = cumsum/n;
+  double variance = cumsum2/n - mean*mean;
   return {mean, std::sqrt(variance)};
 }
