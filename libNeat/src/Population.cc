@@ -123,9 +123,16 @@ Population Population::Reproduce() {
   std::vector<double> total_adj_fitness_by_species;
   for(auto& spec : species) {
     double species_total_adj_fitness = 0;
+
     for(auto& org : spec.organisms) {
       species_total_adj_fitness += org.adj_fitness;
     }
+
+    bool is_stale = spec.age >= required()->stale_species_num_generations;
+    if(is_stale) {
+      species_total_adj_fitness *= required()->stale_species_penalty;
+    }
+
     total_adj_fitness += species_total_adj_fitness;
     total_adj_fitness_by_species.push_back(species_total_adj_fitness);
   }
