@@ -92,7 +92,8 @@ public:
   const std::vector<Species>& GetSpecies() const { return species; }
 
 private:
-
+  std::vector<Species> MakeNextGenerationSpecies();
+  std::vector<Genome> MakeNextGenerationGenomes();
 
   void Speciate(std::vector<Species>& species,
                 const std::vector<Genome>& genomes);

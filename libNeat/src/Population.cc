@@ -84,8 +84,17 @@ void Population::CalculateAdjustedFitness() {
 }
 
 Population Population::Reproduce() {
-  // Generate the list of species for the next generation.
+  auto next_gen_species = MakeNextGenerationSpecies();
+  auto next_gen_genomes = MakeNextGenerationGenomes();
+
+  Speciate(next_gen_species, next_gen_genomes);
+
+  return Population(next_gen_species, get_generator(), required());
+}
+
+std::vector<Species> Population::MakeNextGenerationSpecies() {
   std::vector<Species> next_gen_species;
+
   for(auto& spec : species) {
     std::sort(spec.organisms.begin(), spec.organisms.end(),
               [](auto& a, auto& b) { return a.fitness > b.fitness; });
@@ -117,6 +126,10 @@ Population Population::Reproduce() {
     }
   }
 
+  return next_gen_species;
+}
+
+std::vector<Genome> Population::MakeNextGenerationGenomes() {
   // Determine total adjusted fitness for each species, and for the
   // entire population.
   double total_adj_fitness = 0;
@@ -205,9 +218,7 @@ Population Population::Reproduce() {
     }
   }
 
-  Speciate(next_gen_species, progeny);
-
-  return Population(next_gen_species, get_generator(), required());
+  return progeny;
 }
 
 
