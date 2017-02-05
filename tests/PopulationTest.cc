@@ -73,6 +73,12 @@ TEST(Population,EvaluationTimer){
 TEST(Population, PruneEmptySpecies){
   auto rng = std::make_shared<RNG_MersenneTwister>();
   auto prob = std::make_shared<Probabilities>();
+  // Prevent all mutations during this test.
+  prob->mutation_prob_adjust_weights = 0;
+  prob->mutation_prob_add_connection = 0;
+  prob->mutation_prob_add_node = 0;
+  prob->mutation_prob_reenable_connection = 0;
+  prob->mutation_prob_toggle_connection = 0;
 
   auto adam = Genome::ConnectedSeed(1,1);
   adam.required(prob);
