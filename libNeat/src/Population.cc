@@ -95,7 +95,9 @@ Population Population::Reproduce() {
     new_spec.age = spec.age + 1;
     new_spec.best_fitness = spec.best_fitness;
 
-    if(spec.organisms.size() > 0) {
+    bool species_has_members = spec.organisms.size() > 0;
+
+    if(species_has_members) {
       auto& champion = spec.organisms.front();
       if(champion.fitness > spec.best_fitness) {
         new_spec.age = 0;
@@ -103,9 +105,14 @@ Population Population::Reproduce() {
       }
     }
 
-    if(spec.organisms.size() > 0) {
+    if(species_has_members &&
+       required()->species_representative_from_previous_gen) {
       unsigned int rep_id = random()*spec.organisms.size();
       new_spec.representative = spec.organisms[rep_id].genome;
+    }
+
+    if(species_has_members ||
+       required()->keep_empty_species) {
       next_gen_species.push_back(new_spec);
     }
   }

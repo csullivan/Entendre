@@ -33,6 +33,14 @@ public:
   Population(Genome& first,
              std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
+  /// Construct a population, starting from the specified population of organisms and species
+  /**
+     Note: Assumes that all genomes have the same RNG and
+           Probabilities as are being passed here.
+   */
+  Population(std::vector<Species> species,
+             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
+
   Population(const Population&) = default;
   Population(Population&&) = default;
   Population& operator=(const Population& rhs) = default;
@@ -81,10 +89,10 @@ public:
 
   std::pair<double, double> MeanStdDev() const;
 
+  const std::vector<Species>& GetSpecies() const { return species; }
+
 private:
-  /// Construct a population, starting from the specified population of organisms and species
-  Population(std::vector<Species> species,
-             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
+
 
   void Speciate(std::vector<Species>& species,
                 const std::vector<Genome>& genomes);

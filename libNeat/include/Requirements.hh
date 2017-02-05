@@ -17,7 +17,10 @@ struct Probabilities {
   size_t population_size = 100;
   size_t min_size_for_champion = 5;
   float culling_ratio = 0.5;
+
   size_t stale_species_num_generations = 15;
+  bool keep_empty_species = false;
+  bool species_representative_from_previous_gen = true;
 
   float matching_gene_choose_mother = 0.5;
   float keep_non_matching_mother_gene = 1.0;
