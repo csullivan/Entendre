@@ -28,13 +28,20 @@ PYBIND11_PLUGIN(pyneat) {
            return pop.Reproduce(func);
          })
     .def("Reproduce",(Population (Population::*)())&Population::Reproduce)
-    .def_property_readonly("organisms", &Population::GetOrganisms,
-                           py::return_value_policy::reference_internal);
+    .def_property_readonly("species", &Population::GetSpecies,
+                           py::return_value_policy::reference_internal)
+    ;
+
+  py::class_<Species>(m, "Species")
+    .def_readwrite("organisms", &Species::organisms)
+    .def_readwrite("id", &Species::id)
+    .def_readwrite("representative", &Species::representative)
+    .def_readwrite("age", &Species::age)
+    .def_readwrite("best_fitness", &Species::best_fitness);
 
   py::class_<Organism>(m, "Organism")
     .def_readwrite("fitness", &Organism::fitness)
     .def_readwrite("adj_fitness", &Organism::adj_fitness)
-    .def_readwrite("species", &Organism::species)
     .def_readwrite("genome", &Organism::genome)
     .def_readwrite("network", &Organism::network);
 
@@ -57,7 +64,11 @@ PYBIND11_PLUGIN(pyneat) {
     .def_readwrite("population_size",&Probabilities::population_size)
     .def_readwrite("min_size_for_champion",&Probabilities::min_size_for_champion)
     .def_readwrite("culling_ratio",&Probabilities::culling_ratio)
+    .def_readwrite("keep_empty_species",&Probabilities::keep_empty_species)
+    .def_readwrite("species_representative_from_previous_gen",
+                   &Probabilities::species_representative_from_previous_gen)
     .def_readwrite("stale_species_num_generations",&Probabilities::stale_species_num_generations)
+    .def_readwrite("stale_species_penalty",&Probabilities::stale_species_penalty)
     .def_readwrite("matching_gene_choose_mother",&Probabilities::matching_gene_choose_mother)
     .def_readwrite("keep_non_matching_mother_gene",&Probabilities::keep_non_matching_mother_gene)
     .def_readwrite("keep_non_matching_father_gene",&Probabilities::keep_non_matching_father_gene)
