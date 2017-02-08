@@ -101,35 +101,35 @@ void LFNetwork::sort_connections() {
   for(unsigned int i_try=0; i_try < max_iterations; i_try++) {
     change_applied = false;
 
-    for(auto& conn1 : connections) {
+    for(int i=0; i<connections.size(); i++) {
+      for(int j=i+1; j<connections.size(); j++) {
+        Connection& conn1 = connections[i];
+        Connection& conn2 = connections[j];
 
-      for(auto& conn2 : connections) {
-        if(&conn1 != &conn2) {
-          switch(compare_connections(conn1,conn2)) {
-          case EvaluationOrder::GreaterThan:
-            if (conn1.set <= conn2.set) {
-              conn1.set = conn2.set + 1;
-              change_applied = true;
-            }
-            break;
-
-          case EvaluationOrder::LessThan:
-            if(conn2.set <= conn1.set) {
-              conn2.set = conn1.set + 1;
-              change_applied = true;
-            }
-            break;
-
-          case EvaluationOrder::NotEqual:
-            if(conn1.set == conn2.set) {
-              conn1.set = conn2.set + 1;
-              change_applied = true;
-            }
-            break;
-
-          case EvaluationOrder::Unknown:
-            break;
+        switch(compare_connections(conn1,conn2)) {
+        case EvaluationOrder::GreaterThan:
+          if (conn1.set <= conn2.set) {
+            conn1.set = conn2.set + 1;
+            change_applied = true;
           }
+          break;
+
+        case EvaluationOrder::LessThan:
+          if(conn2.set <= conn1.set) {
+            conn2.set = conn1.set + 1;
+            change_applied = true;
+          }
+          break;
+
+        case EvaluationOrder::NotEqual:
+          if(conn1.set == conn2.set) {
+            conn2.set = conn1.set + 1;
+            change_applied = true;
+          }
+          break;
+
+        case EvaluationOrder::Unknown:
+          break;
         }
       }
     }
@@ -147,10 +147,10 @@ void LFNetwork::sort_connections() {
 
 
 LFNetwork::EvaluationOrder LFNetwork::compare_connections(const Connection& a, const Connection& b) {
-  if (a.type == ConnectionType::Normal && a.dest == b.origin) { return EvaluationOrder::LessThan; }
   if (a.type == ConnectionType::Recurrent && a.origin == b.dest) { return EvaluationOrder::LessThan; }
-  if (b.type == ConnectionType::Normal && b.dest == a.origin) { return EvaluationOrder::GreaterThan; }
   if (b.type == ConnectionType::Recurrent && b.origin == a.dest) { return EvaluationOrder::GreaterThan; }
+  if (a.type == ConnectionType::Normal && a.dest == b.origin) { return EvaluationOrder::LessThan; }
+  if (b.type == ConnectionType::Normal && b.dest == a.origin) { return EvaluationOrder::GreaterThan; }
   if (a.dest == b.dest) { return EvaluationOrder::NotEqual; }
   return EvaluationOrder::Unknown;
 }
