@@ -114,8 +114,8 @@ PYBIND11_PLUGIN(pyneat) {
   py::class_<NeuralNet>(m, "NeuralNet")
     .def(py::init<const Genome&>())
     .def("evaluate", &NeuralNet::evaluate)
-    .def("num_nodes", &NeuralNet::num_nodes)
-    .def("num_connections", &NeuralNet::num_connections)
+    .def_property_readonly("num_nodes", &NeuralNet::num_nodes)
+    .def_property_readonly("num_connections", &NeuralNet::num_connections)
     .def_property_readonly("node_types", &NeuralNet::node_types)
     .def_property_readonly("connections", &NeuralNet::get_connections,
                            py::return_value_policy::reference_internal);
