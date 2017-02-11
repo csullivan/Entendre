@@ -2,17 +2,12 @@
 #include <vector>
 #include <stdexcept>
 #include <functional>
+#include <cmath>
 
-// A network is the current real world view of an organisms
-// internal network. It is what is used for performing calc-
-// ulations and represents the state of all enabled links of
-// a genome neuron set. Referred to as a pheonotype by NEAT.
 
 struct NodeGene;
 
 enum class NodeType { Input, Hidden, Output, Bias };
-bool IsSensor(const NodeType& type);
-
 struct Node {
   double value;
   bool is_sigmoid;
@@ -20,10 +15,12 @@ struct Node {
   Node(NodeType _type)
     : value(0.0),
       is_sigmoid(false), type(_type) {;}
+  operator double() { return value; }
 };
 
-enum class ConnectionType { Normal, Recurrent };
+bool IsSensor(const NodeType& type);
 
+enum class ConnectionType { Normal, Recurrent };
 struct Connection {
   unsigned int origin;
   unsigned int dest;
@@ -38,46 +35,99 @@ struct Connection {
       weight(_weight), type(_type) {;}
 };
 
+// Abstract NeuralNet base class templated over node and connection types
+// For subclass ConsecutiveNeuralNet, N=Node C=Connection
+// For subclass ConcurrentNeuralNet, N=double C=Connection
+template <typename N, typename C>
 class  NeuralNet {
 public:
-  NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn);
-  NeuralNet(const std::vector<Node>& Nodes);
+  NeuralNet(std::vector<N>&& Nodes, std::vector<C>&& Conn);
+  NeuralNet(const std::vector<N>& Nodes);
 
-  void load_input_vals(const std::vector<double>& inputs);
-  std::vector<double> read_output_vals();
   void add_connection(int origin, int dest, double weight);
   void register_sigmoid(std::function<double(double)> sig) {sigma = sig;}
 
   unsigned int num_nodes() const { return nodes.size(); }
   unsigned int num_connections() const { return connections.size(); }
 
-  std::vector<NodeType> node_types() const;
-  const std::vector<Connection>& get_connections() const { return connections; }
+  const std::vector<C>& get_connections() const { return connections; }
 
 protected:
   double sigmoid(double val) const;
-  double get_node_val(unsigned int i);
-  void add_to_val(unsigned int i, double val);
   bool would_make_loop(unsigned int i, unsigned int j) const;
 
 
-  std::vector<Node> nodes;
-  std::vector<Connection> connections;
+  std::vector<N> nodes;
+  std::vector<C> connections;
   bool connections_sorted;
   std::function<double(double val)> sigma;
 
 private:
 
   virtual void sort_connections() = 0;
-
-  friend std::ostream& operator<<(std::ostream& os, const  NeuralNet& net);
+  virtual std::vector<double> evaluate(std::vector<double> inputs) = 0;
 };
 
 
-class NetworkException : public std::exception {
-  using std::exception::exception;
-};
 
-class NetworkSensorSize : public NetworkException {
-  using NetworkException::NetworkException;
-};
+template <typename N, typename C>
+void NeuralNet<N,C>::add_connection(int origin, int dest, double weight) {
+  if(would_make_loop(origin,dest)) {
+    connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight);
+  } else {
+    connections.emplace_back(origin,dest,ConnectionType::Normal,weight);
+  }
+}
+
+template<typename N, typename C>
+bool NeuralNet<N,C>::would_make_loop(unsigned int i, unsigned int j) const {
+  // handle the case of a recurrent connection to itself up front
+  if (i == j) { return true; }
+
+  std::vector<bool> reachable(nodes.size(), false);
+  reachable[j] = true;
+
+  while (true) {
+
+    bool found_new_node = false;
+    for (auto const& conn : connections) {
+      // if the origin of this connection is reachable and its
+      // desitination is not, then it should be made reachable
+      if (reachable[conn.origin] &&
+          !reachable[conn.dest] &&
+          conn.type == ConnectionType::Normal) {
+        // if it is a normal node. if it is the origin of the
+        // proposed additional connection (i->j) then it would be
+        // a loop
+        if (conn.dest == i) {
+          // the destination of this reachable connection is
+          // the origin of the proposed connection. thus there
+          // exists a path from j -> i. So this will be a loop.
+          return true;
+        }
+        else {
+          reachable[conn.dest] = true;
+          found_new_node = true;
+        }
+      }
+    }
+    // no loop detected
+    if (!found_new_node) {
+      return false;
+    }
+
+  }
+}
+
+template<typename N, typename C>
+double NeuralNet<N,C>::sigmoid(double val) const {
+  return (sigma) ? sigma(val) :
+  // Logistic curve
+    1/(1 + std::exp(-val));
+  // Other options for a sigmoid curve
+  //val/std::sqrt(1+val*val);
+  //std::tanh(val);
+  //std::erf((std::sqrt(M_PI)/2)*val);
+  //(2/M_PI) * std::atan((M_PI/2)*val);
+  //val/(1+std::abs(val));
+}

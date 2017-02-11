@@ -6,7 +6,7 @@
 
 class ConsecutiveNeuralNet;
 
-class ConcurrentNeuralNet : public NeuralNet {
+class ConcurrentNeuralNet : public NeuralNet<double,Connection> {
 public:
   using NeuralNet::NeuralNet;
   ConcurrentNeuralNet(ConsecutiveNeuralNet&& net);

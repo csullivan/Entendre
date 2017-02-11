@@ -17,11 +17,11 @@ void ConcurrentNeuralNet::sort_connections() {
     connections.size()*connections.size()*connections.size()+1;
 
   bool change_applied = false;
-  for(unsigned int i_try=0; i_try < max_iterations; i_try++) {
+  for(auto i_try=0u; i_try < max_iterations; i_try++) {
     change_applied = false;
 
-    for(int i=0; i<connections.size(); i++) {
-      for(int j=i+1; j<connections.size(); j++) {
+    for(auto i=0u; i<connections.size(); i++) {
+      for(auto j=i+1; j<connections.size(); j++) {
         Connection& conn1 = connections[i];
         Connection& conn2 = connections[j];
 
@@ -76,21 +76,16 @@ ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(co
 
 ////////////////////////////////////////////////////////////////////////////
 
+std::vector<double> node_values(std::vector<Node>& nodes) {
+  return std::vector<double>(nodes.begin(),nodes.end());
+}
+
 ConcurrentNeuralNet::ConcurrentNeuralNet(ConsecutiveNeuralNet&& net)
-  : NeuralNet(std::move(net.nodes),std::move(net.connections)) {
+  : NeuralNet(node_values(net.nodes),std::move(net.connections)) {
   sigma = net.sigma;
   connections_sorted = net.connections_sorted;
 }
 
-
 std::vector<double> ConcurrentNeuralNet::evaluate(std::vector<double> inputs) {
-  sort_connections();
-  load_input_vals(inputs);
-
-  for(auto& conn : connections) {
-    double input_val = get_node_val(conn.origin);
-    add_to_val(conn.dest, input_val * conn.weight);
-  }
-
-  return read_output_vals();
+  return inputs;
 }
