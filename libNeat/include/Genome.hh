@@ -6,30 +6,14 @@
 #include <utility>
 #include <vector>
 
-#include "NeuralNet.hh"
+#include "ConsecutiveNeuralNet.hh"
 #include "Random.hh"
 #include "Requirements.hh"
 
-struct ConnectionGene {
-  unsigned long innovation;
-  unsigned long origin;
-  unsigned long dest;
-  double weight;
-  bool enabled;
-  bool operator==(const ConnectionGene& other) {
-    return (origin == other.origin) && (dest == other.dest);
-  }
-};
 
-struct NodeGene {
-  NodeGene() = delete;
-  NodeGene(const NodeType& type_) : type(type_), innovation(0) {;}
-  NodeGene(const NodeType& type_, unsigned long innov) : type(type_), innovation(innov) {;}
-  NodeType type;
-  unsigned long innovation;
-};
-
-class ReachabilityChecker;
+struct NodeGene;
+struct ConnectionGene;
+class  ReachabilityChecker;
 
 class Genome : public uses_random_numbers,
                public requires<Probabilities> {
@@ -37,7 +21,7 @@ public:
   Genome();
   static Genome ConnectedSeed(int num_inputs, int num_outputs);
 
-  operator NeuralNet() const;
+  operator ConsecutiveNeuralNet() const;
   Genome& operator=(const Genome&);
   Genome& AddNode(NodeType type);
   Genome& AddConnection(unsigned long origin, unsigned long dest,
@@ -119,4 +103,31 @@ private:
   // innovation record keeping
   unsigned long last_conn_innov;
   unsigned long last_node_innov;
+};
+
+
+struct ConnectionGene {
+  unsigned long innovation;
+  unsigned long origin;
+  unsigned long dest;
+  double weight;
+  bool enabled;
+  bool operator==(const ConnectionGene& other) {
+    return (origin == other.origin) && (dest == other.dest);
+  }
+};
+
+struct NodeGene {
+  NodeGene() = delete;
+  NodeGene(const NodeType& type_) : type(type_), innovation(0) {;}
+  NodeGene(const NodeType& type_, unsigned long innov) : type(type_), innovation(innov) {;}
+  NodeType type;
+  unsigned long innovation;
+  static std::vector<Node> ToNodes(const std::vector<NodeGene>& genes) {
+    std::vector<Node> nodes;
+    for (auto const& gene : genes) {
+      nodes.emplace_back(gene.type);
+    }
+    return nodes;
+  }
 };

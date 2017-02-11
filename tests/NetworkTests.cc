@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include "Genome.hh"
-#include "NeuralNet.hh"
+#include "ConsecutiveNeuralNet.hh"
 #include "Timer.hh"
 
-TEST(NeuralNet,EvaluateNetwork){
+TEST(ConsecutiveNeuralNet,EvaluateNetwork){
     auto sigmoid = [](double val) {return 1/(1 + std::exp(-val));};
 
     auto genome = Genome()
@@ -15,14 +15,14 @@ TEST(NeuralNet,EvaluateNetwork){
         .AddConnection(1,3,true,1.)
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.);
-    auto net = NeuralNet(genome);
+    auto net = ConsecutiveNeuralNet(genome);
     net.register_sigmoid(sigmoid);
     auto result = net.evaluate({0.5});
 
     EXPECT_EQ(result[0],sigmoid(sigmoid(0.5)+1.5));
 }
 
-TEST(NeuralNet,EvaluateRecurrentNetwork){
+TEST(ConsecutiveNeuralNet,EvaluateRecurrentNetwork){
     auto sigmoid = [](double val) {return 1/(1 + std::exp(-val));};
 
     auto genome = Genome()
@@ -35,7 +35,7 @@ TEST(NeuralNet,EvaluateRecurrentNetwork){
         .AddConnection(1,2,true,1.)
         .AddConnection(2,3,true,1.)
         .AddConnection(3,2,true,1.); // recurrent
-    auto net = NeuralNet(genome);
+    auto net = ConsecutiveNeuralNet(genome);
     net.register_sigmoid(sigmoid);
     auto result = net.evaluate({0.5});
     EXPECT_EQ(result[0],sigmoid(sigmoid(0.5+sigmoid(0))+1.5));
@@ -47,7 +47,7 @@ TEST(NeuralNet,EvaluateRecurrentNetwork){
 
 }
 
-TEST(NeuralNet,EvaluateLargeNetwork){
+TEST(ConsecutiveNeuralNet,EvaluateLargeNetwork){
     auto sigmoid = [](double val) {return 1/(1 + std::exp(-val));};
 
     auto genome = Genome().
@@ -95,7 +95,7 @@ TEST(NeuralNet,EvaluateLargeNetwork){
         Timer tbuild([&tperformance](int elapsed) {
                 tperformance+=elapsed;
         });
-        auto net = NeuralNet(genome);
+        auto net = ConsecutiveNeuralNet(genome);
     }
     std::cout << "                Average time to construct network: "
               << tperformance/nTrials/1.0e6 << " ms"
@@ -106,7 +106,7 @@ TEST(NeuralNet,EvaluateLargeNetwork){
     // Time the network evaluation
     for (auto i=0u; i < nTrials; i++)
     {
-        auto net = NeuralNet(genome);
+        auto net = ConsecutiveNeuralNet(genome);
         net.register_sigmoid(sigmoid);
 
         // First evaluation includes network sorting (construction)

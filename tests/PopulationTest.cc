@@ -21,7 +21,7 @@ TEST(Population,Construct){
   std::vector<double> input_vals = {1};
   pop.Reproduce(
     // fitness lambda function
-    [&](NeuralNet& net) {
+    [&](ConsecutiveNeuralNet& net) {
       auto outputs = net.evaluate(input_vals);
       return 1.0;
     });
@@ -58,7 +58,7 @@ TEST(Population,EvaluationTimer){
     std::vector<double> input_vals = {1};
     pop.Evaluate(
       // fitness lambda function
-      [&](NeuralNet& net) {
+      [&](ConsecutiveNeuralNet& net) {
         auto outputs = net.evaluate(input_vals);
         return 1.0;
       });
@@ -102,7 +102,7 @@ TEST(Population, PruneEmptySpecies){
 
   {
     prob->keep_empty_species = false;
-    Population gen2 = gen1.Reproduce([](NeuralNet&) { return 1.0; });
+    Population gen2 = gen1.Reproduce([](ConsecutiveNeuralNet&) { return 1.0; });
 
 
     EXPECT_EQ(gen1.GetSpecies().size(), 2u);
@@ -112,7 +112,7 @@ TEST(Population, PruneEmptySpecies){
 
   {
     prob->keep_empty_species = true;
-    Population gen2 = gen1.Reproduce([](NeuralNet&) { return 1.0; });
+    Population gen2 = gen1.Reproduce([](ConsecutiveNeuralNet&) { return 1.0; });
 
     EXPECT_EQ(gen1.GetSpecies().size(), 2u);
     EXPECT_EQ(gen2.GetSpecies().size(), 2u);

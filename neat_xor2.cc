@@ -44,7 +44,7 @@ int main() {
     }
   }
 
-  std::unique_ptr<NeuralNet> winner = nullptr;
+  std::unique_ptr<ConsecutiveNeuralNet> winner = nullptr;
   unsigned int generation;
 
   auto show = [&](){
@@ -67,7 +67,7 @@ int main() {
 
     auto next_gen = pop.Reproduce(
       // fitness lambda
-      [&](NeuralNet& net) {
+      [&](ConsecutiveNeuralNet& net) {
 
         // randomize input order and then create the solution set
         std::random_shuffle(possible_inputs.begin(),possible_inputs.end());
@@ -89,7 +89,7 @@ int main() {
           truth_count += (possible_inputs[i][2] == 0)  ?  ((output[i]<0.5) ? 1:0) : ((output[i]>=0.5) ? 1:0);
         }
         if (truth_count == 4) {
-          winner = std::make_unique<NeuralNet>(net);
+          winner = std::make_unique<ConsecutiveNeuralNet>(net);
         }
 
         return std::pow(4.-error,2);

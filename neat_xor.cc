@@ -35,7 +35,7 @@ int main() {
   };
   auto shuffled_inputs = inputs;
 
-  std::unique_ptr<NeuralNet> winner = nullptr;
+  std::unique_ptr<ConsecutiveNeuralNet> winner = nullptr;
   unsigned int generation;
 
   auto show = [&](){
@@ -63,7 +63,7 @@ int main() {
     std::cout << "Error: " << error << std::endl;
   };
 
-  auto fitness = [&](NeuralNet& net) {
+  auto fitness = [&](ConsecutiveNeuralNet& net) {
     if(net.num_connections() == 0) {
       return 0.0;
     }
@@ -96,7 +96,7 @@ int main() {
     }
 
     if(have_winner) {
-      winner = std::make_unique<NeuralNet>(*best);
+      winner = std::make_unique<ConsecutiveNeuralNet>(*best);
       break;
     }
 

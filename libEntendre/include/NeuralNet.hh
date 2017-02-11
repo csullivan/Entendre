@@ -38,10 +38,10 @@ struct Connection {
       weight(_weight), type(_type) {;}
 };
 
-class  NeuralNetBase {
+class  NeuralNet {
 public:
-   NeuralNetBase(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn);
-   NeuralNetBase(const std::vector<NodeGene>& Nodes);
+  NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn);
+  NeuralNet(const std::vector<Node>& Nodes);
 
   void load_input_vals(const std::vector<double>& inputs);
   std::vector<double> read_output_vals();
@@ -70,7 +70,7 @@ private:
 
   virtual void sort_connections() = 0;
 
-  friend std::ostream& operator<<(std::ostream& os, const  NeuralNetBase& net);
+  friend std::ostream& operator<<(std::ostream& os, const  NeuralNet& net);
 };
 
 

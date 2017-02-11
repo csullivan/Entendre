@@ -32,7 +32,7 @@ Genome Genome::ConnectedSeed(int num_inputs, int num_outputs) {
   return output;
 }
 
-Genome::operator NeuralNet() const{
+Genome::operator ConsecutiveNeuralNet() const{
   AssertInputNodesFirst();
   AssertNoConnectionsToInput();
 
@@ -58,7 +58,7 @@ Genome::operator NeuralNet() const{
 
   // build neural net from only genes that connect to nodes
   // which have a path to an output and from an input
-  NeuralNet net(node_genes);
+  ConsecutiveNeuralNet net(NodeGene::ToNodes(node_genes));
   for(auto& gene : connection_genes) {
     if (gene.enabled) {
       int i = node_lookup.at(gene.origin);
@@ -482,7 +482,7 @@ void Genome::MutateToggleGeneStatus() {
   // This is in the NEAT implementation but not discussed in the paper
   // Leaving this unimplemented for now. Note, that this could cause a
   // dangling node such that it has no inputs beyon the to-be disabled gene.
-  // The NeuralNet will handle this by searching for said dangling nodes
+  // The ConsecutiveNeuralNet will handle this by searching for said dangling nodes
   // and remove them from the derived network. Thus this function is quite
   // simple.
 

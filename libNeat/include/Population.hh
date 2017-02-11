@@ -1,6 +1,6 @@
 #pragma once
 #include "Genome.hh"
-#include "NeuralNet.hh"
+#include "ConsecutiveNeuralNet.hh"
 
 #include <vector>
 #include <limits>
@@ -10,11 +10,11 @@ struct Organism {
   Organism(const Genome& gen)
     : fitness(std::numeric_limits<double>::quiet_NaN()),
       adj_fitness(std::numeric_limits<double>::quiet_NaN()),
-      genome(gen) , network(NeuralNet(gen)) { ; }
+      genome(gen) , network(ConsecutiveNeuralNet(gen)) { ; }
   float fitness;
   float adj_fitness;
   Genome genome;
-  NeuralNet network;
+  ConsecutiveNeuralNet network;
 };
 
 struct Species {
@@ -75,7 +75,7 @@ public:
      Uses the fitness value calculated by the most recent call to Evaluate or Reproduce.
      If neither has been called, returns nullptr.
    */
-  NeuralNet* BestNet() const;
+  ConsecutiveNeuralNet* BestNet() const;
 
   /// Returns the number of species in the population
   /**

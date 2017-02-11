@@ -1,4 +1,4 @@
-#include "NeuralNetBase.hh"
+#include "NeuralNet.hh"
 
 #include <cassert>
 #include <cmath>
@@ -8,18 +8,12 @@
 #include <sstream>
 #include <vector>
 
-#include "Genome.hh"
-
-NeuralNetBase::NeuralNetBase(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn)
+NeuralNet::NeuralNet(std::vector<Node>&& Nodes, std::vector<Connection>&& Conn)
   : nodes(std::move(Nodes)), connections(std::move(Conn)), connections_sorted(false) { ; }
 
-NeuralNetBase::NeuralNetBase(const std::vector<NodeGene>& genes) : connections_sorted(false) {
-  for (auto const& gene : genes) {
-    nodes.emplace_back(gene.type);
-  }
-}
+NeuralNet::NeuralNet(const std::vector<Node>& nodes) : connections_sorted(false), nodes(nodes) { ; }
 
-void NeuralNetBase::load_input_vals(const std::vector<double>& inputs) {
+void NeuralNet::load_input_vals(const std::vector<double>& inputs) {
   size_t input_index = 0;
 
   for(auto& node : nodes) {
@@ -45,7 +39,7 @@ void NeuralNetBase::load_input_vals(const std::vector<double>& inputs) {
   }
 }
 
-std::vector<double> NeuralNetBase::read_output_vals() {
+std::vector<double> NeuralNet::read_output_vals() {
   std::vector<double> output;
   for(size_t i=0; i<nodes.size(); i++) {
     if(nodes[i].type == NodeType::Output) {
@@ -55,7 +49,7 @@ std::vector<double> NeuralNetBase::read_output_vals() {
   return output;
 }
 
-void NeuralNetBase::add_connection(int origin, int dest, double weight) {
+void NeuralNet::add_connection(int origin, int dest, double weight) {
   if(would_make_loop(origin,dest)) {
     connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight);
   } else {
@@ -63,7 +57,7 @@ void NeuralNetBase::add_connection(int origin, int dest, double weight) {
   }
 }
 
-bool NeuralNetBase::would_make_loop(unsigned int i, unsigned int j) const {
+bool NeuralNet::would_make_loop(unsigned int i, unsigned int j) const {
   // handle the case of a recurrent connection to itself up front
   if (i == j) { return true; }
 
@@ -103,7 +97,7 @@ bool NeuralNetBase::would_make_loop(unsigned int i, unsigned int j) const {
 }
 
 
-double NeuralNetBase::get_node_val(unsigned int i) {
+double NeuralNet::get_node_val(unsigned int i) {
   if(!nodes[i].is_sigmoid) {
     nodes[i].value = sigmoid(nodes[i].value);
     nodes[i].is_sigmoid = true;
@@ -111,7 +105,7 @@ double NeuralNetBase::get_node_val(unsigned int i) {
   return nodes[i].value;
 }
 
-void NeuralNetBase::add_to_val(unsigned int i, double val) {
+void NeuralNet::add_to_val(unsigned int i, double val) {
   if(nodes[i].is_sigmoid) {
     nodes[i].value = 0;
     nodes[i].is_sigmoid = false;
@@ -119,7 +113,7 @@ void NeuralNetBase::add_to_val(unsigned int i, double val) {
   nodes[i].value += val;
 }
 
-double NeuralNetBase::sigmoid(double val) const {
+double NeuralNet::sigmoid(double val) const {
   return (sigma) ? sigma(val) :
   // Logistic curve
     1/(1 + std::exp(-val));
@@ -137,7 +131,7 @@ bool IsSensor(const NodeType& type) {
   return type == NodeType::Input || type == NodeType::Bias;
 }
 
-std::ostream& operator<<(std::ostream& os, const NeuralNetBase& net) {
+std::ostream& operator<<(std::ostream& os, const NeuralNet& net) {
   std::map<unsigned int, std::string> names;
   unsigned int num_inputs = 0;
   unsigned int num_outputs = 0;
@@ -188,7 +182,7 @@ std::ostream& operator<<(std::ostream& os, const NeuralNetBase& net) {
   return os;
 }
 
-std::vector<NodeType> NeuralNetBase::node_types() const {
+std::vector<NodeType> NeuralNet::node_types() const {
   std::vector<NodeType> output;
 
   for(auto& node : nodes) {

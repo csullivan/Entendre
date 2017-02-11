@@ -3,7 +3,7 @@
 
 #include "ReachabilityChecker.hh"
 #include "Genome.hh"
-#include "NeuralNet.hh"
+#include "ConsecutiveNeuralNet.hh"
 #include "Population.hh"
 #include "Requirements.hh"
 
@@ -20,11 +20,11 @@ PYBIND11_PLUGIN(pyneat) {
     .def(py::init<Genome&,std::shared_ptr<RNG>,std::shared_ptr<Probabilities>>())
     .def(py::init<const Population&>())
     .def("Evaluate",
-         [](Population& pop, std::function<double(const NeuralNet&)> func) {
+         [](Population& pop, std::function<double(const ConsecutiveNeuralNet&)> func) {
            pop.Evaluate(func);
          })
     .def("Reproduce",
-         [](Population& pop, std::function<double(const NeuralNet&)> func) {
+         [](Population& pop, std::function<double(const ConsecutiveNeuralNet&)> func) {
            return pop.Reproduce(func);
          })
     .def("Reproduce",(Population (Population::*)())&Population::Reproduce)
@@ -111,13 +111,13 @@ PYBIND11_PLUGIN(pyneat) {
     .def("Size",&Genome::Size)
     .def_static("ConnectedSeed", &Genome::ConnectedSeed);
 
-  py::class_<NeuralNet>(m, "NeuralNet")
+  py::class_<ConsecutiveNeuralNet>(m, "ConsecutiveNeuralNet")
     .def(py::init<const Genome&>())
-    .def("evaluate", &NeuralNet::evaluate)
-    .def("num_nodes", &NeuralNet::num_nodes)
-    .def("num_connections", &NeuralNet::num_connections)
-    .def_property_readonly("node_types", &NeuralNet::node_types)
-    .def_property_readonly("connections", &NeuralNet::get_connections,
+    .def("evaluate", &ConsecutiveNeuralNet::evaluate)
+    .def("num_nodes", &ConsecutiveNeuralNet::num_nodes)
+    .def("num_connections", &ConsecutiveNeuralNet::num_connections)
+    .def_property_readonly("node_types", &ConsecutiveNeuralNet::node_types)
+    .def_property_readonly("connections", &ConsecutiveNeuralNet::get_connections,
                            py::return_value_policy::reference_internal);
 
   py::class_<Connection>(m, "Connection")

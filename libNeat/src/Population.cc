@@ -223,13 +223,13 @@ std::vector<Genome> Population::MakeNextGenerationGenomes() {
 
 
 
-NeuralNet* Population::BestNet() const {
-  NeuralNet* output = nullptr;
+ConsecutiveNeuralNet* Population::BestNet() const {
+  ConsecutiveNeuralNet* output = nullptr;
   double best_fitness = -std::numeric_limits<double>::max();
   for(auto& spec : species) {
     for(auto& org : spec.organisms) {
       if(org.fitness > best_fitness) {
-        output = const_cast<NeuralNet*>(&org.network);
+        output = const_cast<ConsecutiveNeuralNet*>(&org.network);
         best_fitness = org.fitness;
       }
     }
