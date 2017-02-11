@@ -16,11 +16,11 @@ template<>
 NeuralNet<Node,Connection>::NeuralNet(const std::vector<Node>& nodes) : nodes(nodes), connections_sorted(false) { ; }
 
 template<>
-NeuralNet<double,Connection>::NeuralNet(std::vector<double>&& Nodes, std::vector<Connection>&& Conn)
+NeuralNet<float,Connection>::NeuralNet(std::vector<float>&& Nodes, std::vector<Connection>&& Conn)
   : nodes(std::move(Nodes)), connections(std::move(Conn)), connections_sorted(false) { ; }
 
 template<>
-NeuralNet<double,Connection>::NeuralNet(const std::vector<double>& nodes) : nodes(nodes), connections_sorted(false) { ; }
+NeuralNet<float,Connection>::NeuralNet(const std::vector<float>& nodes) : nodes(nodes), connections_sorted(false) { ; }
 
 
 bool IsSensor(const NodeType& type) {
