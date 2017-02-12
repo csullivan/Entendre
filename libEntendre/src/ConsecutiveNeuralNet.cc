@@ -10,19 +10,19 @@
 #include <vector>
 
 
-std::vector<float> ConsecutiveNeuralNet::evaluate(std::vector<float> inputs) {
+std::vector<_float_> ConsecutiveNeuralNet::evaluate(std::vector<_float_> inputs) {
   sort_connections();
   load_input_vals(inputs);
 
   for(auto& conn : connections) {
-    float input_val = get_node_val(conn.origin);
+    _float_ input_val = get_node_val(conn.origin);
     add_to_val(conn.dest, input_val * conn.weight);
   }
 
   return read_output_vals();
 }
 
-void ConsecutiveNeuralNet::load_input_vals(const std::vector<float>& inputs) {
+void ConsecutiveNeuralNet::load_input_vals(const std::vector<_float_>& inputs) {
   size_t input_index = 0;
 
   for(auto& node : nodes) {
@@ -48,8 +48,8 @@ void ConsecutiveNeuralNet::load_input_vals(const std::vector<float>& inputs) {
   }
 }
 
-std::vector<float> ConsecutiveNeuralNet::read_output_vals() {
-  std::vector<float> output;
+std::vector<_float_> ConsecutiveNeuralNet::read_output_vals() {
+  std::vector<_float_> output;
   for(size_t i=0; i<nodes.size(); i++) {
     if(nodes[i].type == NodeType::Output) {
       output.push_back(get_node_val(i));
@@ -58,7 +58,7 @@ std::vector<float> ConsecutiveNeuralNet::read_output_vals() {
   return output;
 }
 
-float ConsecutiveNeuralNet::get_node_val(unsigned int i) {
+_float_ ConsecutiveNeuralNet::get_node_val(unsigned int i) {
   if(!nodes[i].is_sigmoid) {
     nodes[i].value = sigmoid(nodes[i].value);
     nodes[i].is_sigmoid = true;
@@ -66,7 +66,7 @@ float ConsecutiveNeuralNet::get_node_val(unsigned int i) {
   return nodes[i].value;
 }
 
-void ConsecutiveNeuralNet::add_to_val(unsigned int i, float val) {
+void ConsecutiveNeuralNet::add_to_val(unsigned int i, _float_ val) {
   if(nodes[i].is_sigmoid) {
     nodes[i].value = 0;
     nodes[i].is_sigmoid = false;

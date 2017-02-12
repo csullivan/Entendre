@@ -4,7 +4,7 @@
 #include "Timer.hh"
 
 TEST(ConsecutiveNeuralNet,EvaluateNetwork){
-    auto sigmoid = [](float val) {return 1/(1 + std::exp(-val));};
+    auto sigmoid = [](_float_ val) {return 1/(1 + std::exp(-val));};
 
     auto genome = Genome()
         .AddNode(NodeType::Bias)
@@ -23,7 +23,7 @@ TEST(ConsecutiveNeuralNet,EvaluateNetwork){
 }
 
 TEST(ConsecutiveNeuralNet,EvaluateRecurrentNetwork){
-    auto sigmoid = [](float val) {return 1/(1 + std::exp(-val));};
+    auto sigmoid = [](_float_ val) {return 1/(1 + std::exp(-val));};
 
     auto genome = Genome()
         .AddNode(NodeType::Bias)
@@ -48,7 +48,7 @@ TEST(ConsecutiveNeuralNet,EvaluateRecurrentNetwork){
 }
 
 TEST(ConsecutiveNeuralNet,EvaluateLargeNetwork){
-    auto sigmoid = [](float val) {return 1/(1 + std::exp(-val));};
+    auto sigmoid = [](_float_ val) {return 1/(1 + std::exp(-val));};
 
     auto genome = Genome().
         AddNode(NodeType::Bias);

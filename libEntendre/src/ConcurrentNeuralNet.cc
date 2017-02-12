@@ -76,8 +76,8 @@ ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(co
 
 ////////////////////////////////////////////////////////////////////////////
 
-std::vector<float> node_values(std::vector<Node>& nodes) {
-  return std::vector<float>(nodes.begin(),nodes.end());
+std::vector<_float_> node_values(std::vector<Node>& nodes) {
+  return std::vector<_float_>(nodes.begin(),nodes.end());
 }
 
 ConcurrentNeuralNet::ConcurrentNeuralNet(ConsecutiveNeuralNet&& net)
@@ -86,6 +86,6 @@ ConcurrentNeuralNet::ConcurrentNeuralNet(ConsecutiveNeuralNet&& net)
   connections_sorted = net.connections_sorted;
 }
 
-std::vector<float> ConcurrentNeuralNet::evaluate(std::vector<float> inputs) {
+std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) {
   return inputs;
 }

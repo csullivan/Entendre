@@ -18,7 +18,7 @@ TEST(Population,Construct){
                  std::make_shared<Probabilities>());
 
 
-  std::vector<float> input_vals = {1};
+  std::vector<_float_> input_vals = {1};
   pop.Reproduce(
     // fitness lambda function
     [&](ConsecutiveNeuralNet& net) {
@@ -55,7 +55,7 @@ TEST(Population,EvaluationTimer){
         tperformance+=elapsed;
       });
 
-    std::vector<float> input_vals = {1};
+    std::vector<_float_> input_vals = {1};
     pop.Evaluate(
       // fitness lambda function
       [&](ConsecutiveNeuralNet& net) {

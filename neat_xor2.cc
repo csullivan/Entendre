@@ -29,7 +29,7 @@ int main() {
 
   auto max_generations = 2000u;
 
-  std::vector<vector<float>> possible_inputs = {
+  std::vector<vector<_float_>> possible_inputs = {
     {0,0},
     {0,1},
     {1,0},
@@ -54,9 +54,9 @@ int main() {
     std::cout << pop.NumSpecies() << " species total" << std::endl;
     std::cout << "Best (nodes, conn) = (" << best->num_nodes() << ", " << best->num_connections()
     << ")" << std::endl;
-    float error = 0;
+    _float_ error = 0;
     for(auto& input : possible_inputs) {
-      float val = best->evaluate(input)[0];
+      _float_ val = best->evaluate(input)[0];
       std::cout << input[0] << " ^ " << input[1] << " = " << val << std::endl;;
       error += std::abs(val - input[2]);
     }
@@ -72,12 +72,12 @@ int main() {
         // randomize input order and then create the solution set
         std::random_shuffle(possible_inputs.begin(),possible_inputs.end());
 
-        std::vector<float> output;
+        std::vector<_float_> output;
         for (auto& inputs : possible_inputs) {
           output.push_back(net.evaluate(inputs)[0]);
         }
 
-        float error = 0;
+        _float_ error = 0;
         for (auto i=0u; i< possible_inputs.size(); i++) {
           error += (possible_inputs[i][2] == 0) ? std::pow(output[i],2) : std::pow(1-output[i],2);
           //error += (possible_inputs[i][2] == 0) ? std::abs(output[i]) : std::abs(1-output[i]);

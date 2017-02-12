@@ -6,13 +6,13 @@
 
 class ConsecutiveNeuralNet;
 
-class ConcurrentNeuralNet : public NeuralNet<float,Connection> {
+class ConcurrentNeuralNet : public NeuralNet<_float_,Connection> {
 public:
   using NeuralNet::NeuralNet;
   ConcurrentNeuralNet(ConsecutiveNeuralNet&& net);
 
   void sort_connections() override;
-  std::vector<float> evaluate(std::vector<float> inputs);
+  std::vector<_float_> evaluate(std::vector<_float_> inputs);
 
 
 private:
@@ -20,6 +20,6 @@ private:
   EvaluationOrder compare_connections(const Connection& a, const Connection& b);
 
 
-  std::vector<float> nodes_current;
-  std::vector<float> nodes_prior;
+  std::vector<_float_> nodes_current;
+  std::vector<_float_> nodes_prior;
 };

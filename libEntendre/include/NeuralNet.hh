@@ -4,18 +4,19 @@
 #include <functional>
 #include <cmath>
 
+typedef float _float_;
 
 struct NodeGene;
 
 enum class NodeType { Input, Hidden, Output, Bias };
 struct Node {
-  float value;
+  _float_ value;
   bool is_sigmoid;
   NodeType type;
   Node(NodeType _type)
     : value(0.0),
       is_sigmoid(false), type(_type) {;}
-  operator float() { return value; }
+  operator _float_() { return value; }
 };
 
 bool IsSensor(const NodeType& type);
@@ -24,28 +25,28 @@ enum class ConnectionType { Normal, Recurrent };
 struct Connection {
   unsigned int origin;
   unsigned int dest;
-  float weight;
+  _float_ weight;
   ConnectionType type;
   unsigned int set = 0;
   Connection(unsigned int _origin,
              unsigned int _dest,
              ConnectionType _type,
-             float _weight=0.5)
+             _float_ _weight=0.5)
     : origin(_origin), dest(_dest),
       weight(_weight), type(_type) {;}
 };
 
 // Abstract NeuralNet base class templated over node and connection types
 // For subclass ConsecutiveNeuralNet, N=Node C=Connection
-// For subclass ConcurrentNeuralNet, N=float C=Connection
+// For subclass ConcurrentNeuralNet, N=_float_ C=Connection
 template <typename N, typename C>
 class  NeuralNet {
 public:
   NeuralNet(std::vector<N>&& Nodes, std::vector<C>&& Conn);
   NeuralNet(const std::vector<N>& Nodes);
 
-  void add_connection(int origin, int dest, float weight);
-  void register_sigmoid(std::function<float(float)> sig) {sigma = sig;}
+  void add_connection(int origin, int dest, _float_ weight);
+  void register_sigmoid(std::function<_float_(_float_)> sig) {sigma = sig;}
 
   unsigned int num_nodes() const { return nodes.size(); }
   unsigned int num_connections() const { return connections.size(); }
@@ -53,25 +54,25 @@ public:
   const std::vector<C>& get_connections() const { return connections; }
 
 protected:
-  float sigmoid(float val) const;
+  _float_ sigmoid(_float_ val) const;
   bool would_make_loop(unsigned int i, unsigned int j) const;
 
 
   std::vector<N> nodes;
   std::vector<C> connections;
   bool connections_sorted;
-  std::function<float(float val)> sigma;
+  std::function<_float_(_float_ val)> sigma;
 
 private:
 
   virtual void sort_connections() = 0;
-  virtual std::vector<float> evaluate(std::vector<float> inputs) = 0;
+  virtual std::vector<_float_> evaluate(std::vector<_float_> inputs) = 0;
 };
 
 
 
 template <typename N, typename C>
-void NeuralNet<N,C>::add_connection(int origin, int dest, float weight) {
+void NeuralNet<N,C>::add_connection(int origin, int dest, _float_ weight) {
   if(would_make_loop(origin,dest)) {
     connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight);
   } else {
@@ -120,7 +121,7 @@ bool NeuralNet<N,C>::would_make_loop(unsigned int i, unsigned int j) const {
 }
 
 template<typename N, typename C>
-float NeuralNet<N,C>::sigmoid(float val) const {
+_float_ NeuralNet<N,C>::sigmoid(_float_ val) const {
   return (sigma) ? sigma(val) :
   // Logistic curve
     1/(1 + std::exp(-val));

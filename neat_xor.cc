@@ -8,9 +8,9 @@
 #include "Timer.hh"
 
 struct XOR_res {
-  float x;
-  float y;
-  float correct;
+  _float_ x;
+  _float_ y;
+  _float_ correct;
 };
 
 int main() {
@@ -54,9 +54,9 @@ int main() {
     }
     std::cout << "Best (nodes, conn) = (" << best->num_nodes() << ", " << best->num_connections()
               << ")" << std::endl;
-    float error = 0;
+    _float_ error = 0;
     for(auto& input : inputs) {
-      float val = best->evaluate({input.x, input.y})[0];
+      _float_ val = best->evaluate({input.x, input.y})[0];
       std::cout << input.x << " ^ " << input.y << " = " << val << std::endl;
       error += std::abs(val - input.correct);
     }
@@ -68,9 +68,9 @@ int main() {
       return 0.0;
     }
 
-    float error = 0;
+    _float_ error = 0;
     for(const auto& input : shuffled_inputs) {
-      float val = net.evaluate({input.x, input.y})[0];
+      _float_ val = net.evaluate({input.x, input.y})[0];
       //error += std::abs(val - input.correct);
       error += std::pow(val - input.correct, 2);
     }
@@ -88,7 +88,7 @@ int main() {
     auto best = pop.BestNet();
     bool have_winner = true;
     for(auto& input : inputs) {
-      float val = best->evaluate({input.x, input.y})[0];
+      _float_ val = best->evaluate({input.x, input.y})[0];
       if(std::abs(val - input.correct) >= 0.5) {
         have_winner = false;
         break;
