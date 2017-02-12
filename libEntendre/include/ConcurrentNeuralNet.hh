@@ -16,8 +16,14 @@ public:
 
 
 private:
+  void clear_nodes(int* list, int n);
+  void sigmoid_nodes(int* list, int n);
+  void apply_connections(Connection* list, int n);
+
+
   enum class EvaluationOrder { GreaterThan, LessThan, NotEqual, Unknown };
   EvaluationOrder compare_connections(const Connection& a, const Connection& b);
+
 
 
   std::vector<_float_> nodes_current;

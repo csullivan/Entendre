@@ -9,7 +9,7 @@
 #include <set>
 #include <sstream>
 #include <vector>
-
+#include <algorithm>
 
 void ConcurrentNeuralNet::sort_connections() {
 
@@ -62,6 +62,10 @@ void ConcurrentNeuralNet::sort_connections() {
     throw std::runtime_error("Sort Error: change_applied == true on last possible iteration");
   }
 
+  // sort connections based on evaluation set number
+  std::sort(connections.begin(),connections.end(),[](Connection a, Connection b){ return a.set < b.set; });
+  connections_sorted = true;
+
 }
 
 
@@ -89,3 +93,30 @@ ConcurrentNeuralNet::ConcurrentNeuralNet(ConsecutiveNeuralNet&& net)
 std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) {
   return inputs;
 }
+
+void ConcurrentNeuralNet::clear_nodes(int* list, int n) {
+  for(int i=0; i<n; i++) {
+    nodes[list[i]] = 0;
+  }
+}
+
+void ConcurrentNeuralNet::sigmoid_nodes(int* list, int n) {
+  for(int i=0; i<n; i++) {
+    nodes[list[i]] = sigmoid(nodes[list[i]]);
+  }
+}
+
+void ConcurrentNeuralNet::apply_connections(Connection* list, int n) {
+  for(int i=0; i<n; i++) {
+    Connection& conn = list[i];
+    if(conn.origin == conn.dest) {
+      // Special case for self-recurrent nodes
+      // Be sure not to zero-out before this step.
+      nodes[conn.origin] *= conn.weight;
+    } else {
+      nodes[conn.dest] += conn.weight*nodes[conn.origin];
+    }
+  }
+}
+
+
