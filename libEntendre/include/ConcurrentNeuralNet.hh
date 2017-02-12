@@ -16,16 +16,16 @@ public:
 
 
 private:
-  void clear_nodes(int* list, int n);
-  void sigmoid_nodes(int* list, int n);
-  void apply_connections(Connection* list, int n);
+  void clear_nodes(unsigned int* list, unsigned int n);
+  void sigmoid_nodes(unsigned int* list, unsigned int n);
+  void apply_connections(Connection* list, unsigned int n);
+  void build_action_list();
 
 
   enum class EvaluationOrder { GreaterThan, LessThan, NotEqual, Unknown };
   EvaluationOrder compare_connections(const Connection& a, const Connection& b);
 
-
-
-  std::vector<_float_> nodes_current;
-  std::vector<_float_> nodes_prior;
+  size_t num_inputs = 0;
+  size_t num_outputs = 0;
+  std::vector<unsigned int> action_list;
 };
