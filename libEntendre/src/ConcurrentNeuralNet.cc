@@ -11,6 +11,32 @@
 #include <vector>
 #include <algorithm>
 
+
+ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(const Connection& a, const Connection& b) {
+  // A recurrent connection must be used before the origin is overwritten.
+  if (a.type == ConnectionType::Recurrent && a.origin == b.dest) { return EvaluationOrder::LessThan; }
+  if (b.type == ConnectionType::Recurrent && b.origin == a.dest) { return EvaluationOrder::GreaterThan; }
+
+  // A normal connection must occur after every connection incoming to its origin has completed.
+  if (a.type == ConnectionType::Normal && a.dest == b.origin) { return EvaluationOrder::LessThan; }
+  if (b.type == ConnectionType::Normal && b.dest == a.origin) { return EvaluationOrder::GreaterThan; }
+
+  // Two connections writing to the same destination must be in different sets.
+  if (a.dest == b.dest) {
+    // A self-recurrent connection happens at the same time as
+    // zero-ing out, and so must occur first of all connections
+    // writing to that node.
+    if(a.origin == a.dest) {
+      return EvaluationOrder::LessThan;
+    } else if (b.origin == b.dest) {
+      return EvaluationOrder::GreaterThan;
+    } else {
+      return EvaluationOrder::NotEqual;
+    }
+  }
+  return EvaluationOrder::Unknown;
+}
+
 void ConcurrentNeuralNet::sort_connections() {
   if(connections_sorted) {
     return;
@@ -74,81 +100,94 @@ void ConcurrentNeuralNet::sort_connections() {
 
 void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
 
-  std::map<unsigned int, size_t> connection_sets;
-  for (auto const& conn : connections) { connection_sets[conn.set]++; }
+  unsigned int num_connection_sets = connections.back().set+1;
+  std::vector<unsigned int> connection_set_sizes(num_connection_sets, 0);
+  for(auto& conn : connections) {
+    connection_set_sizes[conn.set]++;
+  }
 
-  std::set<unsigned int> cleared_nodes, sigmoided_nodes;
+  std::vector<unsigned int> earliest_zero_out_indices(nodes.size(), 0);
+  std::vector<unsigned int> earliest_sigmoid_indices(nodes.size(), 0);
 
-  unsigned int begin = 0;
-  for (auto& set : connection_sets) {
-    size_t end = begin+set.second;
+  std::vector<unsigned int> latest_zero_out_indices(nodes.size(), num_connection_sets);
+  std::vector<unsigned int> latest_sigmoid_indices(nodes.size(), num_connection_sets);
 
-    // enumerate all destination nodes of the current set
-    std::vector<unsigned int> origins, destinations;
-    for (auto i = begin; i < end; i++) {
-      origins.push_back(connections[i].origin);
-      destinations.push_back(connections[i].dest);
-    }
-    begin = end;
+  std::set<unsigned int> self_recurrent_nodes;
 
-    // determine if node has been cleared in prior set
-    size_t num_to_clear = 0;
-    std::vector<unsigned int> nodes_to_clear;
-    for (auto& node : destinations) {
-      if (cleared_nodes.count(node)==0) {
-        num_to_clear++;
-        nodes_to_clear.push_back(node);
-        cleared_nodes.insert(node);
-      }
-    }
-    // determine if node has been sigmoided in prior set
-    size_t num_to_sigmoid = 0;
-    std::vector<unsigned int> nodes_to_sigmoid;
-    for (auto& node : origins) {
-      if (node >= num_inputs && sigmoided_nodes.count(node)==0) {
-        num_to_sigmoid++;
-        nodes_to_sigmoid.push_back(node);
-        sigmoided_nodes.insert(node);
-      }
+  for(auto& conn : connections) {
+    // delay earliest possible zeroing of recurrent connections origins
+    // until recurrent connections are applied
+    if(conn.type == ConnectionType::Recurrent) {
+      earliest_zero_out_indices[conn.origin] = std::max(
+        earliest_zero_out_indices[conn.origin],
+        conn.set + 1);
     }
 
-    // add only new to-be cleared nodes
-    action_list.push_back(num_to_clear);
-    for (auto& node : nodes_to_clear) {
-      action_list.push_back(node);
+    earliest_sigmoid_indices[conn.dest] = std::max(
+      earliest_sigmoid_indices[conn.dest],
+      conn.set + 1);
+
+    latest_zero_out_indices[conn.dest] = std::min(
+      latest_zero_out_indices[conn.dest],
+      conn.set);
+
+    if(conn.type == ConnectionType::Normal) {
+      latest_sigmoid_indices[conn.origin] = std::min(
+        latest_sigmoid_indices[conn.origin],
+        conn.set);
     }
-    // add only new to-be sigmoided nodes
-    action_list.push_back(num_to_sigmoid);
-    for (auto& node : nodes_to_sigmoid) {
-      action_list.push_back(node);
-    }
-    // add the number of connections to evaluate
-    action_list.push_back(set.second);
 
-    // if this is the last connection set
-    if (begin == connections.size()) {
-      // add final # of nodes to be cleared (none)
-      action_list.push_back(0);
-
-      // determine if node has been sigmoided in prior set
-      num_to_sigmoid = 0;
-      nodes_to_sigmoid.clear();
-      for (auto& node : destinations) {
-        if (sigmoided_nodes.count(node)==0) {
-          num_to_sigmoid++;
-          nodes_to_sigmoid.push_back(node);
-          sigmoided_nodes.insert(node);
-        }
-      }
-
-      // sigmoid output nodes
-      action_list.push_back(num_to_sigmoid);
-      for (auto& node : nodes_to_sigmoid) {
-        action_list.push_back(node);
-      }
-
+    if(conn.origin == conn.dest) {
+      self_recurrent_nodes.insert(conn.origin);
     }
   }
+
+  std::vector<unsigned int>& zero_out_indices = earliest_zero_out_indices;
+  std::vector<unsigned int>& sigmoid_indices = earliest_sigmoid_indices;
+
+
+  std::vector<std::vector<unsigned int> > zero_out_sets(num_connection_sets+1);
+  std::vector<std::vector<unsigned int> > sigmoid_sets(num_connection_sets+1);
+
+  for(unsigned int i=0; i<nodes.size(); i++) {
+    bool is_self_recurrent = self_recurrent_nodes.count(i);
+    if(!is_self_recurrent && i >= num_inputs) {
+      zero_out_sets[zero_out_indices[i]].push_back(i);
+    }
+    if(i >= num_inputs) {
+      sigmoid_sets[sigmoid_indices[i]].push_back(i);
+    }
+  }
+
+  auto append_zero_out_set = [&](unsigned int i) {
+    auto& zero_out_set = zero_out_sets[i];
+    action_list.push_back(zero_out_set.size());
+    for(unsigned int j : zero_out_set) {
+      action_list.push_back(j);
+    }
+  };
+
+  auto append_sigmoid_set = [&](unsigned int i) {
+    auto& sigmoid_set = sigmoid_sets[i];
+    action_list.push_back(sigmoid_set.size());
+    for(unsigned int j : sigmoid_set) {
+      action_list.push_back(j);
+    }
+  };
+
+
+
+  action_list.clear();
+  for(unsigned int i=0; i<num_connection_sets; i++) {
+    append_zero_out_set(i);
+    append_sigmoid_set(i);
+    action_list.push_back(connection_set_sizes[i]);
+  }
+
+  append_zero_out_set(num_connection_sets);
+  append_sigmoid_set(num_connection_sets);
+
+
 
   // print action list
   // for (auto& item : action_list) {
@@ -156,15 +195,6 @@ void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
   // } std::cout << std::endl;
 }
 
-
-ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(const Connection& a, const Connection& b) {
-  if (a.type == ConnectionType::Recurrent && a.origin == b.dest) { return EvaluationOrder::LessThan; }
-  if (b.type == ConnectionType::Recurrent && b.origin == a.dest) { return EvaluationOrder::GreaterThan; }
-  if (a.type == ConnectionType::Normal && a.dest == b.origin) { return EvaluationOrder::LessThan; }
-  if (b.type == ConnectionType::Normal && b.dest == a.origin) { return EvaluationOrder::GreaterThan; }
-  if (a.dest == b.dest) { return EvaluationOrder::NotEqual; }
-  return EvaluationOrder::Unknown;
-}
 
 ////////////////////////////////////////////////////////////////////////////
 

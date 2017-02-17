@@ -140,6 +140,11 @@ void ConsecutiveNeuralNet::sort_connections() {
 
   connections = sorted;
   connections_sorted = true;
+
+  //
+  for (auto& node : nodes) {
+    node.is_sigmoid = true;
+  }
 }
 
 std::vector<NodeType> ConsecutiveNeuralNet::node_types() const {
