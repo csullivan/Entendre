@@ -11,6 +11,7 @@
 #include <vector>
 #include <algorithm>
 
+#include "logging.h"
 
 ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(const Connection& a, const Connection& b) {
   // A recurrent connection must be used before the origin is overwritten.
@@ -34,6 +35,8 @@ ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(co
       return EvaluationOrder::NotEqual;
     }
   }
+
+  // else a & b are not adjacent and cannot be compared
   return EvaluationOrder::Unknown;
 }
 
