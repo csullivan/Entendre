@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <functional>
 #include <cmath>
+#include <memory>
 
 typedef float _float_;
 
@@ -50,7 +51,7 @@ public:
   virtual Connection get_connection(unsigned int i) const = 0;
   virtual NodeType get_node_type(unsigned int i) const = 0;
   virtual std::vector<_float_> evaluate(std::vector<_float_> inputs) = 0;
-  virtual NeuralNet* clone() const = 0;
+  virtual std::unique_ptr<NeuralNet> clone() const = 0;
 
   virtual void print_network(std::ostream& os) const = 0;
   void register_sigmoid(std::function<_float_(_float_)> sig) {sigma = sig;}
@@ -72,8 +73,8 @@ template<typename T>
 class NeuralNetRecursiveBase : public NeuralNet {
 public:
   virtual ~NeuralNetRecursiveBase() { ; }
-  virtual NeuralNet* clone() const {
-    return new T(static_cast<T const&>(*this));
+  virtual std::unique_ptr<NeuralNet> clone() const {
+    return std::make_unique<T>(*static_cast<const T*>(this));
   }
 
 

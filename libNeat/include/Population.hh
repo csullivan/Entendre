@@ -18,7 +18,7 @@ struct Organism {
     fitness = rhs.fitness;
     adj_fitness = rhs.adj_fitness;
     genome = rhs.genome;
-    network.reset(rhs.network->clone());
+    network = rhs.network->clone();
     return *this;
   }
   float fitness;

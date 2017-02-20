@@ -98,7 +98,7 @@ int main() {
     }
 
     if(have_winner) {
-      winner.reset(best->clone());
+      winner = best->clone();
       break;
     }
 

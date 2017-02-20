@@ -91,7 +91,7 @@ int main() {
           truth_count += (possible_inputs[i][2] == 0)  ?  ((output[i]<0.5) ? 1:0) : ((output[i]>=0.5) ? 1:0);
         }
         if (truth_count == 4) {
-          winner.reset(net.clone());
+          winner = net.clone();
         }
 
         return std::pow(4.-error,2);
