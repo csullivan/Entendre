@@ -201,18 +201,23 @@ void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
 
 ////////////////////////////////////////////////////////////////////////////
 
-std::vector<_float_> node_values(std::vector<Node>& nodes) {
-  return std::vector<_float_>(nodes.begin(),nodes.end());
+void ConcurrentNeuralNet::add_node(const NodeType& type) {
+  switch (type) {
+  case NodeType::Bias:
+  case NodeType::Input:
+    num_inputs++;
+    break;
+  case NodeType::Output:
+    num_outputs++;
+    break;
+  case NodeType::Hidden:
+    break;
+  };
+  nodes.push_back(0.0);
 }
 
-ConcurrentNeuralNet::ConcurrentNeuralNet(ConsecutiveNeuralNet&& net)
-  : NeuralNet(node_values(net.nodes),std::move(net.connections)) {
-  sigma = net.sigma;
-  connections_sorted = net.connections_sorted;
-  for (auto const& node : net.nodes) {
-    if (IsSensor(node.type)) { num_inputs++; }
-    else if (node.type == NodeType::Output) { num_outputs++; }
-  }
+std::vector<_float_> node_values(std::vector<Node>& nodes) {
+  return std::vector<_float_>(nodes.begin(),nodes.end());
 }
 
 void ConcurrentNeuralNet::clear_nodes(unsigned int* list, unsigned int n) {

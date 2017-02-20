@@ -157,14 +157,14 @@ std::vector<NodeType> ConsecutiveNeuralNet::node_types() const {
   return output;
 }
 
-std::ostream& operator<<(std::ostream& os, const ConsecutiveNeuralNet& net) {
+void ConsecutiveNeuralNet::print_network(std::ostream& os) const {
   std::map<unsigned int, std::string> names;
   unsigned int num_inputs = 0;
   unsigned int num_outputs = 0;
   unsigned int num_hidden = 0;
-  for(unsigned int i=0; i<net.nodes.size(); i++) {
+  for(unsigned int i=0; i<nodes.size(); i++) {
     std::stringstream ss;
-    switch(net.nodes[i].type) {
+    switch(nodes[i].type) {
       case NodeType::Input:
         ss << "I" << num_inputs++;
         break;
@@ -179,7 +179,7 @@ std::ostream& operator<<(std::ostream& os, const ConsecutiveNeuralNet& net) {
         break;
 
       default:
-        std::cerr << "Type: " << int(net.nodes[i].type) << std::endl;
+        std::cerr << "Type: " << int(nodes[i].type) << std::endl;
         assert(false);
         break;
     }
@@ -190,7 +190,7 @@ std::ostream& operator<<(std::ostream& os, const ConsecutiveNeuralNet& net) {
     std::cout << "Node " << item.first << " = " << item.second << std::endl;
   }
 
-  for(auto& conn : net.connections) {
+  for(auto& conn : connections) {
     os << names[conn.origin];
     //os << conn.origin;
     if(conn.type == ConnectionType::Normal) {
@@ -201,9 +201,8 @@ std::ostream& operator<<(std::ostream& os, const ConsecutiveNeuralNet& net) {
     os << names[conn.dest];
     //os << conn.dest;
 
-    if(&conn != &net.connections.back()) {
+    if(&conn != &connections.back()) {
       os << "\n";
     }
   }
-  return os;
 }

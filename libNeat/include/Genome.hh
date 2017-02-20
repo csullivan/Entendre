@@ -2,18 +2,21 @@
 
 #include <ostream>
 #include <set>
+#include <unordered_set>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <memory>
 
-#include "ConsecutiveNeuralNet.hh"
 #include "Random.hh"
 #include "Requirements.hh"
+#include "ReachabilityChecker.hh"
+#include "ConsecutiveNeuralNet.hh"
+#include "ConcurrentNeuralNet.hh"
 
 
 struct NodeGene;
 struct ConnectionGene;
-class  ReachabilityChecker;
 
 class Genome : public uses_random_numbers,
                public requires<Probabilities> {
@@ -21,7 +24,9 @@ public:
   Genome();
   static Genome ConnectedSeed(int num_inputs, int num_outputs);
 
-  operator ConsecutiveNeuralNet() const;
+  template<typename NetType>
+  std::unique_ptr<NeuralNet> MakeNet() const;
+
   Genome& operator=(const Genome&);
   Genome& AddNode(NodeType type);
   Genome& AddConnection(unsigned long origin, unsigned long dest,
@@ -59,6 +64,7 @@ private:
   NodeGene* GetNodeByInnovation(unsigned long innovation);
   ConnectionGene* GetConnByN(unsigned int i);
   ConnectionGene* GetConnByInnovation(unsigned long innovation);
+
 
   /// Adds the node gene given
   /**
@@ -123,11 +129,4 @@ struct NodeGene {
   NodeGene(const NodeType& type_, unsigned long innov) : type(type_), innovation(innov) {;}
   NodeType type;
   unsigned long innovation;
-  static std::vector<Node> ToNodes(const std::vector<NodeGene>& genes) {
-    std::vector<Node> nodes;
-    for (auto const& gene : genes) {
-      nodes.emplace_back(gene.type);
-    }
-    return nodes;
-  }
 };

@@ -4,15 +4,24 @@
 #include <functional>
 #include "NeuralNet.hh"
 
-class ConsecutiveNeuralNet;
-
-class ConcurrentNeuralNet : public NeuralNet<_float_,Connection> {
+class ConcurrentNeuralNet : public NeuralNetRecursiveBase<ConcurrentNeuralNet> {
+  friend class NeuralNetRecursiveBase;
 public:
-  using NeuralNet::NeuralNet;
-  ConcurrentNeuralNet(ConsecutiveNeuralNet&& net);
+  //using NeuralNet::NeuralNet;
+  virtual ~ConcurrentNeuralNet() { ; }
 
   void sort_connections() override;
   std::vector<_float_> evaluate(std::vector<_float_> inputs);
+  virtual void add_node(const NodeType& type);
+
+
+  virtual Connection get_connection(unsigned int i) const {
+    return connections[i];
+  }
+  virtual NodeType get_node_type(unsigned int i) const {
+    return (i<num_inputs) ? NodeType::Input :
+      (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
+  }
 
 
 private:
@@ -27,5 +36,8 @@ private:
 
   size_t num_inputs = 0;
   size_t num_outputs = 0;
+
+  std::vector<_float_> nodes;
+  std::vector<Connection> connections;
   std::vector<unsigned int> action_list;
 };

@@ -6,9 +6,9 @@
 
 typedef float _float_;
 
-struct NodeGene;
 
 enum class NodeType { Input, Hidden, Output, Bias };
+
 struct Node {
   _float_ value;
   bool is_sigmoid;
@@ -36,62 +36,87 @@ struct Connection {
       weight(_weight), type(_type) {;}
 };
 
-// Abstract NeuralNet base class templated over node and connection types
-// For subclass ConsecutiveNeuralNet, N=Node C=Connection
-// For subclass ConcurrentNeuralNet, N=_float_ C=Connection
-template <typename N, typename C>
+
+
 class  NeuralNet {
 public:
-  NeuralNet(std::vector<N>&& Nodes, std::vector<C>&& Conn);
-  NeuralNet(const std::vector<N>& Nodes);
+  virtual ~NeuralNet() { ; }
 
-  void add_connection(int origin, int dest, _float_ weight);
+
+  virtual void add_node(const NodeType& type) = 0;
+  virtual void add_connection(int origin, int dest, _float_ weight) = 0;
+  virtual unsigned int num_nodes() = 0;
+  virtual unsigned int num_connections() = 0;
+  virtual Connection get_connection(unsigned int i) const = 0;
+  virtual NodeType get_node_type(unsigned int i) const = 0;
+  virtual std::vector<_float_> evaluate(std::vector<_float_> inputs) = 0;
+  virtual NeuralNet* clone() const = 0;
+
+  virtual void print_network(std::ostream& os) const = 0;
   void register_sigmoid(std::function<_float_(_float_)> sig) {sigma = sig;}
-
-  unsigned int num_nodes() const { return nodes.size(); }
-  unsigned int num_connections() const { return connections.size(); }
-
-  const std::vector<C>& get_connections() const { return connections; }
 
 protected:
   _float_ sigmoid(_float_ val) const;
-  bool would_make_loop(unsigned int i, unsigned int j) const;
-
-
-  std::vector<N> nodes;
-  std::vector<C> connections;
   bool connections_sorted;
   std::function<_float_(_float_ val)> sigma;
 
 private:
-
   virtual void sort_connections() = 0;
-  virtual std::vector<_float_> evaluate(std::vector<_float_> inputs) = 0;
+
+  friend std::ostream& operator<<(std::ostream& os, const NeuralNet& net);
+
+};
+
+
+template<typename T>
+class NeuralNetRecursiveBase : public NeuralNet {
+public:
+  virtual ~NeuralNetRecursiveBase() { ; }
+  virtual NeuralNet* clone() const {
+    return new T(static_cast<T const&>(*this));
+  }
+
+
+  virtual void add_connection(int origin, int dest, _float_ weight);
+  virtual unsigned int num_nodes() { return static_cast<T*>(this)->nodes.size(); }
+  virtual unsigned int num_connections() { return static_cast<T*>(this)->connections.size(); }
+  auto& get_connections() const { return static_cast<T*>(this)->connections; }
+
+  virtual void print_network(std::ostream& os) const { std::string str = "Needs Impl."; os << str; }
+
+protected:
+  bool would_make_loop(unsigned int i, unsigned int j);
+
+private:
+
 };
 
 
 
-template <typename N, typename C>
-void NeuralNet<N,C>::add_connection(int origin, int dest, _float_ weight) {
+
+
+
+template <typename T>
+void NeuralNetRecursiveBase<T>::add_connection(int origin, int dest, _float_ weight) {
   if(would_make_loop(origin,dest)) {
-    connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight);
+    static_cast<T*>(this)->connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight);
   } else {
-    connections.emplace_back(origin,dest,ConnectionType::Normal,weight);
+    static_cast<T*>(this)->connections.emplace_back(origin,dest,ConnectionType::Normal,weight);
   }
 }
 
-template<typename N, typename C>
-bool NeuralNet<N,C>::would_make_loop(unsigned int i, unsigned int j) const {
+template <typename T>
+bool NeuralNetRecursiveBase<T>::would_make_loop(unsigned int i, unsigned int j) {
   // handle the case of a recurrent connection to itself up front
   if (i == j) { return true; }
 
-  std::vector<bool> reachable(nodes.size(), false);
+  std::vector<bool> reachable(static_cast<T*>(this)->nodes.size(), false);
   reachable[j] = true;
 
   while (true) {
 
     bool found_new_node = false;
-    for (auto const& conn : connections) {
+    for (auto const& conn : static_cast<T*>(this)->connections) {
       // if the origin of this connection is reachable and its
       // desitination is not, then it should be made reachable
       if (reachable[conn.origin] &&
@@ -118,17 +143,4 @@ bool NeuralNet<N,C>::would_make_loop(unsigned int i, unsigned int j) const {
     }
 
   }
-}
-
-template<typename N, typename C>
-_float_ NeuralNet<N,C>::sigmoid(_float_ val) const {
-  return (sigma) ? sigma(val) :
-  // Logistic curve
-    1/(1 + std::exp(-val));
-  // Other options for a sigmoid curve
-  //val/std::sqrt(1+val*val);
-  //std::tanh(val);
-  //std::erf((std::sqrt(M_PI)/2)*val);
-  //(2/M_PI) * std::atan((M_PI/2)*val);
-  //val/(1+std::abs(val));
 }

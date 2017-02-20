@@ -27,6 +27,8 @@ int main() {
                  std::make_shared<RNG_MersenneTwister>(),
                  std::make_shared<Probabilities>(params));
 
+  pop.SetNetType<ConsecutiveNeuralNet>();
+
   auto max_generations = 2000u;
 
   std::vector<vector<_float_>> possible_inputs = {
@@ -44,7 +46,7 @@ int main() {
     }
   }
 
-  std::unique_ptr<ConsecutiveNeuralNet> winner = nullptr;
+  std::unique_ptr<NeuralNet> winner = nullptr;
   unsigned int generation;
 
   auto show = [&](){
@@ -67,7 +69,7 @@ int main() {
 
     auto next_gen = pop.Reproduce(
       // fitness lambda
-      [&](ConsecutiveNeuralNet& net) {
+      [&](NeuralNet& net) {
 
         // randomize input order and then create the solution set
         std::random_shuffle(possible_inputs.begin(),possible_inputs.end());
@@ -89,7 +91,7 @@ int main() {
           truth_count += (possible_inputs[i][2] == 0)  ?  ((output[i]<0.5) ? 1:0) : ((output[i]>=0.5) ? 1:0);
         }
         if (truth_count == 4) {
-          winner = std::make_unique<ConsecutiveNeuralNet>(net);
+          winner.reset(net.clone());
         }
 
         return std::pow(4.-error,2);
