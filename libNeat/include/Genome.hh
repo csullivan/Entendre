@@ -2,40 +2,31 @@
 
 #include <ostream>
 #include <set>
+#include <unordered_set>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <memory>
 
-#include "NeuralNet.hh"
 #include "Random.hh"
 #include "Requirements.hh"
+#include "ReachabilityChecker.hh"
+#include "ConsecutiveNeuralNet.hh"
+#include "ConcurrentNeuralNet.hh"
 
-struct ConnectionGene {
-  unsigned long innovation;
-  unsigned long origin;
-  unsigned long dest;
-  double weight;
-  bool enabled;
-  bool operator==(const ConnectionGene& other) {
-    return (origin == other.origin) && (dest == other.dest);
-  }
-};
 
-struct NodeGene {
-  NodeGene() = delete;
-  NodeGene(const NodeType& type_) : type(type_), innovation(0) {;}
-  NodeGene(const NodeType& type_, unsigned long innov) : type(type_), innovation(innov) {;}
-  NodeType type;
-  unsigned long innovation;
-};
-
-class ReachabilityChecker;
+struct NodeGene;
+struct ConnectionGene;
 
 class Genome : public uses_random_numbers,
                public requires<Probabilities> {
 public:
   Genome();
-  operator NeuralNet() const;
+  static Genome ConnectedSeed(int num_inputs, int num_outputs);
+
+  template<typename NetType>
+  std::unique_ptr<NeuralNet> MakeNet() const;
+
   Genome& operator=(const Genome&);
   Genome& AddNode(NodeType type);
   Genome& AddConnection(unsigned long origin, unsigned long dest,
@@ -73,6 +64,7 @@ private:
   NodeGene* GetNodeByInnovation(unsigned long innovation);
   ConnectionGene* GetConnByN(unsigned int i);
   ConnectionGene* GetConnByInnovation(unsigned long innovation);
+
 
   /// Adds the node gene given
   /**
@@ -117,4 +109,24 @@ private:
   // innovation record keeping
   unsigned long last_conn_innov;
   unsigned long last_node_innov;
+};
+
+
+struct ConnectionGene {
+  unsigned long innovation;
+  unsigned long origin;
+  unsigned long dest;
+  double weight;
+  bool enabled;
+  bool operator==(const ConnectionGene& other) {
+    return (origin == other.origin) && (dest == other.dest);
+  }
+};
+
+struct NodeGene {
+  NodeGene() = delete;
+  NodeGene(const NodeType& type_) : type(type_), innovation(0) {;}
+  NodeGene(const NodeType& type_, unsigned long innov) : type(type_), innovation(innov) {;}
+  NodeType type;
+  unsigned long innovation;
 };

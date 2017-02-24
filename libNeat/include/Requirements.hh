@@ -17,22 +17,29 @@ struct Probabilities {
   size_t population_size = 100;
   size_t min_size_for_champion = 5;
   float culling_ratio = 0.5;
-  float match = 0.5;
-  float single_greater = 1.0;
-  float single_lesser = 0.0;
-  float mutate_weights = 0.8;
-  float perturb_weight = 0.9;
-  float mutate_link = 0.05;
-  float mutate_node = 0.03;
-  float mutate_only = 0.25;
-  float mutate_offspring = 0.8;
-  float mutate_reenable = 0.05;
-  float add_recurrent = 0.05;
-  float toggle_status = 0.0; // 0.1 NEAT
-  float step_size = 0.5;
-  float reset_weight = 20.0;
-  float genetic_c1 = 1.0;
-  float genetic_c2 = 0.2;
-  float species_delta = 3.0;
-  size_t stale_species = 15;
+
+  size_t stale_species_num_generations = 15;
+  float stale_species_penalty = 0.01;
+  bool keep_empty_species = false;
+  bool species_representative_from_previous_gen = true;
+
+  float matching_gene_choose_mother = 0.5;
+  float keep_non_matching_mother_gene = 1.0;
+  float keep_non_matching_father_gene = 0.0;
+
+  float mutation_prob_adjust_weights = 0.8;
+  float weight_mutation_is_severe = 0.1;
+  float weight_mutation_small_adjust = 0.5;
+  float weight_mutation_reset_range = 20.0;
+
+  float mutation_prob_add_connection = 0.05;
+  float new_connection_is_recurrent = 0.05;
+  float mutation_prob_add_node = 0.03;
+  //float mutate_offspring = 0.8;
+  float mutation_prob_reenable_connection = 0.05;
+  float mutation_prob_toggle_connection = 0.0; // 0.1 NEAT
+
+  float genetic_distance_structural = 1.0;
+  float genetic_distance_weights = 0.2;
+  float genetic_distance_species_threshold = 3.0;
 };

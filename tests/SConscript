@@ -1,9 +1,0 @@
-Import('env')
-
-env = env.Clone()
-env.Append(CPPPATH=[Dir('googletest/googletest/include'),
-                    Dir('googletest/googletest')])
-bin = env.Program('run_all',
-                  [Glob('*.cc'), 'googletest/googletest/src/gtest-all.cc'])
-
-Return('bin')

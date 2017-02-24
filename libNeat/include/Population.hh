@@ -1,27 +1,70 @@
 #pragma once
 #include "Genome.hh"
 #include "NeuralNet.hh"
+
 #include <vector>
+#include <limits>
 #include <unordered_map>
 
+struct Organism {
+  Organism(const Genome& gen, std::unique_ptr<NeuralNet>&& net)
+    : fitness(std::numeric_limits<double>::quiet_NaN()),
+      adj_fitness(std::numeric_limits<double>::quiet_NaN()),
+      genome(gen) , network(std::move(net)) { ; }
+  Organism(const Organism& org)
+    : fitness(org.fitness), adj_fitness(org.adj_fitness),
+      genome(org.genome), network(org.network->clone()) { ; }
+  Organism& operator=(const Organism& rhs) {
+    fitness = rhs.fitness;
+    adj_fitness = rhs.adj_fitness;
+    genome = rhs.genome;
+    network = rhs.network->clone();
+    return *this;
+  }
+  float fitness;
+  float adj_fitness;
+  Genome genome;
+  std::unique_ptr<NeuralNet> network;
+};
+
+struct Species {
+  std::vector<Organism> organisms;
+
+  unsigned int id;
+  Genome representative;
+  unsigned int age;
+  double best_fitness;
+};
 
 class Population : public uses_random_numbers,
                    public requires<Probabilities> {
-
 public:
   /// Construct a population, starting from a seed genome
   Population(Genome& first,
              std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
-  Population(const Population&);
+  /// Construct a population, starting from the specified population of organisms and species
+  /**
+     Note: Assumes that all genomes have the same RNG and
+           Probabilities as are being passed here.
+   */
+  Population(std::vector<Species> species,
+             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
 
-  Population& operator=(Population&&);
+  Population(const Population&) = default;
+  Population(Population&&) = default;
+  Population& operator=(const Population& rhs) = default;
+  Population& operator=(Population&&) = default;
+
   /// Evaluate the fitness function for each neural net.
   template<class Callable>
   void Evaluate(Callable&& fitness) {
-    for (auto& org : organisms) {
-      org.fitness = fitness(org.network);
+    for(auto& spec : species) {
+      for(auto& org : spec.organisms) {
+        org.fitness = fitness(*org.network);
+      }
     }
+    CalculateAdjustedFitness();
   }
 
   /// Reproduce, using the fitness function given.
@@ -36,8 +79,6 @@ public:
      Assumes that Evaluate() has already been called.
    */
   Population Reproduce();
-
-  Population& operator=(const Population& rhs);
 
   /// Returns the best neural net in the population.
   /**
@@ -58,30 +99,31 @@ public:
 
   std::pair<double, double> MeanStdDev() const;
 
+  const std::vector<Species>& GetSpecies() const { return species; }
+
+  struct GenomeConverter {
+    virtual std::unique_ptr<NeuralNet> convert(const Genome&) = 0;
+  };
+  template<typename NetType>
+  struct GenomeConverter_Impl : GenomeConverter {
+    virtual std::unique_ptr<NeuralNet> convert(const Genome& genome) {
+      return genome.MakeNet<NetType>();
+    }
+  };
+
+  template<typename NetType>
+  void SetNetType() {
+    converter = std::make_shared<GenomeConverter_Impl<NetType> >();
+  }
+
 private:
-  struct Organism {
-    Organism(Genome& gen) : genome(gen) , network(NeuralNet(gen)) { ; }
-    float fitness;
-    float adj_fitness;
-    unsigned int species;
-    Genome genome;
-    NeuralNet network;
-  };
+  std::vector<Species> MakeNextGenerationSpecies();
+  std::vector<Genome> MakeNextGenerationGenomes();
 
-  struct Species {
-    unsigned int id;
-    Genome representative;
-    unsigned int age;
-    double best_fitness;
-    unsigned int size;
-  };
+  void Speciate(std::vector<Species>& species,
+                const std::vector<Genome>& genomes);
+  void CalculateAdjustedFitness();
 
-  /// Construct a population, starting from the specified population of organisms and species
-  Population(std::vector<Organism> organisms, std::vector<Species> species,
-             std::shared_ptr<RNG>,std::shared_ptr<Probabilities>);
-
-
-  std::vector<Organism> organisms;
-  std::vector<Species> population_species;
-
+  std::vector<Species> species;
+  std::shared_ptr<GenomeConverter> converter;
 };

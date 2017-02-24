@@ -8,29 +8,24 @@
 #include "Timer.hh"
 
 struct XOR_res {
-  double x;
-  double y;
-  double correct;
+  _float_ x;
+  _float_ y;
+  _float_ correct;
 };
 
 int main() {
 
-  auto seed = Genome()
-    .AddNode(NodeType::Bias)
-    .AddNode(NodeType::Input)
-    .AddNode(NodeType::Input)
-    .AddNode(NodeType::Output)
-    .AddConnection(0,3,true,1.)
-    .AddConnection(1,3,true,1.)
-    .AddConnection(2,3,true,1.);
+  auto seed = Genome::ConnectedSeed(2,1);
 
   auto prob = std::make_shared<Probabilities>();
-  prob->add_recurrent = 0;
-  prob->single_lesser = 0;
+  prob->new_connection_is_recurrent = 0;
+  prob->keep_non_matching_father_gene = 0;
 
   Population pop(seed,
-                 std::make_shared<Uniform>(0,1),
+                 std::make_shared<RNG_MersenneTwister>(),
                  prob);
+
+  pop.SetNetType<ConsecutiveNeuralNet>();
 
   auto max_generations = 1000u;
 
@@ -61,10 +56,10 @@ int main() {
     }
     std::cout << "Best (nodes, conn) = (" << best->num_nodes() << ", " << best->num_connections()
               << ")" << std::endl;
-    double error = 0;
+    _float_ error = 0;
     for(auto& input : inputs) {
-      double val = best->evaluate({input.x, input.y})[0];
-      std::cout << input.x << " ^ " << input.y << " = " << val << std::endl;;
+      _float_ val = best->evaluate({input.x, input.y})[0];
+      std::cout << input.x << " ^ " << input.y << " = " << val << std::endl;
       error += std::abs(val - input.correct);
     }
     std::cout << "Error: " << error << std::endl;
@@ -75,9 +70,9 @@ int main() {
       return 0.0;
     }
 
-    double error = 0;
+    _float_ error = 0;
     for(const auto& input : shuffled_inputs) {
-      double val = net.evaluate({input.x, input.y})[0];
+      _float_ val = net.evaluate({input.x, input.y})[0];
       //error += std::abs(val - input.correct);
       error += std::pow(val - input.correct, 2);
     }
@@ -95,7 +90,7 @@ int main() {
     auto best = pop.BestNet();
     bool have_winner = true;
     for(auto& input : inputs) {
-      double val = best->evaluate({input.x, input.y})[0];
+      _float_ val = best->evaluate({input.x, input.y})[0];
       if(std::abs(val - input.correct) >= 0.5) {
         have_winner = false;
         break;
@@ -103,7 +98,7 @@ int main() {
     }
 
     if(have_winner) {
-      winner = std::make_unique<NeuralNet>(*best);
+      winner = best->clone();
       break;
     }
 

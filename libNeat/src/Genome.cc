@@ -4,15 +4,15 @@
 #include <cassert>
 #include <iostream>
 #include <map>
-#include <unordered_set>
 #include <sstream>
-
-#include "ReachabilityChecker.hh"
 
 Genome::Genome() : num_inputs(0),
                    last_conn_innov(0), last_node_innov(0) { ; }
 
-Genome::operator NeuralNet() const{
+
+
+template<>
+std::unique_ptr<NeuralNet> Genome::MakeNet<ConsecutiveNeuralNet>() const {
   AssertInputNodesFirst();
   AssertNoConnectionsToInput();
 
@@ -38,20 +38,96 @@ Genome::operator NeuralNet() const{
 
   // build neural net from only genes that connect to nodes
   // which have a path to an output and from an input
-  NeuralNet net(node_genes);
+  //NeuralNet net(node_genes);
+  auto net = std::make_unique<ConsecutiveNeuralNet>();
+  for (auto& gene: node_genes) {
+    net->add_node(gene.type);
+  }
   for(auto& gene : connection_genes) {
     if (gene.enabled) {
       int i = node_lookup.at(gene.origin);
       int j = node_lookup.at(gene.dest);
       if(exclusions.count(i) == 0 &&
          exclusions.count(j) == 0) {
-        net.add_connection(i,j,gene.weight);
+        net->add_connection(i,j,gene.weight);
       }
     }
   }
 
   return net;
 }
+
+template<>
+std::unique_ptr<NeuralNet> Genome::MakeNet<ConcurrentNeuralNet>() const {
+  AssertInputNodesFirst();
+  AssertNoConnectionsToInput();
+  // TODO: Add AssertOutputNodesLast();
+
+  // populate reachability checker
+  ReachabilityChecker checker(node_genes.size(),num_inputs);
+  for(auto& gene : connection_genes) {
+    if (gene.enabled) {
+      int i = node_lookup.at(gene.origin);
+      int j = node_lookup.at(gene.dest);
+      checker.AddConnection(i,j);
+    }
+  }
+
+  // use reachability checker to determine if a node is unconnected
+  std::unordered_set<unsigned int> exclusions;
+  for (auto n=0u; n<node_genes.size(); n++) {
+    // if the node is not reachable from either inputs
+    // or outputs, add to the exclusion list
+    if (!ConnectivityCheck(n,checker)) {
+      exclusions.insert(n);
+    }
+  }
+
+  // build neural net from only genes that connect to nodes
+  // which have a path to an output and from an input
+  //NeuralNet net(node_genes);
+  auto net = std::make_unique<ConcurrentNeuralNet>();
+  for (auto const& gene : node_genes) {
+    net->add_node(gene.type);
+  }
+  for(auto& gene : connection_genes) {
+    if (gene.enabled) {
+      int i = node_lookup.at(gene.origin);
+      int j = node_lookup.at(gene.dest);
+      if(exclusions.count(i) == 0 &&
+         exclusions.count(j) == 0) {
+        net->add_connection(i,j,gene.weight);
+      }
+    }
+  }
+
+  return net;
+}
+
+
+Genome Genome::ConnectedSeed(int num_inputs, int num_outputs) {
+  Genome output;
+
+  output.AddNode(NodeType::Bias);
+  for(int i=0; i<num_inputs; i++) {
+    output.AddNode(NodeType::Input);
+  }
+  for(int i=0; i<num_outputs; i++) {
+    output.AddNode(NodeType::Output);
+  }
+
+  for(int from=0; from<num_inputs+1; from++) {
+    for(int to=num_inputs+1; to<num_inputs+1+num_outputs; to++) {
+      output.AddConnection(from, to, true, 1.0);
+    }
+  }
+
+  return output;
+}
+
+//std::unique_ptr<NeuralNet> Genome::MakeNet() const {
+//
+//}
 
 Genome& Genome::operator=(const Genome& rhs) {
   this->num_inputs = rhs.num_inputs;
@@ -93,7 +169,9 @@ float Genome::GeneticDistance(const Genome& other) const {
     }
   }
 
-  return (required()->genetic_c1*nUnshared) + required()->genetic_c2*weight_diffs/nShared;
+  return
+    required()->genetic_distance_structural*nUnshared +
+    required()->genetic_distance_weights*weight_diffs/nShared;
 }
 
 Genome Genome::GeneticAncestry() const {
@@ -127,9 +205,9 @@ Genome Genome::MateWith(const Genome& father) {
   auto child = this->GeneticAncestry();
 
 
-  const auto& match          = required()->match;
-  const auto& single_greater = required()->single_greater;
-  const auto& single_lesser  = required()->single_lesser;
+  const auto& match          = required()->matching_gene_choose_mother;
+  const auto& single_greater = required()->keep_non_matching_mother_gene;
+  const auto& single_lesser  = required()->keep_non_matching_father_gene;
 
   auto add_conn_to_child = [](const auto& parent, const auto& conn_gene, auto& child) {
     const NodeGene* origin = parent.GetNodeByInnovation(conn_gene.origin);
@@ -182,7 +260,7 @@ Genome Genome::MateWith(const Genome& father) {
 
 Genome& Genome::RandomizeWeights() {
   for (auto& gene : connection_genes) {
-    gene.weight = (random() - 0.5)*required()->reset_weight;
+    gene.weight = (random() - 0.5)*required()->weight_mutation_reset_range;
   }
   return *this;
 }
@@ -361,27 +439,27 @@ ConnectionGene* Genome::GetConnByInnovation(unsigned long innovation) {
 void Genome::Mutate() {
 
   // structural mutation
-  if (random() < required()->mutate_node) {
+  if (random() < required()->mutation_prob_add_node) {
     MutateNode();
   }
-  if (random() < required()->mutate_link) {
+  if (random() < required()->mutation_prob_add_connection) {
     MutateConnection();
   }
   // internal mutation (non-topological)
-  if (random() < required()->mutate_weights) { MutateWeights(); }
-  if (random() < required()->toggle_status) { MutateToggleGeneStatus(); }
-  if (random() < required()->mutate_reenable) { MutateReEnableGene(); }
+  if (random() < required()->mutation_prob_adjust_weights) { MutateWeights(); }
+  if (random() < required()->mutation_prob_toggle_connection) { MutateToggleGeneStatus(); }
+  if (random() < required()->mutation_prob_reenable_connection) { MutateReEnableGene(); }
 }
 
 void Genome::MutateWeights() {
-  bool is_severe = random() > required()->perturb_weight;
+  bool is_severe = random() < required()->weight_mutation_is_severe;
 
   for (auto& gene : connection_genes) {
 
     if(is_severe) {// caution to the wind, reset everything!
-      gene.weight = (random() - 0.5)*required()->reset_weight;
+      gene.weight = (random() - 0.5)*required()->weight_mutation_reset_range;
     } else { // otherwise perturb weight by a small amount
-      gene.weight += required()->step_size*(2*random()-1);
+      gene.weight += required()->weight_mutation_small_adjust*(2*random()-1);
     }
   }
 }
@@ -396,7 +474,7 @@ void Genome::MutateConnection() {
 
   int idxorigin, idxdest;
 
-  bool add_recurrent = random() < required()->add_recurrent;
+  bool add_recurrent = random() < required()->new_connection_is_recurrent;
   if (add_recurrent) {
     // recurrent
     std::tie(idxorigin,idxdest) = checker.RandomRecurrentConnection(*get_generator());
@@ -409,7 +487,7 @@ void Genome::MutateConnection() {
     return;
   }
 
-  AddConnection(idxorigin, idxdest, true, (random()-0.5)*required()->reset_weight);
+  AddConnection(idxorigin, idxdest, true, (random()-0.5)*required()->weight_mutation_reset_range);
 }
 
 void Genome::MutateNode() {
