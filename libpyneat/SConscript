@@ -22,6 +22,8 @@ def find_python_include():
 lib_env = env.Clone()
 lib_env.Append(CPPPATH=[Dir('../pybind11/include')])
 lib_env.Append(CPPPATH=[find_python_include()])
+env.Append(CPPPATH=[Dir('../libEntendre/include')])
+
 
 lib_env.Append(LIBPATH=[libNeat[0].dir])
 lib_env.Append(LIBS=[libNeat[0].name])

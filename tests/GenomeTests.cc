@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Genome.hh"
-#include "NeuralNet.hh"
+#include "ConsecutiveNeuralNet.hh"
 #include "Timer.hh"
 
 TEST(Genome,CompareInnovation){
