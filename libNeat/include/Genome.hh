@@ -13,6 +13,7 @@
 #include "ReachabilityChecker.hh"
 #include "ConsecutiveNeuralNet.hh"
 #include "ConcurrentNeuralNet.hh"
+#include "ConcurrentGPUNeuralNet.hh"
 
 
 struct NodeGene;

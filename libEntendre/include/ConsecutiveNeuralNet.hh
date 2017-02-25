@@ -1,12 +1,13 @@
 #pragma once
+#include "NeuralNet_CRTP.hh"
+
 #include <vector>
 #include <stdexcept>
 #include <functional>
-#include "NeuralNet.hh"
 
 
-class ConsecutiveNeuralNet : public NeuralNetRecursiveBase<ConsecutiveNeuralNet> {
-  friend class NeuralNetRecursiveBase;
+class ConsecutiveNeuralNet : public NeuralNet_CRTP<ConsecutiveNeuralNet> {
+  friend class NeuralNet_CRTP;
 public:
   //using NeuralNet::NeuralNet;
   virtual ~ConsecutiveNeuralNet() { ; }

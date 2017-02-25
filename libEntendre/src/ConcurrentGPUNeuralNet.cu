@@ -1,4 +1,4 @@
-#include "ConcurrentNeuralNet.hh"
+#include "ConcurrentGPUNeuralNet.hh"
 
 #include <cassert>
 #include <stdexcept>
@@ -12,7 +12,26 @@
 
 #include "logging.h"
 
-ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(const Connection& a, const Connection& b) {
+#define cuda_assert(ans) { cudaAssert((ans), __FILE__, __LINE__); }
+
+inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=true) {
+//#ifndef NDEBUG
+  if (code != cudaSuccess) {
+    fprintf(stderr,"cuda_assert: %s %s %d\n", cudaGetErrorString(code), file, line);
+    if (abort) exit(code);
+  }
+//#endif
+}
+
+ConcurrentGPUNeuralNet::~ConcurrentGPUNeuralNet() {
+  if (node_) { cuda_assert(cudaFree(node_)); }
+  if (origin_) { cuda_assert(cudaFree(origin_)); }
+  if (dest_) { cuda_assert(cudaFree(dest_)); }
+  if (weight_) { cuda_assert(cudaFree(weight_)); }
+  if (action_list_) { cuda_assert(cudaFree(action_list_)); }
+}
+
+ConcurrentGPUNeuralNet::EvaluationOrder ConcurrentGPUNeuralNet::compare_connections(const Connection& a, const Connection& b) {
   // A recurrent connection must be used before the origin is overwritten.
   if (a.type == ConnectionType::Recurrent && a.origin == b.dest) { return EvaluationOrder::LessThan; }
   if (b.type == ConnectionType::Recurrent && b.origin == a.dest) { return EvaluationOrder::GreaterThan; }
@@ -39,7 +58,7 @@ ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(co
   return EvaluationOrder::Unknown;
 }
 
-void ConcurrentNeuralNet::sort_connections() {
+void ConcurrentGPUNeuralNet::sort_connections() {
   if(connections_sorted) {
     return;
   }
@@ -95,12 +114,17 @@ void ConcurrentNeuralNet::sort_connections() {
 
   // sort connections based on evaluation set number
   std::sort(connections.begin(),connections.end(),[](Connection a, Connection b){ return a.set < b.set; });
+  for (auto const& conn : connections) {
+    connection_list.add(conn.origin,conn.dest,conn.weight);
+  }
   connections_sorted = true;
 
   build_action_list();
+  connections.clear();
+  synchronize();
 }
 
-void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
+void ConcurrentGPUNeuralNet::ConcurrentGPUNeuralNet::build_action_list() {
 
   unsigned int num_connection_sets = connections.back().set+1;
   std::vector<unsigned int> connection_set_sizes(num_connection_sets, 0);
@@ -200,7 +224,7 @@ void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
 
 ////////////////////////////////////////////////////////////////////////////
 
-void ConcurrentNeuralNet::add_node(const NodeType& type) {
+void ConcurrentGPUNeuralNet::add_node(const NodeType& type) {
   switch (type) {
   case NodeType::Bias:
   case NodeType::Input:
@@ -215,32 +239,39 @@ void ConcurrentNeuralNet::add_node(const NodeType& type) {
   nodes.push_back(0.0);
 }
 
-void ConcurrentNeuralNet::clear_nodes(unsigned int* list, unsigned int n) {
+
+void clear_nodes(unsigned int* list, _float_* nodes, unsigned int n) {
   for(auto i=0u; i<n; i++) {
     nodes[list[i]] = 0;
   }
 }
 
-void ConcurrentNeuralNet::sigmoid_nodes(unsigned int* list, unsigned int n) {
+_float_ sigmoid(_float_ val) {
+  return 1/(1 + std::exp(-val));
+}
+
+void sigmoid_nodes(unsigned int* list, _float_* nodes, unsigned int n) {
   for(auto i=0u; i<n; i++) {
     nodes[list[i]] = sigmoid(nodes[list[i]]);
   }
 }
 
-void ConcurrentNeuralNet::apply_connections(Connection* list, unsigned int n) {
+void apply_connections(_float_* node, unsigned int* origin, unsigned int* dest, _float_* weight, unsigned int n) {
   for(auto i=0u; i<n; i++) {
-    Connection& conn = list[i];
-    if(conn.origin == conn.dest) {
+    auto& conn_origin = origin[i];
+    auto& conn_dest = dest[i];
+    auto& conn_weight = weight[i];
+    if(conn_origin == conn_dest) {
       // Special case for self-recurrent nodes
       // Be sure not to zero-out before this step.
-      nodes[conn.origin] *= conn.weight;
+      node[conn_origin] *= conn_weight;
     } else {
-      nodes[conn.dest] += conn.weight*nodes[conn.origin];
+      node[conn_dest] += conn_weight*node[conn_origin];
     }
   }
 }
 
-std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) {
+std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> inputs) {
   assert(inputs.size() == num_inputs);
   sort_connections();
 
@@ -249,27 +280,92 @@ std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) 
 
   auto i = 0u;
   int how_many_zero_out = action_list[i++];
-  clear_nodes(&action_list[i], how_many_zero_out);
+  clear_nodes(&action_list[i], nodes.data(), how_many_zero_out);
   i += how_many_zero_out;
 
   int how_many_sigmoid = action_list[i++];
-  sigmoid_nodes(&action_list[i], how_many_sigmoid);
+  sigmoid_nodes(&action_list[i], nodes.data(), how_many_sigmoid);
   i += how_many_sigmoid;
 
   int current_conn = 0;
   while(i<action_list.size()) {
     int how_many_conn = action_list[i++];
-    apply_connections(&connections[current_conn], how_many_conn);
+    apply_connections(nodes.data(), &connection_list.origin[current_conn], &connection_list.dest[current_conn], &connection_list.weight[current_conn], how_many_conn);
     current_conn += how_many_conn;
 
     int how_many_zero_out = action_list[i++];
-    clear_nodes(&action_list[i], how_many_zero_out);
+    clear_nodes(&action_list[i], nodes.data(), how_many_zero_out);
     i += how_many_zero_out;
 
     int how_many_sigmoid = action_list[i++];
-    sigmoid_nodes(&action_list[i], how_many_sigmoid);
+    sigmoid_nodes(&action_list[i], nodes.data(), how_many_sigmoid);
     i += how_many_sigmoid;
   }
 
   return std::vector<_float_> (nodes.begin()+num_inputs,nodes.begin()+num_inputs+num_outputs);
+}
+
+void ConcurrentGPUNeuralNet::add_connection(int origin, int dest, _float_ weight) {
+  if(would_make_loop(origin,dest)) {
+    connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight);
+  } else {
+    connections.emplace_back(origin,dest,ConnectionType::Normal,weight);
+  }
+}
+
+bool ConcurrentGPUNeuralNet::would_make_loop(unsigned int i, unsigned int j) {
+  // handle the case of a recurrent connection to itself up front
+  if (i == j) { return true; }
+
+  std::vector<bool> reachable(nodes.size(), false);
+  reachable[j] = true;
+
+  while (true) {
+
+    bool found_new_node = false;
+    for (auto const& conn : connections) {
+      // if the origin of this connection is reachable and its
+      // desitination is not, then it should be made reachable
+      if (reachable[conn.origin] &&
+          !reachable[conn.dest] &&
+          conn.type == ConnectionType::Normal) {
+        // if it is a normal node. if it is the origin of the
+        // proposed additional connection (i->j) then it would be
+        // a loop
+        if (conn.dest == i) {
+          // the destination of this reachable connection is
+          // the origin of the proposed connection. thus there
+          // exists a path from j -> i. So this will be a loop.
+          return true;
+        }
+        else {
+          reachable[conn.dest] = true;
+          found_new_node = true;
+        }
+      }
+    }
+    // no loop detected
+    if (!found_new_node) {
+      return false;
+    }
+
+  }
+}
+
+// TODO: implement gpu_smart_pointer to handle GPU memory according to RAII
+void ConcurrentGPUNeuralNet::synchronize() {
+  cuda_assert(cudaMalloc((void**)&node_,nodes.size()*sizeof(_float_)));
+  cuda_assert(cudaMemcpy(node_,nodes.data(),nodes.size()*sizeof(_float_),cudaMemcpyHostToDevice));
+
+  cuda_assert(cudaMalloc((void**)&origin_,connection_list.origin.size()*sizeof(unsigned int)));
+  cuda_assert(cudaMemcpy(origin_,connection_list.origin.data(),connection_list.origin.size()*sizeof(unsigned int),cudaMemcpyHostToDevice));
+
+  cuda_assert(cudaMalloc((void**)&dest_,connection_list.dest.size()*sizeof(unsigned int)));
+  cuda_assert(cudaMemcpy(dest_,connection_list.dest.data(),connection_list.dest.size()*sizeof(unsigned int),cudaMemcpyHostToDevice));
+  
+  cuda_assert(cudaMalloc((void**)&weight_,connection_list.weight.size()*sizeof(_float_)));
+  cuda_assert(cudaMemcpy(weight_,connection_list.weight.data(),connection_list.weight.size()*sizeof(_float_),cudaMemcpyHostToDevice));
+
+  cuda_assert(cudaMalloc((void**)&action_list_,action_list.size()*sizeof(unsigned int)));
+  cuda_assert(cudaMemcpy(action_list_,action_list.data(),action_list.size()*sizeof(unsigned int),cudaMemcpyHostToDevice));
 }
