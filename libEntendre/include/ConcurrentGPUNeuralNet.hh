@@ -15,6 +15,8 @@ public:
   virtual unsigned int num_nodes() { return nodes.size(); }
   virtual unsigned int num_connections() { return connections.size(); }
   virtual std::vector<_float_> evaluate(std::vector<_float_> inputs);
+  std::vector<_float_> device_evaluate(std::vector<_float_> inputs, unsigned int num_threads=16);
+
   virtual std::unique_ptr<NeuralNet> clone() const {
     return std::unique_ptr<ConcurrentGPUNeuralNet>(new ConcurrentGPUNeuralNet(*this));
   }

@@ -209,6 +209,14 @@ TEST(ConcurrentNeuralNet,EvaluateLargeNetwork){
 
 }
 
+template<typename Derived, typename Base, typename Del>
+std::unique_ptr<Derived, Del>
+static_unique_ptr_cast( std::unique_ptr<Base, Del>&& p )
+{
+        auto d = static_cast<Derived *>(p.release());
+        return std::unique_ptr<Derived, Del>(d, std::move(p.get_deleter()));
+}
+
 TEST(ConcurrentGPUNeuralNet,EvaluateLargeNetwork){
     auto sigmoid = [](_float_ val) {return 1/(1 + std::exp(-val));};
 
@@ -268,17 +276,17 @@ TEST(ConcurrentGPUNeuralNet,EvaluateLargeNetwork){
     // Time the network evaluation
     for (auto i=0u; i < nTrials; i++)
     {
-        auto net = genome.MakeNet<ConcurrentGPUNeuralNet>();
+            auto net = static_unique_ptr_cast<ConcurrentGPUNeuralNet>(genome.MakeNet<ConcurrentGPUNeuralNet>());
         net->register_sigmoid(sigmoid);
 
         // First evaluation includes network sorting (construction)
         // so we will time the evaluations thereafter
-        net->evaluate({1.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5});
+        net->device_evaluate({1.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5});
 
         Timer teval([&tperformance](int elapsed) {
                 tperformance+=elapsed;
             });
-        auto result2 = net->evaluate({1.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5});
+        auto result2 = net->device_evaluate({1.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5});
 
 
     }
@@ -303,14 +311,13 @@ TEST(ConcurrentGPUNeuralNet,CompareEvaluation) {
     .AddConnection(3,2,true,1.)
     .AddConnection(2,3,true,1.); // recurrent
   auto consecutive = genome.MakeNet<ConsecutiveNeuralNet>();
-  auto concurrent = genome.MakeNet<ConcurrentGPUNeuralNet>();
-  auto concurrentgpu = genome.MakeNet<ConcurrentGPUNeuralNet>();
+  auto concurrent =  genome.MakeNet<ConcurrentNeuralNet>();
+  auto concurrentgpu = static_unique_ptr_cast<ConcurrentGPUNeuralNet>(genome.MakeNet<ConcurrentGPUNeuralNet>());
 
 
-  for (int i=0; i<10; i++) {
-    auto result = consecutive->evaluate({0.5,1.5});
-    auto result3 = concurrentgpu->evaluate({0.5,1.5});
-    EXPECT_FLOAT_EQ(result[0],result3[0]);
-  }
+
+  auto result = consecutive->evaluate({0.5,1.5});
+  auto result3 = concurrentgpu->device_evaluate({0.5,1.5});
+  EXPECT_FLOAT_EQ(result[0],result3[0]);
 
 }

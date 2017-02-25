@@ -11,6 +11,8 @@
 #include <algorithm>
 
 #include "logging.h"
+#include "math.h"
+
 
 #define cuda_assert(ans) { cudaAssert((ans), __FILE__, __LINE__); }
 
@@ -239,15 +241,14 @@ void ConcurrentGPUNeuralNet::add_node(const NodeType& type) {
   nodes.push_back(0.0);
 }
 
+_float_ sigmoid(_float_ val) {
+  return 1/(1 + std::exp(-val));
+}
 
 void clear_nodes(unsigned int* list, _float_* nodes, unsigned int n) {
   for(auto i=0u; i<n; i++) {
     nodes[list[i]] = 0;
   }
-}
-
-_float_ sigmoid(_float_ val) {
-  return 1/(1 + std::exp(-val));
 }
 
 void sigmoid_nodes(unsigned int* list, _float_* nodes, unsigned int n) {
@@ -258,6 +259,40 @@ void sigmoid_nodes(unsigned int* list, _float_* nodes, unsigned int n) {
 
 void apply_connections(_float_* node, unsigned int* origin, unsigned int* dest, _float_* weight, unsigned int n) {
   for(auto i=0u; i<n; i++) {
+    auto& conn_origin = origin[i];
+    auto& conn_dest = dest[i];
+    auto& conn_weight = weight[i];
+    if(conn_origin == conn_dest) {
+      // Special case for self-recurrent nodes
+      // Be sure not to zero-out before this step.
+      node[conn_origin] *= conn_weight;
+    } else {
+      node[conn_dest] += conn_weight*node[conn_origin];
+    }
+  }
+}
+
+__device__ _float_ device_sigmoid(_float_ val) {
+  return 1/(1 + expf(-val));
+}
+
+__global__ void device_clear_nodes(unsigned int* list, _float_* nodes, unsigned int n) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  if (i<n) {
+    nodes[list[i]] = 0;
+  }
+}
+
+__global__ void device_sigmoid_nodes(unsigned int* list, _float_* nodes, unsigned int n) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  if (i<n) {
+    nodes[list[i]] = device_sigmoid(nodes[list[i]]);
+  }
+}
+
+__global__ void device_apply_connections(_float_* node, unsigned int* origin, unsigned int* dest, _float_* weight, unsigned int n) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  if (i<n) {
     auto& conn_origin = origin[i];
     auto& conn_dest = dest[i];
     auto& conn_weight = weight[i];
@@ -303,6 +338,49 @@ std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> input
   }
 
   return std::vector<_float_> (nodes.begin()+num_inputs,nodes.begin()+num_inputs+num_outputs);
+}
+
+std::vector<_float_> ConcurrentGPUNeuralNet::device_evaluate(std::vector<_float_> inputs, unsigned int num_threads) {
+  assert(inputs.size() == num_inputs);
+  sort_connections();
+
+  // copy inputs in to network
+  //std::copy(inputs.begin(),inputs.end(),nodes.begin());
+  cuda_assert(cudaMemcpy(node_,inputs.data(),inputs.size()*sizeof(_float_),cudaMemcpyHostToDevice));
+
+  auto i = 0u;
+  int how_many_zero_out = action_list[i++];
+  unsigned int num_blocks = (how_many_zero_out+num_threads-1)/num_threads;
+  device_clear_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_zero_out);
+  i += how_many_zero_out;
+
+  int how_many_sigmoid = action_list[i++];
+  num_blocks = (how_many_sigmoid+num_threads-1)/num_threads;
+  device_sigmoid_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_sigmoid);
+  i += how_many_sigmoid;
+
+  int current_conn = 0;
+  while(i<action_list.size()) {
+    int how_many_conn = action_list[i++];
+    num_blocks = (how_many_conn+num_threads-1)/num_threads;
+    device_apply_connections<<<num_blocks,num_threads>>>(node_, origin_, dest_, weight_, how_many_conn);
+    current_conn += how_many_conn;
+
+    int how_many_zero_out = action_list[i++];
+    num_blocks = (how_many_zero_out+num_threads-1)/num_threads;
+    device_clear_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_zero_out);
+    i += how_many_zero_out;
+
+    int how_many_sigmoid = action_list[i++];
+    num_blocks = (how_many_sigmoid+num_threads-1)/num_threads;
+    device_sigmoid_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_sigmoid);
+    i += how_many_sigmoid;
+  }
+  cuda_assert(cudaDeviceSynchronize());
+  std::vector<_float_> outputs(num_outputs,0);
+  cuda_assert(cudaMemcpy(outputs.data(),&node_[num_inputs],num_outputs*sizeof(_float_),cudaMemcpyDeviceToHost));
+
+  return outputs;
 }
 
 void ConcurrentGPUNeuralNet::add_connection(int origin, int dest, _float_ weight) {
