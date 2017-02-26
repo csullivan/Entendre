@@ -9,25 +9,29 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/functional.h>
 
 namespace py = pybind11;
 
 PYBIND11_PLUGIN(pyneat) {
   py::module m("pyneat", "C++ implementation of NEAT");
 
+  typedef std::function<double(NeuralNet&)> FitnessFunc;
+  py::class_<FitnessFunc>(m, "CppFitnessFunc");
+
   py::class_<Population>(m, "Population")
     .def(py::init<Genome&,std::shared_ptr<RNG>,std::shared_ptr<Probabilities>>())
     .def(py::init<const Population&>())
     .def("Evaluate",
-         [](Population& pop, std::function<double(const NeuralNet&)> func) {
+         [](Population& pop, FitnessFunc func) {
            pop.Evaluate(func);
          })
     .def("Reproduce",
-         [](Population& pop, std::function<double(const NeuralNet&)> func) {
+         [](Population& pop, FitnessFunc func) {
            return pop.Reproduce(func);
-         })
-    .def("Reproduce",(Population (Population::*)())&Population::Reproduce)
+         }, py::return_value_policy::move)
+    .def("Reproduce",
+         (Population (Population::*)())&Population::Reproduce,
+         py::return_value_policy::move)
     .def_property_readonly("species", &Population::GetSpecies,
                            py::return_value_policy::reference_internal)
     ;
@@ -43,7 +47,10 @@ PYBIND11_PLUGIN(pyneat) {
     .def_readwrite("fitness", &Organism::fitness)
     .def_readwrite("adj_fitness", &Organism::adj_fitness)
     .def_readwrite("genome", &Organism::genome)
-    .def_readwrite("network", &Organism::network);
+    .def_property_readonly("network", [](Organism& org) {
+        return org.network.get();
+      }, py::return_value_policy::reference_internal)
+    ;
 
   py::class_<RNG, std::shared_ptr<RNG> >(m, "RNG")
     .def("uniform",&RNG::uniform,
@@ -111,14 +118,30 @@ PYBIND11_PLUGIN(pyneat) {
     .def("Size",&Genome::Size)
     .def_static("ConnectedSeed", &Genome::ConnectedSeed);
 
+
   py::class_<NeuralNet>(m, "NeuralNet")
-    .def(py::init<const Genome&>())
     .def("evaluate", &NeuralNet::evaluate)
-    .def_property_readonly("num_nodes", &NeuralNet::num_nodes)
-    .def_property_readonly("num_connections", &NeuralNet::num_connections)
-    .def_property_readonly("node_types", &NeuralNet::node_types)
-    .def_property_readonly("connections", &NeuralNet::get_connections,
-                           py::return_value_policy::reference_internal);
+    .def("num_nodes", &NeuralNet::num_nodes)
+    .def("num_connections", &NeuralNet::num_connections)
+    .def("get_node_type",&NeuralNet::get_node_type)
+    .def("get_connection",&NeuralNet::get_connection)
+    .def_property_readonly("node_types",
+                           [](NeuralNet& net){
+                             std::vector<NodeType> node_types;
+                             for (auto i=0u; i<net.num_nodes(); i++) {
+                               node_types.push_back(net.get_node_type(i));
+                             }
+                             return node_types;
+                           })
+    .def_property_readonly("connections",
+                           [](NeuralNet& net){
+                             std::vector<Connection> connections;
+                             for (auto i=0u; i<net.num_connections(); i++) {
+                               connections.push_back(net.get_connection(i));
+                             }
+                             return connections;
+                           })
+    ;
 
   py::class_<Connection>(m, "Connection")
     .def_readwrite("origin", &Connection::origin)

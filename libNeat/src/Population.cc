@@ -20,6 +20,7 @@ Population::Population(Genome& first,
   set_generator(gen);
   first.required(params);
   first.set_generator(gen);
+  SetNetType<ConsecutiveNeuralNet>();
 
   std::vector<Genome> genomes;
 
@@ -37,7 +38,7 @@ void Population::Speciate(std::vector<Species>& species,
     for(auto& spec : species) {
       double dist = genome.GeneticDistance(spec.representative);
       if(dist < required()->genetic_distance_species_threshold) {
-        spec.organisms.push_back(genome);
+        spec.organisms.emplace_back(genome,converter->convert(genome));
         need_new_species = false;
         break;
       }
@@ -49,7 +50,7 @@ void Population::Speciate(std::vector<Species>& species,
       new_spec.representative = genome;
       new_spec.age = 0;
       new_spec.best_fitness = 0;
-      new_spec.organisms.push_back(genome);
+      new_spec.organisms.emplace_back(genome,converter->convert(genome));
 
       species.push_back(new_spec);
     }
@@ -89,7 +90,10 @@ Population Population::Reproduce() {
 
   Speciate(next_gen_species, next_gen_genomes);
 
-  return Population(next_gen_species, get_generator(), required());
+  Population pop(next_gen_species, get_generator(), required());
+  pop.converter = converter;
+
+  return pop;
 }
 
 std::vector<Species> Population::MakeNextGenerationSpecies() {
@@ -229,7 +233,7 @@ NeuralNet* Population::BestNet() const {
   for(auto& spec : species) {
     for(auto& org : spec.organisms) {
       if(org.fitness > best_fitness) {
-        output = const_cast<NeuralNet*>(&org.network);
+        output = org.network.get();
         best_fitness = org.fitness;
       }
     }
