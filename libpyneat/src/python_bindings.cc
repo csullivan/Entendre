@@ -9,25 +9,29 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/functional.h>
 
 namespace py = pybind11;
 
 PYBIND11_PLUGIN(pyneat) {
   py::module m("pyneat", "C++ implementation of NEAT");
 
+  typedef std::function<double(NeuralNet&)> FitnessFunc;
+  py::class_<FitnessFunc>(m, "CppFitnessFunc");
+
   py::class_<Population>(m, "Population")
     .def(py::init<Genome&,std::shared_ptr<RNG>,std::shared_ptr<Probabilities>>())
     .def(py::init<const Population&>())
     .def("Evaluate",
-         [](Population& pop, std::function<double(const NeuralNet&)> func) {
+         [](Population& pop, FitnessFunc func) {
            pop.Evaluate(func);
          })
     .def("Reproduce",
-         [](Population& pop, std::function<double(const NeuralNet&)> func) {
+         [](Population& pop, FitnessFunc func) {
            return pop.Reproduce(func);
-         })
-    .def("Reproduce",(Population (Population::*)())&Population::Reproduce)
+         }, py::return_value_policy::move)
+    .def("Reproduce",
+         (Population (Population::*)())&Population::Reproduce,
+         py::return_value_policy::move)
     .def_property_readonly("species", &Population::GetSpecies,
                            py::return_value_policy::reference_internal)
     ;
