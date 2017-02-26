@@ -118,7 +118,6 @@ PYBIND11_PLUGIN(pyneat) {
     .def("Size",&Genome::Size)
     .def_static("ConnectedSeed", &Genome::ConnectedSeed);
 
-
   py::class_<NeuralNet>(m, "NeuralNet")
     .def("evaluate", &NeuralNet::evaluate)
     .def("num_nodes", &NeuralNet::num_nodes)
