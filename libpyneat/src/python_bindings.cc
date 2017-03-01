@@ -120,8 +120,8 @@ PYBIND11_PLUGIN(pyneat) {
 
   py::class_<NeuralNet>(m, "NeuralNet")
     .def("evaluate", &NeuralNet::evaluate)
-    .def("num_nodes", &NeuralNet::num_nodes)
-    .def("num_connections", &NeuralNet::num_connections)
+    .def_property_readonly("num_nodes", &NeuralNet::num_nodes)
+    .def_property_readonly("num_connections", &NeuralNet::num_connections)
     .def("get_node_type",&NeuralNet::get_node_type)
     .def("get_connection",&NeuralNet::get_connection)
     .def_property_readonly("node_types",
