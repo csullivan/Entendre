@@ -343,6 +343,7 @@ std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> input
 std::vector<_float_> ConcurrentGPUNeuralNet::device_evaluate(std::vector<_float_> inputs, unsigned int num_threads) {
   assert(inputs.size() == num_inputs);
   sort_connections();
+  unsigned int num_blocks = 0;
 
   // copy inputs in to network
   //std::copy(inputs.begin(),inputs.end(),nodes.begin());
@@ -350,30 +351,30 @@ std::vector<_float_> ConcurrentGPUNeuralNet::device_evaluate(std::vector<_float_
 
   auto i = 0u;
   int how_many_zero_out = action_list[i++];
-  unsigned int num_blocks = (how_many_zero_out+num_threads-1)/num_threads;
-  device_clear_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_zero_out);
+  num_blocks = (how_many_zero_out+num_threads-1)/num_threads;
+  if (how_many_zero_out) { device_clear_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_zero_out); }
   i += how_many_zero_out;
 
   int how_many_sigmoid = action_list[i++];
   num_blocks = (how_many_sigmoid+num_threads-1)/num_threads;
-  device_sigmoid_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_sigmoid);
+  if (how_many_sigmoid) { device_sigmoid_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_sigmoid); }
   i += how_many_sigmoid;
 
   int current_conn = 0;
   while(i<action_list.size()) {
     int how_many_conn = action_list[i++];
     num_blocks = (how_many_conn+num_threads-1)/num_threads;
-    device_apply_connections<<<num_blocks,num_threads>>>(node_, origin_, dest_, weight_, how_many_conn);
+    if (how_many_conn) { device_apply_connections<<<num_blocks,num_threads>>>(node_, origin_, dest_, weight_, how_many_conn); }
     current_conn += how_many_conn;
 
     int how_many_zero_out = action_list[i++];
     num_blocks = (how_many_zero_out+num_threads-1)/num_threads;
-    device_clear_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_zero_out);
+    if (how_many_zero_out) { device_clear_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_zero_out); }
     i += how_many_zero_out;
 
     int how_many_sigmoid = action_list[i++];
     num_blocks = (how_many_sigmoid+num_threads-1)/num_threads;
-    device_sigmoid_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_sigmoid);
+    if (how_many_sigmoid) { device_sigmoid_nodes<<<num_blocks,num_threads>>>(&action_list_[i], node_, how_many_sigmoid); }
     i += how_many_sigmoid;
   }
   cuda_assert(cudaDeviceSynchronize());
