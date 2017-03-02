@@ -136,7 +136,7 @@ TEST(ConcurrentNeuralNet,EvaluateLargeNetwork){
         AddNode(NodeType::Bias);
 
     auto nInputs = 10u;
-    auto nHidden = 20u;
+    auto nHidden = 2000u;
     auto nOutputs = 10u;
 
     auto nTotal = nInputs + nHidden + nOutputs + 1;
@@ -166,7 +166,7 @@ TEST(ConcurrentNeuralNet,EvaluateLargeNetwork){
         }
     }
 
-    auto nTrials = 100u;
+    auto nTrials = 1u;
     double tperformance = 0.0;
 
 
@@ -224,7 +224,7 @@ TEST(ConcurrentGPUNeuralNet,EvaluateLargeNetwork){
         AddNode(NodeType::Bias);
 
     auto nInputs = 10u;
-    auto nHidden = 20u;
+    auto nHidden = 2000u;
     auto nOutputs = 10u;
 
     auto nTotal = nInputs + nHidden + nOutputs + 1;
@@ -254,7 +254,7 @@ TEST(ConcurrentGPUNeuralNet,EvaluateLargeNetwork){
         }
     }
 
-    auto nTrials = 100u;
+    auto nTrials = 1u;
     double tperformance = 0.0;
 
 
@@ -276,7 +276,7 @@ TEST(ConcurrentGPUNeuralNet,EvaluateLargeNetwork){
     // Time the network evaluation
     for (auto i=0u; i < nTrials; i++)
     {
-            auto net = static_unique_ptr_cast<ConcurrentGPUNeuralNet>(genome.MakeNet<ConcurrentGPUNeuralNet>());
+        auto net = static_unique_ptr_cast<ConcurrentGPUNeuralNet>(genome.MakeNet<ConcurrentGPUNeuralNet>());
         net->register_sigmoid(sigmoid);
 
         // First evaluation includes network sorting (construction)

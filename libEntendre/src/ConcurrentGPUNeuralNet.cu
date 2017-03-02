@@ -364,7 +364,7 @@ std::vector<_float_> ConcurrentGPUNeuralNet::device_evaluate(std::vector<_float_
   while(i<action_list.size()) {
     int how_many_conn = action_list[i++];
     num_blocks = (how_many_conn+num_threads-1)/num_threads;
-    if (how_many_conn) { device_apply_connections<<<num_blocks,num_threads>>>(node_, origin_, dest_, weight_, how_many_conn); }
+    if (how_many_conn) { device_apply_connections<<<num_blocks,num_threads>>>(node_, &origin_[current_conn], &dest_[current_conn], &weight_[current_conn], how_many_conn); }
     current_conn += how_many_conn;
 
     int how_many_zero_out = action_list[i++];
