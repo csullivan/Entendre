@@ -17,8 +17,10 @@ TEST(Population,Construct){
                  std::make_shared<RNG_MersenneTwister>(),
                  std::make_shared<Probabilities>());
 
+  pop.SetNetType<ConsecutiveNeuralNet>();
 
-  std::vector<double> input_vals = {1};
+
+  std::vector<_float_> input_vals = {1};
   pop.Reproduce(
     // fitness lambda function
     [&](NeuralNet& net) {
@@ -44,6 +46,7 @@ TEST(Population,EvaluationTimer){
                  std::make_shared<RNG_MersenneTwister>(),
                  std::make_shared<Probabilities>());
 
+  pop.SetNetType<ConsecutiveNeuralNet>();
 
   double tperformance = 0.0;
   auto nTrials = 1000u;
@@ -55,7 +58,7 @@ TEST(Population,EvaluationTimer){
         tperformance+=elapsed;
       });
 
-    std::vector<double> input_vals = {1};
+    std::vector<_float_> input_vals = {1};
     pop.Evaluate(
       // fitness lambda function
       [&](NeuralNet& net) {
@@ -84,8 +87,10 @@ TEST(Population, PruneEmptySpecies){
   adam.required(prob);
   adam.set_generator(rng);
 
+  auto net = adam.MakeNet<ConsecutiveNeuralNet>();
+
   Species full;
-  full.organisms.push_back(adam);
+  full.organisms.emplace_back(adam,std::move(net));
   full.id = 5;
   full.representative = adam;
   full.age = 0;
@@ -98,7 +103,7 @@ TEST(Population, PruneEmptySpecies){
   empty.best_fitness = 0;
 
   Population gen1({full, empty}, rng, prob);
-
+  gen1.SetNetType<ConsecutiveNeuralNet>();
 
   {
     prob->keep_empty_species = false;

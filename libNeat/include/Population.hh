@@ -7,14 +7,24 @@
 #include <unordered_map>
 
 struct Organism {
-  Organism(const Genome& gen)
+  Organism(const Genome& gen, std::unique_ptr<NeuralNet>&& net)
     : fitness(std::numeric_limits<double>::quiet_NaN()),
       adj_fitness(std::numeric_limits<double>::quiet_NaN()),
-      genome(gen) , network(NeuralNet(gen)) { ; }
+      genome(gen) , network(std::move(net)) { ; }
+  Organism(const Organism& org)
+    : fitness(org.fitness), adj_fitness(org.adj_fitness),
+      genome(org.genome), network(org.network->clone()) { ; }
+  Organism& operator=(const Organism& rhs) {
+    fitness = rhs.fitness;
+    adj_fitness = rhs.adj_fitness;
+    genome = rhs.genome;
+    network = rhs.network->clone();
+    return *this;
+  }
   float fitness;
   float adj_fitness;
   Genome genome;
-  NeuralNet network;
+  std::unique_ptr<NeuralNet> network;
 };
 
 struct Species {
@@ -51,7 +61,7 @@ public:
   void Evaluate(Callable&& fitness) {
     for(auto& spec : species) {
       for(auto& org : spec.organisms) {
-        org.fitness = fitness(org.network);
+        org.fitness = fitness(*org.network);
       }
     }
     CalculateAdjustedFitness();
@@ -91,6 +101,21 @@ public:
 
   const std::vector<Species>& GetSpecies() const { return species; }
 
+  struct GenomeConverter {
+    virtual std::unique_ptr<NeuralNet> convert(const Genome&) = 0;
+  };
+  template<typename NetType>
+  struct GenomeConverter_Impl : GenomeConverter {
+    virtual std::unique_ptr<NeuralNet> convert(const Genome& genome) {
+      return genome.MakeNet<NetType>();
+    }
+  };
+
+  template<typename NetType>
+  void SetNetType() {
+    converter = std::make_shared<GenomeConverter_Impl<NetType> >();
+  }
+
 private:
   std::vector<Species> MakeNextGenerationSpecies();
   std::vector<Genome> MakeNextGenerationGenomes();
@@ -100,4 +125,5 @@ private:
   void CalculateAdjustedFitness();
 
   std::vector<Species> species;
+  std::shared_ptr<GenomeConverter> converter;
 };
