@@ -448,3 +448,34 @@ void ConcurrentGPUNeuralNet::synchronize() {
   cuda_assert(cudaMalloc((void**)&action_list_,action_list.size()*sizeof(unsigned int)));
   cuda_assert(cudaMemcpy(action_list_,action_list.data(),action_list.size()*sizeof(unsigned int),cudaMemcpyHostToDevice));
 }
+
+
+void ConcurrentGPUNeuralNet::print_network(std::ostream& os) const {
+  std::stringstream ss;
+  ss << "Action List: \n\n";
+
+  auto i = 0u;
+  int how_many_zero_out = action_list[i++];
+  ss << "# Zero out: " << how_many_zero_out << "\n";
+  i += how_many_zero_out;
+
+  int how_many_sigmoid = action_list[i++];
+  ss << "# Sigmoid: " << how_many_sigmoid << "\n";
+  i += how_many_sigmoid;
+
+  int current_conn = 0;
+  while(i<action_list.size()) {
+    int how_many_conn = action_list[i++];
+    ss << "# Connections: " << how_many_conn << "\n";
+    current_conn += how_many_conn;
+
+    int how_many_zero_out = action_list[i++];
+    ss << "# Zero out: " << how_many_zero_out << "\n";
+    i += how_many_zero_out;
+
+    int how_many_sigmoid = action_list[i++];
+    ss << "# Sigmoid: " << how_many_sigmoid << "\n";
+    i += how_many_sigmoid;
+  }
+  os << ss.str();
+}

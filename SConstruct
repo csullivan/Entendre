@@ -20,9 +20,8 @@ def default_environment():
     The environment that is used to build everything.
     """
     env = Environment(ENV = os.environ)
-    env['CC']='/home/sulli448/.local/bin/g++-5.3.0'
-    env['CXX']='/home/sulli448/.local/bin/g++-5.3.0'
-
+    env['CC'] = '/opt/software/GNU-5.4.0/bin/gcc-5.4.0'
+    env['CXX'] = '/opt/software/GNU-5.4.0/bin/g++-5.4.0'
 
     env['bin_dir'] = Dir('bin')
     env['lib_dir'] = Dir('lib')
