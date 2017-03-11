@@ -209,7 +209,7 @@ void ConcurrentNeuralNet::add_node(const NodeType& type) {
   case NodeType::Output:
     num_outputs++;
     break;
-  case NodeType::Hidden:
+  default: // all hidden nodes
     break;
   };
   nodes.push_back(0.0);

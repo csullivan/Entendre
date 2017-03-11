@@ -27,8 +27,10 @@ public:
     return connections[i];
   }
   virtual NodeType get_node_type(unsigned int i) const {
+    // TODO: Update this for CPPN node types.
+    // NodeType::Hidden was changed temporarily to NodeType::Sigmoid
     return (i<num_inputs) ? NodeType::Input :
-      (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
+      (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Sigmoid;
   }
 
 private:

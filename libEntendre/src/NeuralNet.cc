@@ -25,8 +25,3 @@ std::ostream& operator<<(std::ostream& os, const NeuralNet& net) {
   net.print_network(os);
   return os;
 }
-
-bool IsSensor(const NodeType& type) {
-  return type == NodeType::Input || type == NodeType::Bias;
-}
-

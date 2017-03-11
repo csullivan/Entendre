@@ -106,10 +106,20 @@ PYBIND11_PLUGIN(pyneat) {
     .def("NumPossibleRecurrentConnections",&ReachabilityChecker::NumPossibleRecurrentConnections);
 
   py::enum_<NodeType>(m, "NodeType")
+    .value("Bias",NodeType::Bias)
     .value("Input",NodeType::Input)
     .value("Output",NodeType::Output)
-    .value("Hidden",NodeType::Hidden)
-    .value("Bias",NodeType::Bias);
+    .value("Sigmoid",NodeType::Sigmoid)
+    .value("Tanh",NodeType::Tanh)
+    .value("Relu",NodeType::Relu)
+    .value("Gaussian",NodeType::Gaussian)
+    .value("Sin",NodeType::Sin)
+    .value("Cos",NodeType::Cos)
+    .value("Mult",NodeType::Mult)
+    .value("Abs",NodeType::Abs)
+    .value("Add",NodeType::Add)
+    .value("MultGaussian",NodeType::MultGaussian)
+    .value("Square",NodeType::Square);
 
   py::class_<Genome>(m, "Genome")
     .def(py::init<>())

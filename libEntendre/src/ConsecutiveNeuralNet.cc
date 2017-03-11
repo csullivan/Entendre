@@ -171,16 +171,11 @@ void ConsecutiveNeuralNet::print_network(std::ostream& os) const {
       case NodeType::Output:
         ss << "O" << num_outputs++;
         break;
-      case NodeType::Hidden:
-        ss << "H" << num_hidden++;
-        break;
       case NodeType::Bias:
         ss << "B";
         break;
-
-      default:
-        std::cerr << "Type: " << int(nodes[i].type) << std::endl;
-        assert(false);
+      default: // all hidden nodes
+        ss << "H" << num_hidden++;
         break;
     }
     names[i] = ss.str();
