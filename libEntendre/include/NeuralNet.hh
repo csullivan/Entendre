@@ -10,11 +10,11 @@
 
 struct Node {
   _float_ value;
-  bool is_sigmoid;
+  bool is_activated;
   NodeType type;
   Node(NodeType _type)
     : value(0.0),
-      is_sigmoid(false), type(_type) {;}
+      is_activated(false), type(_type) {;}
   operator _float_() { return value; }
 };
 

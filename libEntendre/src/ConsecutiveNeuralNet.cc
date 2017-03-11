@@ -33,13 +33,13 @@ void ConsecutiveNeuralNet::load_input_vals(const std::vector<_float_>& inputs) {
       } else {
         node.value = 0;
       }
-      node.is_sigmoid = true;
+      node.is_activated = true;
       input_index++;
       break;
 
     case NodeType::Bias:
       node.value = 1;
-      node.is_sigmoid = true;
+      node.is_activated = true;
       break;
 
     default:
@@ -59,17 +59,18 @@ std::vector<_float_> ConsecutiveNeuralNet::read_output_vals() {
 }
 
 _float_ ConsecutiveNeuralNet::get_node_val(unsigned int i) {
-  if(!nodes[i].is_sigmoid) {
-    nodes[i].value = sigmoid(nodes[i].value);
-    nodes[i].is_sigmoid = true;
+  if(!nodes[i].is_activated) {
+    //nodes[i].value = sigmoid(nodes[i].value);
+    nodes[i].value = activation_functions.at(nodes[i].type)(nodes[i].value);
+    nodes[i].is_activated = true;
   }
   return nodes[i].value;
 }
 
 void ConsecutiveNeuralNet::add_to_val(unsigned int i, _float_ val) {
-  if(nodes[i].is_sigmoid) {
+  if(nodes[i].is_activated) {
     nodes[i].value = 0;
-    nodes[i].is_sigmoid = false;
+    nodes[i].is_activated = false;
   }
   nodes[i].value += val;
 }
@@ -143,7 +144,7 @@ void ConsecutiveNeuralNet::sort_connections() {
 
   //
   for (auto& node : nodes) {
-    node.is_sigmoid = true;
+    node.is_activated = true;
   }
 }
 
