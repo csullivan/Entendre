@@ -7,9 +7,9 @@ typedef float _float_;
 
 enum class ConnectionType { Normal, Recurrent };
 
-// Possible TO DO:
+// TODO:
 /*
-  We could consider creating an enum-factory for the NodeType activation function which
+  Consider creating an enum-factory for the NodeType activation function which
   would return a class functor wrapping the correct activation function. For now, I have
   decided that the default case for switch(NodeType) will be used for hidden nodes, which
   means our internal switches only need a minor change. If we want to move toward a factory
@@ -47,7 +47,7 @@ namespace {
   std::map<NodeType,std::function<_float_(const _float_&)>> activation_functions = {
     {NodeType::Bias, Identity},
     {NodeType::Input, Identity},
-    {NodeType::Output, Identity}, // switch to identity
+    {NodeType::Output, Identity},
     {NodeType::Sigmoid, Sigmoid},
     {NodeType::Tanh, Tanh},
     {NodeType::Relu, Relu},

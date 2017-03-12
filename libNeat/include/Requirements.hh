@@ -42,4 +42,6 @@ struct Probabilities {
   float genetic_distance_structural = 1.0;
   float genetic_distance_weights = 0.2;
   float genetic_distance_species_threshold = 3.0;
+
+  bool use_compositional_pattern_producing_networks = false;
 };

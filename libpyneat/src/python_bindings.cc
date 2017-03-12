@@ -90,7 +90,8 @@ PYBIND11_PLUGIN(pyneat) {
     .def_readwrite("mutation_prob_toggle_connection",&Probabilities::mutation_prob_toggle_connection)
     .def_readwrite("genetic_distance_structural",&Probabilities::genetic_distance_structural)
     .def_readwrite("genetic_distance_weights",&Probabilities::genetic_distance_weights)
-    .def_readwrite("genetic_distance_species_threshold",&Probabilities::genetic_distance_species_threshold);
+    .def_readwrite("genetic_distance_species_threshold",&Probabilities::genetic_distance_species_threshold)
+    .def_readwrite("use_compositional_pattern_producing_networks",&Probabilities::use_compositional_pattern_producing_networks);
 
   py::class_<ReachabilityChecker>(m, "ReachabilityChecker")
     .def(py::init<size_t>())
