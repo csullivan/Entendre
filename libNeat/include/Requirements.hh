@@ -24,7 +24,7 @@ struct Probabilities {
   bool species_representative_from_previous_gen = true;
 
   float matching_gene_choose_mother = 0.5;
-  float keep_non_matching_mother_gene = 1.0;
+  float keep_non_matching_mother_gene = 1.0; // fitness: mother > father
   float keep_non_matching_father_gene = 0.0;
 
   float mutation_prob_adjust_weights = 0.8;
