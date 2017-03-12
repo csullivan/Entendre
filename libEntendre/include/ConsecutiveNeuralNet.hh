@@ -31,6 +31,7 @@ public:
 protected:
   _float_ get_node_val(unsigned int i);
   void add_to_val(unsigned int i, _float_ val);
+  void mult_into_val(unsigned int i, _float_ val);
 
 private:
   void sort_connections() override;

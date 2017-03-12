@@ -16,7 +16,11 @@ std::vector<_float_> ConsecutiveNeuralNet::evaluate(std::vector<_float_> inputs)
 
   for(auto& conn : connections) {
     _float_ input_val = get_node_val(conn.origin);
-    add_to_val(conn.dest, input_val * conn.weight);
+    if (nodes[conn.dest].type == NodeType::Mult) {
+      mult_into_val(conn.dest, input_val * conn.weight);
+    } else {
+      add_to_val(conn.dest, input_val * conn.weight);
+    }
   }
 
   return read_output_vals();
@@ -72,7 +76,17 @@ void ConsecutiveNeuralNet::add_to_val(unsigned int i, _float_ val) {
     nodes[i].value = 0;
     nodes[i].is_activated = false;
   }
-  nodes[i].value += val;
+  //nodes[i].value += val;
+  nodes[i].value += (nodes[i].type == NodeType::MultGaussian) ? Gaussian(val) : val;
+}
+
+void ConsecutiveNeuralNet::mult_into_val(unsigned int i, _float_ val) {
+  if(nodes[i].is_activated) {
+    nodes[i].value = 0;
+    nodes[i].is_activated = false;
+  }
+  //nodes[i].value *= val;
+  nodes[i].value *= (nodes[i].type == NodeType::MultGaussian) ? Gaussian(val) : val;
 }
 
 void ConsecutiveNeuralNet::sort_connections() {

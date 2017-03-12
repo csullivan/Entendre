@@ -40,14 +40,14 @@ namespace {
   inline _float_ Abs          (const _float_ val) { return std::abs(val); }
   inline _float_ Square       (const _float_ val) { return val*val; }
 
-  inline _float_ Mult         (const _float_ val) { return val; } // Mult implementation needed
-  inline _float_ Add          (const _float_ val) { return val; } // Add implementation needed
+  //inline _float_ Mult         (const _float_ val) { return val; } // Mult implementation needed
+  //inline _float_ Add          (const _float_ val) { return val; } // Add implementation needed
   //inline _float_ MultGaussian (const _float_ val) { return val; } // MultGaussian implementation needed
 
   std::map<NodeType,std::function<_float_(const _float_&)>> activation_functions = {
     {NodeType::Bias, Identity},
     {NodeType::Input, Identity},
-    {NodeType::Output, Sigmoid},
+    {NodeType::Output, Identity}, // switch to identity
     {NodeType::Sigmoid, Sigmoid},
     {NodeType::Tanh, Tanh},
     {NodeType::Relu, Relu},
@@ -56,8 +56,8 @@ namespace {
     {NodeType::Cos, Cos},
     {NodeType::Abs, Abs},
     {NodeType::Square, Square},
-    {NodeType::Add, Add},
-    {NodeType::Mult, Mult},
-    {NodeType::MultGaussian, Gaussian}
+    {NodeType::Add, Identity},
+    {NodeType::Mult, Identity},
+    {NodeType::MultGaussian, Identity}
   };
 }
