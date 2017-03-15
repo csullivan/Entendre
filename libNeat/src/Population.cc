@@ -112,7 +112,7 @@ std::vector<Species> Population::MakeNextGenerationSpecies() {
 
     if(species_has_members) {
       auto& champion = spec.organisms.front();
-      if(champion.fitness > spec.best_fitness) {
+      if((champion.fitness - spec.best_fitness)/spec.best_fitness > required()->necessary_species_improvement) {
         new_spec.age = 0;
         new_spec.best_fitness = champion.fitness;
       }
@@ -136,6 +136,7 @@ std::vector<Species> Population::MakeNextGenerationSpecies() {
 std::vector<Genome> Population::MakeNextGenerationGenomes() {
   // Determine total adjusted fitness for each species, and for the
   // entire population.
+
   double total_adj_fitness = 0;
   std::vector<double> total_adj_fitness_by_species;
   for(auto& spec : species) {
@@ -147,6 +148,7 @@ std::vector<Genome> Population::MakeNextGenerationGenomes() {
 
     bool is_stale = spec.age >= required()->stale_species_num_generations;
     if(is_stale) {
+
       species_total_adj_fitness *= required()->stale_species_penalty;
     }
 

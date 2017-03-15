@@ -19,6 +19,7 @@ struct Probabilities {
   float culling_ratio = 0.5;
 
   size_t stale_species_num_generations = 15;
+  float necessary_species_improvement = 0.0;
   float stale_species_penalty = 0.01;
   bool keep_empty_species = false;
   bool species_representative_from_previous_gen = true;
