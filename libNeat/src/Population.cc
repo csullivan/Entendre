@@ -113,7 +113,6 @@ std::vector<Species> Population::MakeNextGenerationSpecies() {
     if(species_has_members) {
       auto& champion = spec.organisms.front();
       if((champion.fitness - spec.best_fitness)/spec.best_fitness > required()->necessary_species_improvement) {
-        new_spec.age = 0;
         new_spec.best_fitness = champion.fitness;
       }
     }
@@ -133,40 +132,121 @@ std::vector<Species> Population::MakeNextGenerationSpecies() {
   return next_gen_species;
 }
 
+
+
+
+
+void Population::DistributeChildrenByRank(std::vector<unsigned int>& number_of_children) const {
+  std::vector<std::pair<unsigned int, _float_>> organism_fitnesses;
+  for (auto i=0u; i<species.size(); i++) {
+    auto& spec = species[i];
+    for (auto& org : spec.organisms) {
+      organism_fitnesses.push_back({i,org.fitness});
+    }
+  }
+  std::sort(organism_fitnesses.begin(),organism_fitnesses.end(),
+            [](auto& a, auto& b){ return a.second > b.second; });
+
+  // total number of organisms in top x percentile
+  auto num_organisms_in_percentile =
+    std::round(required()->species_survival_percentile*required()->population_size);
+  assert(num_organisms_in_percentile <= organism_fitnesses.size());
+
+  // count number of organisms in top x percentile for each species
+  std::vector<float> num_organisms_in_percentile_by_species(species.size(),0);
+  for (auto i=0u; i<num_organisms_in_percentile; i++) {
+    auto i_species = organism_fitnesses[i].first;
+    num_organisms_in_percentile_by_species[i_species]++;
+  }
+
+
+  // add children based on the relative performance of each species
+  std::vector<float> ratio_of_org_in_percentile_by_species(species.size(),0);
+  float total_org_in_percentile_ratio = 0.;
+  for (auto i=0u; i<number_of_children.size(); i++) {
+    auto species_size = species[i].organisms.size();
+    float ratio = (species_size > 0) ? num_organisms_in_percentile_by_species[i]/species_size : 0;
+    ratio_of_org_in_percentile_by_species[i] = ratio;
+    total_org_in_percentile_ratio += ratio;
+  }
+
+  for (auto i=0u; i<number_of_children.size(); i++) {
+    number_of_children[i] += ratio_of_org_in_percentile_by_species[i]/total_org_in_percentile_ratio*required()->population_size;
+    // std::cout << ratio_of_org_in_percentile_by_species[i]  << " " << total_org_in_percentile_ratio  << std::endl;
+    // std::cout << "Adding # children: " <<ratio_of_org_in_percentile_by_species[i]/total_org_in_percentile_ratio*required()->population_size << std::endl;
+
+  }
+}
+
+void Population::DistributeNurseryChildren(std::vector<unsigned int>& number_of_children) const {
+
+  // build list of nursery species
+  std::vector<unsigned int> nursery;
+  for (auto i=0u; i< species.size(); i++) {
+    if (species[i].age < required()->nursery_age) {
+      nursery.push_back(i);
+    }
+  }
+
+  if (!required()->fixed_nursery_size) { // each nursery species gets a fixed number of children
+    for (auto& i : nursery) {
+      number_of_children[i] += required()->number_of_children_given_in_nursery;
+    }
+
+  } else { // each nursery species gets children based on the amount of absolute fitness it has
+
+    // Determine total adjusted fitness for each species, and for the
+    // entire population.
+
+    double total_adj_fitness = 0;
+    std::vector<double> total_adj_fitness_by_species;
+    for(auto& i : nursery) {
+      auto& spec = species[i];
+      double species_total_adj_fitness = 0;
+
+      for(auto& org : spec.organisms) {
+        species_total_adj_fitness += org.adj_fitness;
+      }
+
+      // NOTICE: stale species are no longer implemented
+      // bool is_stale = spec.age_since_last_improvement >= required()->stale_species_num_generations;
+      // if(is_stale) {
+      //   species_total_adj_fitness *= required()->stale_species_penalty;
+      // }
+
+      total_adj_fitness += species_total_adj_fitness;
+      total_adj_fitness_by_species.push_back(species_total_adj_fitness);
+    }
+
+    // Determine number of children for each species.
+    double children_per_adj_fitness = required()->number_of_children_given_in_nursery / total_adj_fitness;
+    for(auto i=0u,j=0u; i<nursery.size(); i++) {
+      double spec_total_adj_fitness = total_adj_fitness_by_species[j++];
+      // Rounding differences here can cause slightly more or slightly
+      // fewer genomes to be created than population_size. This is
+      // probably ok, but should be studied.
+      unsigned int num_children = std::round(children_per_adj_fitness *
+                                             spec_total_adj_fitness);
+
+      number_of_children[nursery[i]] += num_children;
+    }
+  }
+
+
+}
+
 std::vector<Genome> Population::MakeNextGenerationGenomes() {
-  // Determine total adjusted fitness for each species, and for the
-  // entire population.
 
-  double total_adj_fitness = 0;
-  std::vector<double> total_adj_fitness_by_species;
-  for(auto& spec : species) {
-    double species_total_adj_fitness = 0;
+  std::vector<unsigned int> num_children_by_species(species.size(),0);
+  DistributeNurseryChildren(num_children_by_species);
+  for (auto i=0u; i<species.size(); i++) {
+    std::cout << species[i].id << ": " << num_children_by_species[i] << std::endl;
+  }std::cout << std::endl;
 
-    for(auto& org : spec.organisms) {
-      species_total_adj_fitness += org.adj_fitness;
-    }
-
-    bool is_stale = spec.age >= required()->stale_species_num_generations;
-    if(is_stale) {
-
-      species_total_adj_fitness *= required()->stale_species_penalty;
-    }
-
-    total_adj_fitness += species_total_adj_fitness;
-    total_adj_fitness_by_species.push_back(species_total_adj_fitness);
-  }
-
-  // Determine number of children for each species.
-  double children_per_adj_fitness = required()->population_size / total_adj_fitness;
-  std::vector<int> num_children_by_species;
-  for(double spec_total_adj_fitness : total_adj_fitness_by_species) {
-    // Rounding differences here can cause slightly more or slightly
-    // fewer genomes to be created than population_size. This is
-    // probably ok, but should be studied.
-    int num_children = std::round(children_per_adj_fitness *
-                                  spec_total_adj_fitness);
-    num_children_by_species.push_back(num_children);
-  }
+  DistributeChildrenByRank(num_children_by_species);
+  for (auto i=0u; i<species.size(); i++) {
+    std::cout << species[i].id << ": " << num_children_by_species[i] << std::endl;
+  }std::cout << std::endl;
 
 
   std::vector<Genome> progeny;

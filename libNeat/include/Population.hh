@@ -21,8 +21,8 @@ struct Organism {
     network = rhs.network->clone();
     return *this;
   }
-  float fitness;
-  float adj_fitness;
+  _float_ fitness;
+  _float_ adj_fitness;
   Genome genome;
   std::unique_ptr<NeuralNet> network;
 };
@@ -33,6 +33,7 @@ struct Species {
   unsigned int id;
   Genome representative;
   unsigned int age;
+  //unsigned int age_since_last_improvement;
   double best_fitness;
 };
 
@@ -119,6 +120,9 @@ public:
 private:
   std::vector<Species> MakeNextGenerationSpecies();
   std::vector<Genome> MakeNextGenerationGenomes();
+  void DistributeChildrenByRank(std::vector<unsigned int>&) const;
+  void DistributeNurseryChildren(std::vector<unsigned int>&) const;
+
 
   void Speciate(std::vector<Species>& species,
                 const std::vector<Genome>& genomes);
