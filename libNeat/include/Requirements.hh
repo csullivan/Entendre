@@ -19,12 +19,13 @@ struct Probabilities {
   float culling_ratio = 0.5;
 
   size_t stale_species_num_generations = 15;
+  float necessary_species_improvement = 0.0;
   float stale_species_penalty = 0.01;
   bool keep_empty_species = false;
   bool species_representative_from_previous_gen = true;
 
   float matching_gene_choose_mother = 0.5;
-  float keep_non_matching_mother_gene = 1.0;
+  float keep_non_matching_mother_gene = 1.0; // fitness: mother > father
   float keep_non_matching_father_gene = 0.0;
 
   float mutation_prob_adjust_weights = 0.8;
@@ -42,4 +43,10 @@ struct Probabilities {
   float genetic_distance_structural = 1.0;
   float genetic_distance_weights = 0.2;
   float genetic_distance_species_threshold = 3.0;
+
+  size_t nursery_age = 15;
+  bool fixed_nursery_size = true;
+  size_t number_of_children_given_in_nursery = 100;
+  float species_survival_percentile = 0.3;
+
 };
