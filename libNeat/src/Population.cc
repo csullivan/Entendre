@@ -175,9 +175,6 @@ void Population::DistributeChildrenByRank(std::vector<unsigned int>& number_of_c
 
   for (auto i=0u; i<number_of_children.size(); i++) {
     number_of_children[i] += ratio_of_org_in_percentile_by_species[i]/total_org_in_percentile_ratio*required()->population_size;
-    // std::cout << ratio_of_org_in_percentile_by_species[i]  << " " << total_org_in_percentile_ratio  << std::endl;
-    // std::cout << "Adding # children: " <<ratio_of_org_in_percentile_by_species[i]/total_org_in_percentile_ratio*required()->population_size << std::endl;
-
   }
 }
 
@@ -242,15 +239,7 @@ std::vector<Genome> Population::MakeNextGenerationGenomes() {
 
   std::vector<unsigned int> num_children_by_species(species.size(),0);
   DistributeNurseryChildren(num_children_by_species);
-  for (auto i=0u; i<species.size(); i++) {
-    std::cout << species[i].id << ": " << num_children_by_species[i] << std::endl;
-  }std::cout << std::endl;
-
   DistributeChildrenByRank(num_children_by_species);
-  for (auto i=0u; i<species.size(); i++) {
-    std::cout << species[i].id << ": " << num_children_by_species[i] << std::endl;
-  }std::cout << std::endl;
-
 
   std::vector<Genome> progeny;
   //std::vector<Genome> progeny;
