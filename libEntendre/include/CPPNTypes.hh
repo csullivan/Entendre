@@ -20,9 +20,22 @@ enum class ConnectionType { Normal, Recurrent };
   below enum. If the nodes had activation sets, then seperate activation kernel launches would
   be made for each set, and the factory could handle this all on the CPU side of things.
 */
-enum class NodeType { Bias, Input, Output,
-    Sigmoid, Tanh, Relu, Gaussian, Sin, Cos, Abs, Square, // simple activation functions
-    Add, Mult, MultGaussian // custom activation functions
+enum class NodeType {
+  Bias,
+    Input,
+    Output,
+    Sigmoid,
+    Tanh,
+    Relu,
+    Gaussian,
+    Sin,
+    Cos,
+    Abs,
+    Square,
+  //Cube,
+  //Log,
+  //Exp,
+    MaxNodeType=Square
     };
 
 inline bool IsSensor(const NodeType& type) {
@@ -30,34 +43,65 @@ inline bool IsSensor(const NodeType& type) {
 }
 
 namespace {
-  inline _float_ Identity     (const _float_ val) { return val; }
-  inline _float_ Sigmoid      (const _float_ val) { return 1/(1 + std::exp(-val)); }
-  inline _float_ Tanh         (const _float_ val) { return std::tanh(val); }
-  inline _float_ Relu         (const _float_ val) { return std::max(_float_(0.),val); }
-  inline _float_ Gaussian     (const _float_ val) { return std::exp(-val*val/2.); }
-  inline _float_ Sin          (const _float_ val) { return std::sin(val); }
-  inline _float_ Cos          (const _float_ val) { return std::cos(val); }
-  inline _float_ Abs          (const _float_ val) { return std::abs(val); }
-  inline _float_ Square       (const _float_ val) { return val*val; }
+  static const _float_ max_exp_signal = std::log(std::numeric_limits<_float_>::max());
 
-  //inline _float_ Mult         (const _float_ val) { return val; } // Mult implementation needed
-  //inline _float_ Add          (const _float_ val) { return val; } // Add implementation needed
-  //inline _float_ MultGaussian (const _float_ val) { return val; } // MultGaussian implementation needed
+  inline _float_ clip(_float_ val, _float_ low, _float_ high) {
+    return (val > high) ? high :
+      (val < low ) ? low  : val;
+  }
+  inline _float_ clip_low(_float_ val, _float_ low) {
+    return (val < low ) ? low  : val;
+  }
+  inline _float_ clip_high(_float_ val, _float_ high) {
+    return (val > high) ? high : val;
+  }
 
-  std::map<NodeType,std::function<_float_(const _float_&)>> activation_functions = {
-    {NodeType::Bias, Identity},
-    {NodeType::Input, Identity},
-    {NodeType::Output, Identity},
-    {NodeType::Sigmoid, Sigmoid},
-    {NodeType::Tanh, Tanh},
-    {NodeType::Relu, Relu},
-    {NodeType::Gaussian, Gaussian},
-    {NodeType::Sin, Sin},
-    {NodeType::Cos, Cos},
-    {NodeType::Abs, Abs},
-    {NodeType::Square, Square},
-    {NodeType::Add, Identity},
-    {NodeType::Mult, Identity},
-    {NodeType::MultGaussian, Identity}
-  };
+  inline _float_ identity     (_float_ val) { return val; }
+  inline _float_ tanh         (_float_ val) { return std::tanh(val); }
+  inline _float_ relu         (_float_ val) { return std::max(_float_(0.),val); }
+  inline _float_ gaussian     (_float_ val) { return std::exp(-val*val/2.); }
+  inline _float_ sin          (_float_ val) { return std::sin(val); }
+  inline _float_ cos          (_float_ val) { return std::cos(val); }
+  inline _float_ abs          (_float_ val) { return std::abs(val); }
+  inline _float_ square       (_float_ val) { return val*val; }
+  //inline _float_ cube         (_float_ val) { return std::pow(val,3); }
+  //inline _float_ log          (_float_ val) { return std::log(std::abs(val)); }
+  //inline _float_ exp          (_float_ val) { return std::exp(clip_high(val,50)); }
+  inline _float_ logistic     (_float_ val) { return 1/(1 + std::exp(-val)); }
+
+
+  inline _float_ activate     (NodeType type, _float_ val) {
+    switch(type) {
+    case NodeType::Bias:
+      return identity(val);
+    case NodeType::Input:
+      return identity(val);
+    case NodeType::Output:
+      return identity(val);
+    case NodeType::Sigmoid:
+      return logistic(val);
+    case NodeType::Tanh:
+      return tanh(val);
+    case NodeType::Relu:
+      return relu(val);
+    case NodeType::Gaussian:
+      return gaussian(val);
+    case NodeType::Sin:
+      return sin(val);
+    case NodeType::Cos:
+      return cos(val);
+    case NodeType::Abs:
+      return abs(val);
+    case NodeType::Square:
+      return square(val);
+    // case NodeType::Cube:
+    //   return cube(val);
+    // case NodeType::Log:
+    //   return log(val);
+      //case NodeType::Exp:
+      //return exp(val);
+    default:
+      throw std::runtime_error("Unimplemented NodeType activation function.");
+    };
+  }
 }

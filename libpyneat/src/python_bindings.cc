@@ -116,11 +116,11 @@ PYBIND11_PLUGIN(pyneat) {
     .value("Gaussian",NodeType::Gaussian)
     .value("Sin",NodeType::Sin)
     .value("Cos",NodeType::Cos)
-    .value("Mult",NodeType::Mult)
     .value("Abs",NodeType::Abs)
-    .value("Add",NodeType::Add)
-    .value("MultGaussian",NodeType::MultGaussian)
     .value("Square",NodeType::Square);
+      //.value("Cube",NodeType::Cube);
+      //.value("Log",NodeType::Log);
+      //.value("Exp",NodeType::Exp);
 
   py::class_<Genome>(m, "Genome")
     .def(py::init<>())

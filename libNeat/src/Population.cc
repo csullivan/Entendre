@@ -58,30 +58,30 @@ void Population::Speciate(std::vector<Species>& species,
 }
 
 void Population::CalculateAdjustedFitness() {
-  // // adj_fitness = fitness / number_in_species
-  // for(auto& spec : species) {
-  //   auto num_in_species = spec.organisms.size();
-  //   for(auto& org : spec.organisms) {
-  //     org.adj_fitness = org.fitness / num_in_species
-  //   }
-  // }
+  // adj_fitness = fitness / number_in_species
+  for(auto& spec : species) {
+    auto num_in_species = spec.organisms.size();
+    for(auto& org : spec.organisms) {
+      org.adj_fitness = org.fitness / num_in_species;
+    }
+  }
 
 
   // adj_fitness = fitness/ number_of_genetically_similar_in_species
-  for(auto& spec : species) {
-    for(auto& org : spec.organisms) {
-      int nearby_in_species = 0;
+  // for(auto& spec : species) {
+  //   for(auto& org : spec.organisms) {
+  //     int nearby_in_species = 0;
 
-      for(auto& other : spec.organisms) {
-        double dist = org.genome.GeneticDistance(other.genome);
-        if(dist < required()->genetic_distance_species_threshold) {
-          nearby_in_species++;
-        }
-      }
+  //     for(auto& other : spec.organisms) {
+  //       double dist = org.genome.GeneticDistance(other.genome);
+  //       if(dist < required()->genetic_distance_species_threshold) {
+  //         nearby_in_species++;
+  //       }
+  //     }
 
-      org.adj_fitness = org.fitness/nearby_in_species;
-    }
-  }
+  //     org.adj_fitness = org.fitness/nearby_in_species;
+  //   }
+  // }
 }
 
 Population Population::Reproduce() {
@@ -239,14 +239,7 @@ std::vector<Genome> Population::MakeNextGenerationGenomes() {
 
   std::vector<unsigned int> num_children_by_species(species.size(),0);
   DistributeNurseryChildren(num_children_by_species);
-  for (auto i=0u; i<species.size(); i++) {
-    std::cout << species[i].id << ": " << num_children_by_species[i] << std::endl;
-  }std::cout << std::endl;
-
   DistributeChildrenByRank(num_children_by_species);
-  for (auto i=0u; i<species.size(); i++) {
-    std::cout << species[i].id << ": " << num_children_by_species[i] << std::endl;
-  }std::cout << std::endl;
 
 
   std::vector<Genome> progeny;
@@ -274,10 +267,7 @@ std::vector<Genome> Population::MakeNextGenerationGenomes() {
 
         int idx1 = random()*org_list.size()*culling_ratio;
         int idx2 = random()*org_list.size()*culling_ratio;
-        // while (idx1 == idx2) {
-        //   idx1 = random()*org_list.size()*culling_ratio;
-        //   idx2 = random()*org_list.size()*culling_ratio;
-        // }
+
         Organism& parent1 = org_list[idx1];
         Organism& parent2 = org_list[idx2];
         Genome child;

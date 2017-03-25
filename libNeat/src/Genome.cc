@@ -569,7 +569,7 @@ void Genome::MutateNode() {
   //        Currently, all activation functions have equal probability
   //        2. Additionally, the node type should be used in innovation hashing
   auto type = required()->use_compositional_pattern_producing_networks ?
-    NodeType(random()*(activation_functions.size()-3) + 3) :
+    NodeType(random()*((int(NodeType::MaxNodeType)+1)-3) + 3) :
     NodeType::Sigmoid;
 
   AddNodeByInnovation(type, new_node_innov);

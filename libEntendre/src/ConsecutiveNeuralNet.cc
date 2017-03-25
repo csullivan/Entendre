@@ -16,11 +16,7 @@ std::vector<_float_> ConsecutiveNeuralNet::evaluate(std::vector<_float_> inputs)
 
   for(auto& conn : connections) {
     _float_ input_val = get_node_val(conn.origin);
-    if (nodes[conn.dest].type == NodeType::Mult) {
-      mult_into_val(conn.dest, input_val * conn.weight);
-    } else {
-      add_to_val(conn.dest, input_val * conn.weight);
-    }
+    add_to_val(conn.dest, input_val * conn.weight);
   }
 
   return read_output_vals();
@@ -65,7 +61,7 @@ std::vector<_float_> ConsecutiveNeuralNet::read_output_vals() {
 _float_ ConsecutiveNeuralNet::get_node_val(unsigned int i) {
   if(!nodes[i].is_activated) {
     //nodes[i].value = sigmoid(nodes[i].value);
-    nodes[i].value = activation_functions.at(nodes[i].type)(nodes[i].value);
+    nodes[i].value = activate(nodes[i].type,nodes[i].value);
     nodes[i].is_activated = true;
   }
   return nodes[i].value;
@@ -76,17 +72,7 @@ void ConsecutiveNeuralNet::add_to_val(unsigned int i, _float_ val) {
     nodes[i].value = 0;
     nodes[i].is_activated = false;
   }
-  //nodes[i].value += val;
-  nodes[i].value += (nodes[i].type == NodeType::MultGaussian) ? Gaussian(val) : val;
-}
-
-void ConsecutiveNeuralNet::mult_into_val(unsigned int i, _float_ val) {
-  if(nodes[i].is_activated) {
-    nodes[i].value = 0;
-    nodes[i].is_activated = false;
-  }
-  //nodes[i].value *= val;
-  nodes[i].value *= (nodes[i].type == NodeType::MultGaussian) ? Gaussian(val) : val;
+  nodes[i].value += val;
 }
 
 void ConsecutiveNeuralNet::sort_connections() {
