@@ -152,7 +152,8 @@ void Population::DistributeChildrenByRank(std::vector<unsigned int>& number_of_c
 
   // total number of organisms in top x percentile
   auto num_organisms_in_percentile =
-    std::round(required()->species_survival_percentile*required()->population_size);
+    std::round(required()->species_survival_percentile*organism_fitnesses.size());
+
   assert(num_organisms_in_percentile <= organism_fitnesses.size());
 
   // count number of organisms in top x percentile for each species

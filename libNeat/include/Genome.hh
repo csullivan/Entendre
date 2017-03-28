@@ -26,7 +26,11 @@ public:
   static Genome ConnectedSeed(int num_inputs, int num_outputs);
 
   template<typename NetType>
-  std::unique_ptr<NeuralNet> MakeNet() const;
+  std::unique_ptr<NeuralNet> MakeNet() const {
+    auto output = std::make_unique<NetType>();
+    MakeNet(*output);
+    return output;
+  }
 
   Genome& operator=(const Genome&);
   Genome& AddNode(NodeType type);
@@ -56,6 +60,8 @@ public:
   void AssertNoConnectionsToInput() const;
 
 private:
+  void MakeNet(NeuralNet& net) const;
+
   const NodeGene* GetNodeByN(unsigned int i) const;
   const NodeGene* GetNodeByInnovation(unsigned long innovation) const;
   const ConnectionGene* GetConnByN(unsigned int i) const;
@@ -131,3 +137,4 @@ struct NodeGene {
   NodeType type;
   unsigned long innovation;
 };
+

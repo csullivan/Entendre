@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <functional>
 
+#ifdef CUDA_ENABLED
 class ConcurrentGPUNeuralNet : public NeuralNet {
 public:
 
@@ -67,3 +68,7 @@ private:
   _float_* weight_ = nullptr;
   unsigned int* action_list_ = nullptr;
 };
+
+#else
+typedef ConcurrentNeuralNet ConcurrentGPUNeuralNet;
+#endif

@@ -9,10 +9,7 @@
 Genome::Genome() : num_inputs(0),
                    last_conn_innov(0), last_node_innov(0) { ; }
 
-
-
-template<>
-std::unique_ptr<NeuralNet> Genome::MakeNet<ConsecutiveNeuralNet>() const {
+void Genome::MakeNet(NeuralNet& net) const {
   AssertInputNodesFirst();
   AssertNoConnectionsToInput();
 
@@ -39,9 +36,8 @@ std::unique_ptr<NeuralNet> Genome::MakeNet<ConsecutiveNeuralNet>() const {
   // build neural net from only genes that connect to nodes
   // which have a path to an output and from an input
   //NeuralNet net(node_genes);
-  auto net = std::make_unique<ConsecutiveNeuralNet>();
   for (auto& gene: node_genes) {
-    net->add_node(gene.type);
+    net.add_node(gene.type);
   }
   for(auto& gene : connection_genes) {
     if (gene.enabled) {
@@ -49,106 +45,10 @@ std::unique_ptr<NeuralNet> Genome::MakeNet<ConsecutiveNeuralNet>() const {
       int j = node_lookup.at(gene.dest);
       if(exclusions.count(i) == 0 &&
          exclusions.count(j) == 0) {
-        net->add_connection(i,j,gene.weight);
+        net.add_connection(i,j,gene.weight);
       }
     }
   }
-
-  return net;
-}
-
-template<>
-std::unique_ptr<NeuralNet> Genome::MakeNet<ConcurrentNeuralNet>() const {
-  AssertInputNodesFirst();
-  AssertNoConnectionsToInput();
-  // TODO: Add AssertOutputNodesLast();
-
-  // populate reachability checker
-  ReachabilityChecker checker(node_genes.size(),num_inputs);
-  for(auto& gene : connection_genes) {
-    if (gene.enabled) {
-      int i = node_lookup.at(gene.origin);
-      int j = node_lookup.at(gene.dest);
-      checker.AddConnection(i,j);
-    }
-  }
-
-  // use reachability checker to determine if a node is unconnected
-  std::unordered_set<unsigned int> exclusions;
-  for (auto n=0u; n<node_genes.size(); n++) {
-    // if the node is not reachable from either inputs
-    // or outputs, add to the exclusion list
-    if (!ConnectivityCheck(n,checker)) {
-      exclusions.insert(n);
-    }
-  }
-
-  // build neural net from only genes that connect to nodes
-  // which have a path to an output and from an input
-  //NeuralNet net(node_genes);
-  auto net = std::make_unique<ConcurrentNeuralNet>();
-  for (auto const& gene : node_genes) {
-    net->add_node(gene.type);
-  }
-  for(auto& gene : connection_genes) {
-    if (gene.enabled) {
-      int i = node_lookup.at(gene.origin);
-      int j = node_lookup.at(gene.dest);
-      if(exclusions.count(i) == 0 &&
-         exclusions.count(j) == 0) {
-        net->add_connection(i,j,gene.weight);
-      }
-    }
-  }
-
-  return net;
-}
-
-template<>
-std::unique_ptr<NeuralNet> Genome::MakeNet<ConcurrentGPUNeuralNet>() const {
-  AssertInputNodesFirst();
-  AssertNoConnectionsToInput();
-  // TODO: Add AssertOutputNodesLast();
-
-  // populate reachability checker
-  ReachabilityChecker checker(node_genes.size(),num_inputs);
-  for(auto& gene : connection_genes) {
-    if (gene.enabled) {
-      int i = node_lookup.at(gene.origin);
-      int j = node_lookup.at(gene.dest);
-      checker.AddConnection(i,j);
-    }
-  }
-
-  // use reachability checker to determine if a node is unconnected
-  std::unordered_set<unsigned int> exclusions;
-  for (auto n=0u; n<node_genes.size(); n++) {
-    // if the node is not reachable from either inputs
-    // or outputs, add to the exclusion list
-    if (!ConnectivityCheck(n,checker)) {
-      exclusions.insert(n);
-    }
-  }
-
-  // build neural net from only genes that connect to nodes
-  // which have a path to an output and from an input
-  //NeuralNet net(node_genes);
-  auto net = std::make_unique<ConcurrentGPUNeuralNet>();
-  for (auto const& gene : node_genes) {
-    net->add_node(gene.type);
-  }
-  for(auto& gene : connection_genes) {
-    if (gene.enabled) {
-      int i = node_lookup.at(gene.origin);
-      int j = node_lookup.at(gene.dest);
-      if(exclusions.count(i) == 0 &&
-         exclusions.count(j) == 0) {
-        net->add_connection(i,j,gene.weight);
-      }
-    }
-  }
-
-  return net;
 }
 
 

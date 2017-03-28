@@ -276,17 +276,17 @@ TEST(ConcurrentGPUNeuralNet,EvaluateLargeNetwork){
     // Time the network evaluation
     for (auto i=0u; i < nTrials; i++)
     {
-        auto net = static_unique_ptr_cast<ConcurrentGPUNeuralNet>(genome.MakeNet<ConcurrentGPUNeuralNet>());
+        auto net = genome.MakeNet<ConcurrentGPUNeuralNet>();
         net->register_sigmoid(sigmoid);
 
         // First evaluation includes network sorting (construction)
         // so we will time the evaluations thereafter
-        net->device_evaluate({1.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5});
+        net->evaluate({1.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5});
 
         Timer teval([&tperformance](int elapsed) {
                 tperformance+=elapsed;
             });
-        auto result2 = net->device_evaluate({1.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5});
+        auto result2 = net->evaluate({1.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5});
 
 
     }
@@ -312,12 +312,14 @@ TEST(ConcurrentGPUNeuralNet,CompareEvaluation) {
     .AddConnection(2,3,true,1.); // recurrent
   auto consecutive = genome.MakeNet<ConsecutiveNeuralNet>();
   auto concurrent =  genome.MakeNet<ConcurrentNeuralNet>();
-  auto concurrentgpu = static_unique_ptr_cast<ConcurrentGPUNeuralNet>(genome.MakeNet<ConcurrentGPUNeuralNet>());
+  auto concurrentgpu = genome.MakeNet<ConcurrentGPUNeuralNet>();
 
 
 
   auto result = consecutive->evaluate({0.5,1.5});
-  auto result3 = concurrentgpu->device_evaluate({0.5,1.5});
+  auto result2 = concurrent->evaluate({0.5,1.5});
+  auto result3 = concurrentgpu->evaluate({0.5,1.5});
+  EXPECT_FLOAT_EQ(result[0],result2[0]);
   EXPECT_FLOAT_EQ(result[0],result3[0]);
 
 }
