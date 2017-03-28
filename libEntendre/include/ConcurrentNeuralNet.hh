@@ -32,7 +32,7 @@ private:
   void build_action_list();
 
 
-  enum class EvaluationOrder { GreaterThan, LessThan, NotEqual, Unknown };
+  enum class EvaluationOrder { GreaterThan, LessThan, Unknown };
   EvaluationOrder compare_connections(const Connection& a, const Connection& b);
 
   size_t num_inputs = 0;

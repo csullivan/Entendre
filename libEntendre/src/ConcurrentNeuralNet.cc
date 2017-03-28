@@ -31,7 +31,13 @@ ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(co
     } else if (b.origin == b.dest) {
       return EvaluationOrder::GreaterThan;
     } else {
-      return EvaluationOrder::NotEqual;
+      // Choice here is absolutely arbitrary.
+      // This is arbitrary, and consistent.
+      if(a.origin < b.origin) {
+        return EvaluationOrder::GreaterThan;
+      } else {
+        return EvaluationOrder::LessThan;
+      }
     }
   }
 
@@ -44,60 +50,58 @@ void ConcurrentNeuralNet::sort_connections() {
     return;
   }
 
-  unsigned int max_iterations =
-    connections.size()*connections.size()*connections.size()+1;
-
-  bool change_applied = false;
-  for(auto i_try=0u; i_try < max_iterations; i_try++) {
-    change_applied = false;
-
-    for(auto i=0u; i<connections.size(); i++) {
-      for(auto j=i+1; j<connections.size(); j++) {
-        Connection& conn1 = connections[i];
-        Connection& conn2 = connections[j];
-
-        switch(compare_connections(conn1,conn2)) {
+  for(auto& conn : connections) {
+    conn.set = 0;
+  }
+  for(auto i=0u; i<connections.size(); i++) {
+    for(auto j=i+1; j<connections.size(); j++) {
+      Connection& conn1 = connections[i];
+      Connection& conn2 = connections[j];
+      switch(compare_connections(conn1,conn2)) {
         case EvaluationOrder::GreaterThan:
-          if (conn1.set <= conn2.set) {
-            conn1.set = conn2.set + 1;
-            change_applied = true;
-          }
+          conn1.set++;
           break;
 
         case EvaluationOrder::LessThan:
-          if(conn2.set <= conn1.set) {
-            conn2.set = conn1.set + 1;
-            change_applied = true;
-          }
-          break;
-
-        case EvaluationOrder::NotEqual:
-          if(conn1.set == conn2.set) {
-            conn2.set = conn1.set + 1;
-            change_applied = true;
-          }
+          conn2.set++;
           break;
 
         case EvaluationOrder::Unknown:
           break;
+      }
+    }
+  }
+
+  auto split_iter = connections.begin();
+  size_t current_set_num = 0;
+  while(split_iter != connections.end()) {
+    auto next_split = std::partition(split_iter, connections.end(),
+                                     [](const Connection& conn) {
+                                       return conn.set == 0;
+                                     });
+    assert(next_split != split_iter);
+
+    // These could be run now, no longer need to track number of
+    // depencencies.
+    for(auto iter = split_iter; iter<next_split; iter++) {
+      iter->set = current_set_num;
+    }
+    current_set_num++;
+
+    // Decrease number of dependencies for everything else.
+    for(auto iter_done = split_iter; iter_done<next_split; iter_done++) {
+      for(auto iter_not_done = next_split; iter_not_done<connections.end(); iter_not_done++) {
+        if (compare_connections(*iter_done,*iter_not_done) == EvaluationOrder::LessThan) {
+          iter_not_done->set--;
         }
       }
     }
 
-    if(!change_applied) {
-      break;
-    }
+    split_iter = next_split;
   }
-
-  if(change_applied) {
-    throw std::runtime_error("Sort Error: change_applied == true on last possible iteration");
-  }
-
-  // sort connections based on evaluation set number
-  std::sort(connections.begin(),connections.end(),[](Connection a, Connection b){ return a.set < b.set; });
-  connections_sorted = true;
 
   build_action_list();
+  connections_sorted = true;
 }
 
 void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
