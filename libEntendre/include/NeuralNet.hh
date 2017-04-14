@@ -6,25 +6,19 @@
 #include <memory>
 #include <algorithm>
 
-
-typedef float _float_;
-
-
-enum class NodeType { Input, Hidden, Output, Bias };
+#include "CPPNTypes.hh"
 
 struct Node {
   _float_ value;
-  bool is_sigmoid;
+  bool is_activated;
   NodeType type;
   Node(NodeType _type)
     : value(0.0),
-      is_sigmoid(false), type(_type) {;}
+      is_activated(false), type(_type) {;}
   operator _float_() { return value; }
 };
 
-bool IsSensor(const NodeType& type);
 
-enum class ConnectionType { Normal, Recurrent };
 struct Connection {
   unsigned int origin;
   unsigned int dest;

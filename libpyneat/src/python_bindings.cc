@@ -90,7 +90,8 @@ PYBIND11_PLUGIN(pyneat) {
     .def_readwrite("mutation_prob_toggle_connection",&Probabilities::mutation_prob_toggle_connection)
     .def_readwrite("genetic_distance_structural",&Probabilities::genetic_distance_structural)
     .def_readwrite("genetic_distance_weights",&Probabilities::genetic_distance_weights)
-    .def_readwrite("genetic_distance_species_threshold",&Probabilities::genetic_distance_species_threshold);
+    .def_readwrite("genetic_distance_species_threshold",&Probabilities::genetic_distance_species_threshold)
+    .def_readwrite("use_compositional_pattern_producing_networks",&Probabilities::use_compositional_pattern_producing_networks);
 
   py::class_<ReachabilityChecker>(m, "ReachabilityChecker")
     .def(py::init<size_t>())
@@ -106,10 +107,20 @@ PYBIND11_PLUGIN(pyneat) {
     .def("NumPossibleRecurrentConnections",&ReachabilityChecker::NumPossibleRecurrentConnections);
 
   py::enum_<NodeType>(m, "NodeType")
+    .value("Bias",NodeType::Bias)
     .value("Input",NodeType::Input)
     .value("Output",NodeType::Output)
-    .value("Hidden",NodeType::Hidden)
-    .value("Bias",NodeType::Bias);
+    .value("Sigmoid",NodeType::Sigmoid)
+    .value("Tanh",NodeType::Tanh)
+    .value("Relu",NodeType::Relu)
+    .value("Gaussian",NodeType::Gaussian)
+    .value("Sin",NodeType::Sin)
+    .value("Cos",NodeType::Cos)
+    .value("Abs",NodeType::Abs)
+    .value("Square",NodeType::Square);
+      //.value("Cube",NodeType::Cube);
+      //.value("Log",NodeType::Log);
+      //.value("Exp",NodeType::Exp);
 
   py::class_<Genome>(m, "Genome")
     .def(py::init<>())

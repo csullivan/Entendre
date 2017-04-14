@@ -44,6 +44,8 @@ struct Probabilities {
   float genetic_distance_weights = 0.2;
   float genetic_distance_species_threshold = 3.0;
 
+  bool use_compositional_pattern_producing_networks = false;
+  
   size_t nursery_age = 15;
   bool fixed_nursery_size = true;
   size_t number_of_children_given_in_nursery = 100;

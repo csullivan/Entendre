@@ -227,7 +227,7 @@ Genome& Genome::AddNode(NodeType type) {
   case NodeType::Output:
     innovation = Hash(2, last_node_innov);
     break;
-  case NodeType::Hidden:
+  default: // all hidden nodes
     innovation = Hash(3, last_node_innov);
     break;
   }
@@ -464,7 +464,15 @@ void Genome::MutateNode() {
   // add a new node:
   // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
   auto new_node_innov = Hash(split_conn.innovation, last_node_innov);
-  AddNodeByInnovation(NodeType::Hidden, new_node_innov);
+  // TODO:  1. HyperNEAT performs a random roulette choice based on probabilities
+  //        set for each activation function which are exposed in the parameters.
+  //        Currently, all activation functions have equal probability
+  //        2. Additionally, the node type should be used in innovation hashing
+  auto type = required()->use_compositional_pattern_producing_networks ?
+    NodeType(random()*((int(NodeType::MaxNodeType)+1)-3) + 3) :
+    NodeType::Sigmoid;
+
+  AddNodeByInnovation(type, new_node_innov);
 
   // disable old gene
   GetConnByInnovation(split_conn.innovation)->enabled = false;
@@ -610,16 +618,11 @@ std::ostream& operator<<(std::ostream& os, const Genome& genome) {
       case NodeType::Output:
         ss << "O" << num_outputs++;
         break;
-      case NodeType::Hidden:
-        ss << "H" << num_hidden++;
-        break;
       case NodeType::Bias:
         ss << "B";
         break;
-
-      default:
-        std::cerr << "Type: " << int(genome.node_genes[i].type) << std::endl;
-        assert(false);
+      default: // all hidden nodes
+        ss << "H" << num_hidden++;
         break;
     }
     names[genome.node_genes[i].innovation] = ss.str();
