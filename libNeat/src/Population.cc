@@ -38,7 +38,7 @@ void Population::Speciate(std::vector<Species>& species,
     for(auto& spec : species) {
       double dist = genome.GeneticDistance(spec.representative);
       if(dist < required()->genetic_distance_species_threshold) {
-        spec.organisms.emplace_back(genome,converter->convert(genome));
+        spec.organisms.emplace_back(genome,converter);
         need_new_species = false;
         break;
       }
@@ -51,7 +51,7 @@ void Population::Speciate(std::vector<Species>& species,
       new_spec.age = 0;
       //new_spec.age_since_last_improvement = 0;
       new_spec.best_fitness = 0;
-      new_spec.organisms.emplace_back(genome,converter->convert(genome));
+      new_spec.organisms.emplace_back(genome,converter);
 
       species.push_back(new_spec);
     }
@@ -302,13 +302,13 @@ std::vector<Genome> Population::MakeNextGenerationGenomes() {
 
 
 
-NeuralNet* Population::BestNet() const {
+NeuralNet* Population::BestNet() {
   NeuralNet* output = nullptr;
   double best_fitness = -std::numeric_limits<double>::max();
   for(auto& spec : species) {
     for(auto& org : spec.organisms) {
       if(org.fitness > best_fitness) {
-        output = org.network.get();
+        output = org.network();
         best_fitness = org.fitness;
       }
     }

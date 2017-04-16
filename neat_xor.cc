@@ -70,7 +70,9 @@ int main() {
       return 0.0;
     }
 
-    _float_ error = 0;
+    std::random_shuffle(shuffled_inputs.begin(), shuffled_inputs.end());
+
+    double error = 0;
     for(const auto& input : shuffled_inputs) {
       _float_ val = net.evaluate({input.x, input.y})[0];
       //error += std::abs(val - input.correct);
@@ -83,7 +85,6 @@ int main() {
 
 
   for (generation = 0u; generation < max_generations; generation++) {
-    std::random_shuffle(shuffled_inputs.begin(), shuffled_inputs.end());
 
     auto next_gen = pop.Reproduce(fitness);
 
