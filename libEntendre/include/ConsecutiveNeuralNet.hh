@@ -33,7 +33,7 @@ protected:
   void add_to_val(unsigned int i, _float_ val);
 
 private:
-  void sort_connections() override;
+  void sort_connections(unsigned int first=0, unsigned int num_connections=0) override;
 
 
   std::vector<Node> nodes;

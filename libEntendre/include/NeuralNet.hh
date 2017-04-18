@@ -62,7 +62,7 @@ protected:
   std::function<_float_(_float_ val)> sigma;
 
 private:
-  virtual void sort_connections() = 0;
+  virtual void sort_connections(unsigned int first, unsigned int num_connections) = 0;
 
   friend std::ostream& operator<<(std::ostream& os, const NeuralNet& net);
 

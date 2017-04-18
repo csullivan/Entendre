@@ -11,7 +11,7 @@ public:
   //using NeuralNet::NeuralNet;
   virtual ~ConcurrentNeuralNet() { ; }
 
-  void sort_connections() override;
+  void sort_connections(unsigned int first=0, unsigned int num_connections=0) override;
   std::vector<_float_> evaluate(std::vector<_float_> inputs);
   virtual void add_node(const NodeType& type);
 

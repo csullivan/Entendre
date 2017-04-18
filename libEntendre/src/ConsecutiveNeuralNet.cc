@@ -74,25 +74,31 @@ void ConsecutiveNeuralNet::add_to_val(unsigned int i, _float_ val) {
   nodes[i].value += val;
 }
 
-void ConsecutiveNeuralNet::sort_connections() {
+void ConsecutiveNeuralNet::sort_connections(unsigned int first, unsigned int num_connections) {
   if(connections_sorted) {
     return;
   }
 
-  auto num_connections = connections.size();
+  assert(!(first!=0 && num_connections==0));
+  num_connections = num_connections > 0 ? num_connections : connections.size();
+  assert(first+num_connections <= connections.size());
 
   std::vector<Connection> sorted;
   sorted.reserve(num_connections);
 
   std::vector<bool> used(num_connections,false);
 
-  for(size_t i = 0; i<num_connections; i++) {
+  for(size_t i = first; i<first+num_connections; i++) {
+    // all nodes should start sigmoided
+    nodes[connections[i].origin].is_sigmoid = true;
+    nodes[connections[i].dest].is_sigmoid = true;
+
     size_t possible;
     for(possible = 0; possible<num_connections; possible++) {
 
       if (used[possible]) { continue; }
 
-      Connection& conn = connections[possible];
+      Connection& conn = connections[first+possible];
       bool disqualified = false;
 
       // Origin of normal connection has no unused input connections
@@ -113,7 +119,7 @@ void ConsecutiveNeuralNet::sort_connections() {
       // Destination of connection has no unused recurrent output connections
       // If the output recurrent connection is ourself, it is allowed.
       for(size_t j=0; j<num_connections; j++) {
-        Connection& other = connections[j];
+        Connection& other = connections[first+j];
         if(!used[j] &&
            conn.dest == other.origin &&
            possible != j &&
@@ -135,16 +141,16 @@ void ConsecutiveNeuralNet::sort_connections() {
     }
 
     used[possible] = true;
-    sorted.push_back(connections[possible]);
+    sorted.push_back(connections[first+possible]);
   }
 
   connections = sorted;
   connections_sorted = true;
 
-  //
-  for (auto& node : nodes) {
-    node.is_sigmoid = true;
-  }
+  // TODO: put this in inner loop (above) over connections
+  // for (auto& node : nodes) {
+  //   node.is_sigmoid = true;
+  // }
 }
 
 std::vector<NodeType> ConsecutiveNeuralNet::node_types() const {

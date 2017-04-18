@@ -45,16 +45,20 @@ ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(co
   return EvaluationOrder::Unknown;
 }
 
-void ConcurrentNeuralNet::sort_connections() {
+void ConcurrentNeuralNet::sort_connections(unsigned int first, unsigned int num_connections) {
   if(connections_sorted) {
     return;
   }
 
-  for(auto& conn : connections) {
-    conn.set = 0;
+  assert(!(first!=0 && num_connections==0));
+  num_connections = num_connections > 0 ? num_connections : connections.size();
+  assert(first+num_connections <= connections.size());
+
+  for (auto i=first; i<first+num_connections; i++) {
+    connections[i].set = 0;
   }
-  for(auto i=0u; i<connections.size(); i++) {
-    for(auto j=i+1; j<connections.size(); j++) {
+  for(auto i=first; i<first+num_connections; i++) {
+    for(auto j=i+1; j<first+num_connections; j++) {
       Connection& conn1 = connections[i];
       Connection& conn2 = connections[j];
       switch(compare_connections(conn1,conn2)) {
@@ -72,10 +76,11 @@ void ConcurrentNeuralNet::sort_connections() {
     }
   }
 
-  auto split_iter = connections.begin();
+  auto split_iter = connections.begin()+first;
+  auto last_iter = connections.begin()+first+num_connections;
   size_t current_set_num = 0;
-  while(split_iter != connections.end()) {
-    auto next_split = std::partition(split_iter, connections.end(),
+  while(split_iter != last_iter) {
+    auto next_split = std::partition(split_iter, last_iter,
                                      [](const Connection& conn) {
                                        return conn.set == 0;
                                      });
@@ -90,7 +95,7 @@ void ConcurrentNeuralNet::sort_connections() {
 
     // Decrease number of dependencies for everything else.
     for(auto iter_done = split_iter; iter_done<next_split; iter_done++) {
-      for(auto iter_not_done = next_split; iter_not_done<connections.end(); iter_not_done++) {
+      for(auto iter_not_done = next_split; iter_not_done<last_iter; iter_not_done++) {
         if (compare_connections(*iter_done,*iter_not_done) == EvaluationOrder::LessThan) {
           iter_not_done->set--;
         }
@@ -100,7 +105,9 @@ void ConcurrentNeuralNet::sort_connections() {
     split_iter = next_split;
   }
 
-  build_action_list();
+  if (num_connections == connections.size()) {
+    build_action_list();
+  }
   connections_sorted = true;
 }
 

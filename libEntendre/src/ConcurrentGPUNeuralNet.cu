@@ -60,20 +60,25 @@ ConcurrentGPUNeuralNet::EvaluationOrder ConcurrentGPUNeuralNet::compare_connecti
   return EvaluationOrder::Unknown;
 }
 
-void ConcurrentGPUNeuralNet::sort_connections() {
+void ConcurrentGPUNeuralNet::sort_connections(unsigned int first, unsigned int num_connections) {
   if(connections_sorted) {
     return;
   }
 
+  assert(!(first!=0 && num_connections==0));
+  num_connections = num_connections > 0 ? num_connections : connections.size();
+  assert(first+num_connections <= connections.size());
+
+
   unsigned int max_iterations =
-    connections.size()*connections.size()*connections.size()+1;
+    num_connections*num_connections*num_connections+1;
 
   bool change_applied = false;
   for(auto i_try=0u; i_try < max_iterations; i_try++) {
     change_applied = false;
 
-    for(auto i=0u; i<connections.size(); i++) {
-      for(auto j=i+1; j<connections.size(); j++) {
+    for(auto i=first; i<first+num_connections; i++) {
+      for(auto j=i+1; j<first+num_connections; j++) {
         Connection& conn1 = connections[i];
         Connection& conn2 = connections[j];
 
@@ -115,13 +120,16 @@ void ConcurrentGPUNeuralNet::sort_connections() {
   }
 
   // sort connections based on evaluation set number
-  std::sort(connections.begin(),connections.end(),[](Connection a, Connection b){ return a.set < b.set; });
-  for (auto const& conn : connections) {
+  std::sort(connections.begin()+first,connections.begin()+first+num_connections,[](Connection a, Connection b){ return a.set < b.set; });
+  for (auto i=first; i<first+num_connections; i++) {
+    auto& conn = connections[i];
     connection_list.add(conn.origin,conn.dest,conn.weight);
   }
   connections_sorted = true;
 
-  build_action_list();
+  if (num_connections == connections.size()) {
+    build_action_list();
+  }
   connections.clear();
   synchronize();
 }

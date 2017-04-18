@@ -34,7 +34,7 @@ public:
 
 private:
   bool would_make_loop(unsigned int i, unsigned int j);
-  virtual void sort_connections();
+  virtual void sort_connections(unsigned int first=0, unsigned int num_connections=0);
   void build_action_list();
   void synchronize();
 
