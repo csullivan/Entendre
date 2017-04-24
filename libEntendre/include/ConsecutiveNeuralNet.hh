@@ -25,6 +25,7 @@ public:
   virtual NodeType get_node_type(unsigned int i) const {
     return nodes[i].type;
   }
+  void sort_connections(unsigned int first=0, unsigned int num_connections=0) override;
 
   virtual void print_network(std::ostream& os) const;
 
@@ -33,7 +34,6 @@ protected:
   void add_to_val(unsigned int i, _float_ val);
 
 private:
-  void sort_connections(unsigned int first=0, unsigned int num_connections=0) override;
 
 
   std::vector<Node> nodes;

@@ -50,10 +50,17 @@ void ConcurrentNeuralNet::sort_connections(unsigned int first, unsigned int num_
     return;
   }
 
+  // if the first connection in the list to sort is not
+  // the first connection, and num_connections is zero
+  // this is an error
   assert(!(first!=0 && num_connections==0));
+  // if num_connections is zero, then we will sort all connections
   num_connections = num_connections > 0 ? num_connections : connections.size();
+  // the number of connections to sort cannot be
+  // larger than the total number of connections
   assert(first+num_connections <= connections.size());
 
+  // zero out connection set index for use in sorting
   for (auto i=first; i<first+num_connections; i++) {
     connections[i].set = 0;
   }
@@ -105,10 +112,22 @@ void ConcurrentNeuralNet::sort_connections(unsigned int first, unsigned int num_
     split_iter = next_split;
   }
 
-  if (num_connections == connections.size()) {
+  // build the action list if num_connections was the total set
+  // or if this is the last subset of connections (all others are sorted)
+  if (first + num_connections == connections.size()) {
+    // if first is nonzero then we have been sorting based on subsets and now all subset lock free buckets
+    // need to be merged in a sort of the entire connections list where set now is the lock free set index
+    // (before it was used as the subnet index)
+    if (first != 0) {
+      // sort connections based on evaluation set number if not already done
+      std::sort(connections.begin(),connections.end(),[](Connection a, Connection b){ return a.set < b.set; });
+    }
+
+
     build_action_list();
+    connections_sorted = true; // we are done sorting
   }
-  connections_sorted = true;
+
 }
 
 void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
@@ -283,4 +302,13 @@ std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) 
   }
 
   return std::vector<_float_> (nodes.begin()+num_inputs,nodes.begin()+num_inputs+num_outputs);
+}
+
+
+void ConcurrentNeuralNet::print_network(std::ostream& os) const {
+  std::stringstream ss; ss.str("");
+  for (auto& conn : connections) {
+    ss << conn.origin << " -> " << conn.dest << "  in set " << conn.set << "\n";
+  }
+  os << ss.str();
 }

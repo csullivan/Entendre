@@ -12,7 +12,7 @@ public:
   virtual ~ConcurrentGPUNeuralNet();
 
   virtual void add_node(const NodeType& type);
-  virtual void add_connection(int origin, int dest, _float_ weight);
+  virtual void add_connection(int origin, int dest, _float_ weight, unsigned int set=std::numeric_limits<unsigned int>::max());
   virtual unsigned int num_nodes() { return nodes.size(); }
   virtual unsigned int num_connections() { return connections.size(); }
   virtual std::vector<_float_> evaluate(std::vector<_float_> inputs);
@@ -31,15 +31,16 @@ public:
     return (i<num_inputs) ? NodeType::Input :
       (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
   }
+  virtual void sort_connections(unsigned int first=0, unsigned int num_connections=0);
+  std::vector<Connection>& get_connections() { return connections; }
 
 private:
-  bool would_make_loop(unsigned int i, unsigned int j);
-  virtual void sort_connections(unsigned int first=0, unsigned int num_connections=0);
+  bool would_make_loop(unsigned int i, unsigned int j, unsigned int set=std::numeric_limits<unsigned int>::max());
   void build_action_list();
   void synchronize();
 
 
-  enum class EvaluationOrder { GreaterThan, LessThan, NotEqual, Unknown };
+  enum class EvaluationOrder { GreaterThan, LessThan, Unknown };
   EvaluationOrder compare_connections(const Connection& a, const Connection& b);
 
   size_t num_inputs = 0;

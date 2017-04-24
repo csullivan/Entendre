@@ -24,7 +24,7 @@ public:
       (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
   }
 
-
+  virtual void print_network(std::ostream& os) const override;
 private:
   void clear_nodes(unsigned int* list, unsigned int n);
   void sigmoid_nodes(unsigned int* list, unsigned int n);

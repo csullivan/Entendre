@@ -34,7 +34,7 @@ ConcurrentGPUNeuralNet::~ConcurrentGPUNeuralNet() {
 }
 
 ConcurrentGPUNeuralNet::EvaluationOrder ConcurrentGPUNeuralNet::compare_connections(const Connection& a, const Connection& b) {
-  // A recurrent connection must be used before the origin is overwritten.
+    // A recurrent connection must be used before the origin is overwritten.
   if (a.type == ConnectionType::Recurrent && a.origin == b.dest) { return EvaluationOrder::LessThan; }
   if (b.type == ConnectionType::Recurrent && b.origin == a.dest) { return EvaluationOrder::GreaterThan; }
 
@@ -52,7 +52,13 @@ ConcurrentGPUNeuralNet::EvaluationOrder ConcurrentGPUNeuralNet::compare_connecti
     } else if (b.origin == b.dest) {
       return EvaluationOrder::GreaterThan;
     } else {
-      return EvaluationOrder::NotEqual;
+      // Choice here is absolutely arbitrary.
+      // This is arbitrary, and consistent.
+      if(a.origin < b.origin) {
+        return EvaluationOrder::GreaterThan;
+      } else {
+        return EvaluationOrder::LessThan;
+      }
     }
   }
 
@@ -65,73 +71,89 @@ void ConcurrentGPUNeuralNet::sort_connections(unsigned int first, unsigned int n
     return;
   }
 
+  // if the first connection in the list to sort is not
+  // the first connection, and num_connections is zero
+  // this is an error
   assert(!(first!=0 && num_connections==0));
+  // if num_connections is zero, then we will sort all connections
   num_connections = num_connections > 0 ? num_connections : connections.size();
+  // the number of connections to sort cannot be
+  // larger than the total number of connections
   assert(first+num_connections <= connections.size());
 
-
-  unsigned int max_iterations =
-    num_connections*num_connections*num_connections+1;
-
-  bool change_applied = false;
-  for(auto i_try=0u; i_try < max_iterations; i_try++) {
-    change_applied = false;
-
-    for(auto i=first; i<first+num_connections; i++) {
-      for(auto j=i+1; j<first+num_connections; j++) {
-        Connection& conn1 = connections[i];
-        Connection& conn2 = connections[j];
-
-        switch(compare_connections(conn1,conn2)) {
+  // zero out connection set index for use in sorting
+  for (auto i=first; i<first+num_connections; i++) {
+    connections[i].set = 0;
+  }
+  for(auto i=first; i<first+num_connections; i++) {
+    for(auto j=i+1; j<first+num_connections; j++) {
+      Connection& conn1 = connections[i];
+      Connection& conn2 = connections[j];
+      switch(compare_connections(conn1,conn2)) {
         case EvaluationOrder::GreaterThan:
-          if (conn1.set <= conn2.set) {
-            conn1.set = conn2.set + 1;
-            change_applied = true;
-          }
+          conn1.set++;
           break;
 
         case EvaluationOrder::LessThan:
-          if(conn2.set <= conn1.set) {
-            conn2.set = conn1.set + 1;
-            change_applied = true;
-          }
-          break;
-
-        case EvaluationOrder::NotEqual:
-          if(conn1.set == conn2.set) {
-            conn2.set = conn1.set + 1;
-            change_applied = true;
-          }
+          conn2.set++;
           break;
 
         case EvaluationOrder::Unknown:
           break;
+      }
+    }
+  }
+
+  auto split_iter = connections.begin()+first;
+  auto last_iter = connections.begin()+first+num_connections;
+  size_t current_set_num = 0;
+  while(split_iter != last_iter) {
+    auto next_split = std::partition(split_iter, last_iter,
+                                     [](const Connection& conn) {
+                                       return conn.set == 0;
+                                     });
+    assert(next_split != split_iter);
+
+    // These could be run now, no longer need to track number of
+    // depencencies.
+    for(auto iter = split_iter; iter<next_split; iter++) {
+      iter->set = current_set_num;
+    }
+    current_set_num++;
+
+    // Decrease number of dependencies for everything else.
+    for(auto iter_done = split_iter; iter_done<next_split; iter_done++) {
+      for(auto iter_not_done = next_split; iter_not_done<last_iter; iter_not_done++) {
+        if (compare_connections(*iter_done,*iter_not_done) == EvaluationOrder::LessThan) {
+          iter_not_done->set--;
         }
       }
     }
 
-    if(!change_applied) {
-      break;
+    split_iter = next_split;
+  }
+
+  // build the action list if num_connections was the total set
+  // or if this is the last subset of connections (all others are sorted)
+  if (first + num_connections == connections.size()) {
+    // if first is nonzero then we have been sorting based on subsets and now all subset lock free buckets
+    // need to be merged in a sort of the entire connections list where set now is the lock free set index
+    // (before it was used as the subnet index)
+
+    if (first != 0) {
+      // sort connections based on evaluation set number if not already done
+      std::sort(connections.begin(),connections.end(),[](Connection a, Connection b){ return a.set < b.set; });
     }
-  }
-
-  if(change_applied) {
-    throw std::runtime_error("Sort Error: change_applied == true on last possible iteration");
-  }
-
-  // sort connections based on evaluation set number
-  std::sort(connections.begin()+first,connections.begin()+first+num_connections,[](Connection a, Connection b){ return a.set < b.set; });
-  for (auto i=first; i<first+num_connections; i++) {
-    auto& conn = connections[i];
-    connection_list.add(conn.origin,conn.dest,conn.weight);
-  }
-  connections_sorted = true;
-
-  if (num_connections == connections.size()) {
+    // build struct of arrays for use on GPU
+    for (auto i=0u; i<connections.size(); i++) {
+      auto& conn = connections[i];
+      connection_list.add(conn.origin,conn.dest,conn.weight);
+    }
     build_action_list();
+    connections_sorted = true;
+    connections.clear();
+    synchronize();
   }
-  connections.clear();
-  synchronize();
 }
 
 void ConcurrentGPUNeuralNet::ConcurrentGPUNeuralNet::build_action_list() {
@@ -392,50 +414,105 @@ std::vector<_float_> ConcurrentGPUNeuralNet::device_evaluate(std::vector<_float_
   return outputs;
 }
 
-void ConcurrentGPUNeuralNet::add_connection(int origin, int dest, _float_ weight) {
-  if(would_make_loop(origin,dest)) {
-    connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight);
+void ConcurrentGPUNeuralNet::add_connection(int origin, int dest, _float_ weight, unsigned int set) {
+  if(would_make_loop(origin,dest,set)) {
+    connections.emplace_back(origin,dest,ConnectionType::Recurrent,weight,set);
   } else {
-    connections.emplace_back(origin,dest,ConnectionType::Normal,weight);
+    connections.emplace_back(origin,dest,ConnectionType::Normal,weight,set);
   }
 }
 
-bool ConcurrentGPUNeuralNet::would_make_loop(unsigned int i, unsigned int j) {
+bool ConcurrentGPUNeuralNet::would_make_loop(unsigned int i, unsigned int j, unsigned int set) {
   // handle the case of a recurrent connection to itself up front
   if (i == j) { return true; }
 
-  std::vector<bool> reachable(nodes.size(), false);
-  reachable[j] = true;
+  if (set == std::numeric_limits<unsigned int>::max()) {
 
-  while (true) {
+    std::vector<bool> reachable(nodes.size(), false);
+    reachable[j] = true;
 
-    bool found_new_node = false;
-    for (auto const& conn : connections) {
-      // if the origin of this connection is reachable and its
-      // desitination is not, then it should be made reachable
-      if (reachable[conn.origin] &&
-          !reachable[conn.dest] &&
-          conn.type == ConnectionType::Normal) {
-        // if it is a normal node. if it is the origin of the
-        // proposed additional connection (i->j) then it would be
-        // a loop
-        if (conn.dest == i) {
-          // the destination of this reachable connection is
-          // the origin of the proposed connection. thus there
-          // exists a path from j -> i. So this will be a loop.
-          return true;
+    while (true) {
+
+      bool found_new_node = false;
+      for (auto const& conn : connections) {
+        // if the origin of this connection is reachable and its
+        // desitination is not, then it should be made reachable
+        if (reachable[conn.origin] &&
+                    !reachable[conn.dest] &&
+            conn.type == ConnectionType::Normal) {
+          // if it is a normal node. if it is the origin of the
+          // proposed additional connection (i->j) then it would be
+          // a loop
+          if (conn.dest == i) {
+            // the destination of this reachable connection is
+            // the origin of the proposed connection. thus there
+            // exists a path from j -> i. So this will be a loop.
+            return true;
+          }
+          else {
+            reachable[conn.dest] = true;
+            found_new_node = true;
+          }
         }
-        else {
-          reachable[conn.dest] = true;
-          found_new_node = true;
+      }
+      // no loop detected
+      if (!found_new_node) {
+        return false;
+      }
+
+    }
+
+  } else {
+    std::map<unsigned int,unsigned int> subset_node_map;
+    subset_node_map[i] = subset_node_map.size();
+    subset_node_map[j] = subset_node_map.size();
+    for (auto const& conn : connections) {
+      if (conn.set == set) {
+        if (subset_node_map.count(conn.origin)==0) {
+          subset_node_map[conn.origin] = subset_node_map.size();
+        }
+        if (subset_node_map.count(conn.dest)==0) {
+          subset_node_map[conn.dest] = subset_node_map.size();
         }
       }
     }
-    // no loop detected
-    if (!found_new_node) {
-      return false;
-    }
 
+    std::vector<bool> reachable(subset_node_map.size(), false);
+    reachable[subset_node_map[j]] = true;
+
+    while (true) {
+
+      bool found_new_node = false;
+      for (auto const& conn : connections) {
+        // only check reachability of nodes/connections within the same set
+        if (conn.set != set) { continue; }
+
+        // if the origin of this connection is reachable and its
+        // desitination is not, then it should be made reachable
+        if (reachable[subset_node_map[conn.origin]] &&
+            !reachable[subset_node_map[conn.dest]] &&
+            conn.type == ConnectionType::Normal) {
+          // if it is a normal node. if it is the origin of the
+          // proposed additional connection (i->j) then it would be
+          // a loop
+          if (conn.dest == i) {
+            // the destination of this reachable connection is
+            // the origin of the proposed connection. thus there
+            // exists a path from j -> i. So this will be a loop.
+            return true;
+          }
+          else {
+            reachable[subset_node_map[conn.dest]] = true;
+            found_new_node = true;
+          }
+        }
+      }
+      // no loop detected
+      if (!found_new_node) {
+        return false;
+      }
+
+    }
   }
 }
 
@@ -459,7 +536,7 @@ void ConcurrentGPUNeuralNet::synchronize() {
 
 
 void ConcurrentGPUNeuralNet::print_network(std::ostream& os) const {
-  std::stringstream ss;
+  std::stringstream ss; ss.str("");
   ss << "Action List: \n\n";
 
   auto i = 0u;
@@ -471,11 +548,13 @@ void ConcurrentGPUNeuralNet::print_network(std::ostream& os) const {
   ss << "# Sigmoid: " << how_many_sigmoid << "\n";
   i += how_many_sigmoid;
 
+  std::vector<unsigned int> num_conn_to_apply;
   int current_conn = 0;
   while(i<action_list.size()) {
     int how_many_conn = action_list[i++];
     ss << "# Connections: " << how_many_conn << "\n";
     current_conn += how_many_conn;
+    num_conn_to_apply.push_back(how_many_conn);
 
     int how_many_zero_out = action_list[i++];
     ss << "# Zero out: " << how_many_zero_out << "\n";
@@ -485,5 +564,16 @@ void ConcurrentGPUNeuralNet::print_network(std::ostream& os) const {
     ss << "# Sigmoid: " << how_many_sigmoid << "\n";
     i += how_many_sigmoid;
   }
+  os << ss.str();
+
+  ss.str("");
+  ss << "\nConnection sets:\n";
+  int counter = 0;
+  int num = num_conn_to_apply[counter];
+  for (auto i=0u; i<connection_list.size(); i++) {
+    ss << connection_list.origin[i] << " -> " << connection_list.dest[i] << "\n";
+    if (i == num-1) { num += num_conn_to_apply[++counter]; ss << "\n";}
+  }
+
   os << ss.str();
 }

@@ -3,6 +3,7 @@
 #include "NeuralNet.hh"
 #include "PopulationHelpers.hh"
 #include "FitnessEvaluator.hh"
+#include "CompositeNet.hh"
 
 #include <vector>
 #include <limits>

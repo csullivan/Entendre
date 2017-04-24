@@ -144,13 +144,19 @@ void ConsecutiveNeuralNet::sort_connections(unsigned int first, unsigned int num
     sorted.push_back(connections[first+possible]);
   }
 
-  connections = sorted;
-  connections_sorted = true;
 
-  // TODO: put this in inner loop (above) over connections
-  // for (auto& node : nodes) {
-  //   node.is_sigmoid = true;
-  // }
+  // copy sorted connections into connections list
+  for (auto i=first; i<first+num_connections; i++) {
+    connections[i] = sorted[i];
+  }
+
+  // if num_connections was the total set
+  // or if this is the last subset of connections
+  // then we are done (all others are sorted)
+  if (first + num_connections == connections.size()) {
+    connections_sorted = true;
+  }
+
 }
 
 std::vector<NodeType> ConsecutiveNeuralNet::node_types() const {
