@@ -7,11 +7,68 @@
 #include "Population.hh"
 #include "Timer.hh"
 
-struct XOR_res {
-  _float_ x;
-  _float_ y;
-  _float_ correct;
+struct EachAnswer {
+  EachAnswer(_float_ a, _float_ b)
+    : a(a), b(b), correct_result(int(a)^int(b)),
+      nn_result(std::numeric_limits<_float_>::quiet_NaN()) { }
+
+
+  _float_ a;
+  _float_ b;
+  _float_ correct_result;
+  _float_ nn_result;
 };
+
+
+class XorFitness : public FitnessEvaluator {
+public:
+  XorFitness()
+    : all_answers{
+    EachAnswer(0,0),
+      EachAnswer(0,1),
+      EachAnswer(1,0),
+      EachAnswer(1,1)} {
+    std::random_shuffle(all_answers.begin(), all_answers.end());
+  }
+
+  void step(NetProxy& proxy) {
+
+    for(auto& ans : all_answers) {
+      if(std::isnan(ans.nn_result)) {
+        proxy.request_calc({ans.a, ans.b},
+                           [&](const auto& nn_output) {
+                             ans.nn_result = nn_output[0];
+                           });
+        return;
+      }
+    }
+
+    if(proxy.num_connections() == 0) {
+      proxy.set_fitness_value(0.0);
+      return;
+    }
+
+    double error = 0;
+    for(auto& ans : all_answers) {
+      //error += std::abs(ans.nn_result - ans.correct_result);
+      error += std::pow(ans.nn_result - ans.correct_result,2);
+    }
+    double fitness = std::pow(4.0 - error, 2); //16 - std::pow(cum_sum, 2);
+    proxy.set_fitness_value(fitness);
+  }
+
+private:
+
+
+  std::array<EachAnswer, 4> all_answers;
+};
+
+
+std::array<EachAnswer, 4> inputs = {EachAnswer(0,0),
+                                    EachAnswer(0,1),
+                                    EachAnswer(1,0),
+                                    EachAnswer(1,1)};
+
 
 int main() {
 
@@ -28,14 +85,6 @@ int main() {
   pop.SetNetType<ConsecutiveNeuralNet>();
 
   auto max_generations = 1000u;
-
-  std::vector<XOR_res> inputs{
-    {0, 0, 0},
-    {0, 1, 1},
-    {1, 0, 1},
-    {1, 1, 0}
-  };
-  auto shuffled_inputs = inputs;
 
   std::unique_ptr<NeuralNet> winner = nullptr;
   unsigned int generation;
@@ -58,41 +107,25 @@ int main() {
               << ")" << std::endl;
     _float_ error = 0;
     for(auto& input : inputs) {
-      _float_ val = best->evaluate({input.x, input.y})[0];
-      std::cout << input.x << " ^ " << input.y << " = " << val << std::endl;
-      error += std::abs(val - input.correct);
+      _float_ val = best->evaluate({input.a, input.b})[0];
+      std::cout << input.a << " ^ " << input.b << " = " << val << std::endl;
+      error += std::abs(val - input.correct_result);
     }
     std::cout << "Error: " << error << std::endl;
   };
 
-  auto fitness = [&](NeuralNet& net) {
-    if(net.num_connections() == 0) {
-      return 0.0;
-    }
 
-    std::random_shuffle(shuffled_inputs.begin(), shuffled_inputs.end());
-
-    double error = 0;
-    for(const auto& input : shuffled_inputs) {
-      _float_ val = net.evaluate({input.x, input.y})[0];
-      //error += std::abs(val - input.correct);
-      error += std::pow(val - input.correct, 2);
-    }
-
-    return std::pow(4.0 - error, 2);
-    //return 4 - error;
-  };
-
+  std::function<std::unique_ptr<FitnessEvaluator>(void)> fitness_factory = [](){return std::make_unique<XorFitness>();};
 
   for (generation = 0u; generation < max_generations; generation++) {
 
-    auto next_gen = pop.Reproduce(fitness);
+    auto next_gen = pop.Reproduce(fitness_factory);
 
     auto best = pop.BestNet();
     bool have_winner = true;
     for(auto& input : inputs) {
-      _float_ val = best->evaluate({input.x, input.y})[0];
-      if(std::abs(val - input.correct) >= 0.5) {
+      _float_ val = best->evaluate({input.a, input.b})[0];
+      if(std::abs(val - input.correct_result) >= 0.5) {
         have_winner = false;
         break;
       }
@@ -119,7 +152,7 @@ int main() {
               << *winner << std::endl;
   } else {
     std::cout << "No winner found after " << generation << " generations" << std::endl;
-    pop.Evaluate(fitness);
+    pop.Evaluate(fitness_factory);
     std::cout << "Best: " << *pop.BestNet() << std::endl;
   }
 

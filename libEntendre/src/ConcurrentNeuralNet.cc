@@ -45,16 +45,27 @@ ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(co
   return EvaluationOrder::Unknown;
 }
 
-void ConcurrentNeuralNet::sort_connections() {
+void ConcurrentNeuralNet::sort_connections(unsigned int first, unsigned int num_connections) {
   if(connections_sorted) {
     return;
   }
 
-  for(auto& conn : connections) {
-    conn.set = 0;
+  // if the first connection in the list to sort is not
+  // the first connection, and num_connections is zero
+  // this is an error
+  assert(!(first!=0 && num_connections==0));
+  // if num_connections is zero, then we will sort all connections
+  num_connections = num_connections > 0 ? num_connections : connections.size();
+  // the number of connections to sort cannot be
+  // larger than the total number of connections
+  assert(first+num_connections <= connections.size());
+
+  // zero out connection set index for use in sorting
+  for (auto i=first; i<first+num_connections; i++) {
+    connections[i].set = 0;
   }
-  for(auto i=0u; i<connections.size(); i++) {
-    for(auto j=i+1; j<connections.size(); j++) {
+  for(auto i=first; i<first+num_connections; i++) {
+    for(auto j=i+1; j<first+num_connections; j++) {
       Connection& conn1 = connections[i];
       Connection& conn2 = connections[j];
       switch(compare_connections(conn1,conn2)) {
@@ -72,10 +83,11 @@ void ConcurrentNeuralNet::sort_connections() {
     }
   }
 
-  auto split_iter = connections.begin();
+  auto split_iter = connections.begin()+first;
+  auto last_iter = connections.begin()+first+num_connections;
   size_t current_set_num = 0;
-  while(split_iter != connections.end()) {
-    auto next_split = std::partition(split_iter, connections.end(),
+  while(split_iter != last_iter) {
+    auto next_split = std::partition(split_iter, last_iter,
                                      [](const Connection& conn) {
                                        return conn.set == 0;
                                      });
@@ -90,7 +102,7 @@ void ConcurrentNeuralNet::sort_connections() {
 
     // Decrease number of dependencies for everything else.
     for(auto iter_done = split_iter; iter_done<next_split; iter_done++) {
-      for(auto iter_not_done = next_split; iter_not_done<connections.end(); iter_not_done++) {
+      for(auto iter_not_done = next_split; iter_not_done<last_iter; iter_not_done++) {
         if (compare_connections(*iter_done,*iter_not_done) == EvaluationOrder::LessThan) {
           iter_not_done->set--;
         }
@@ -100,8 +112,22 @@ void ConcurrentNeuralNet::sort_connections() {
     split_iter = next_split;
   }
 
-  build_action_list();
-  connections_sorted = true;
+  // build the action list if num_connections was the total set
+  // or if this is the last subset of connections (all others are sorted)
+  if (first + num_connections == connections.size()) {
+    // if first is nonzero then we have been sorting based on subsets and now all subset lock free buckets
+    // need to be merged in a sort of the entire connections list where set now is the lock free set index
+    // (before it was used as the subnet index)
+    if (first != 0) {
+      // sort connections based on evaluation set number if not already done
+      std::sort(connections.begin(),connections.end(),[](Connection a, Connection b){ return a.set < b.set; });
+    }
+
+
+    build_action_list();
+    connections_sorted = true; // we are done sorting
+  }
+
 }
 
 void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
@@ -280,4 +306,13 @@ std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) 
   }
 
   return std::vector<_float_> (nodes.begin()+num_inputs,nodes.begin()+num_inputs+num_outputs);
+}
+
+
+void ConcurrentNeuralNet::print_network(std::ostream& os) const {
+  std::stringstream ss; ss.str("");
+  for (auto& conn : connections) {
+    ss << conn.origin << " -> " << conn.dest << "  in set " << conn.set << "\n";
+  }
+  os << ss.str();
 }

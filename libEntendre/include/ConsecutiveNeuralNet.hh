@@ -27,6 +27,7 @@ public:
   virtual NodeType get_node_type(unsigned int i) const {
     return nodes[i].type;
   }
+  void sort_connections(unsigned int first=0, unsigned int num_connections=0) override;
 
   virtual ActivationFunction get_activation_func(unsigned int i) const {
     return nodes[i].func;
@@ -40,7 +41,6 @@ protected:
   void mult_into_val(unsigned int i, _float_ val);
 
 private:
-  void sort_connections() override;
 
 
   std::vector<Node> nodes;

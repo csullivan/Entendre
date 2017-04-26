@@ -48,7 +48,7 @@ PYBIND11_PLUGIN(pyneat) {
     .def_readwrite("adj_fitness", &Organism::adj_fitness)
     .def_readwrite("genome", &Organism::genome)
     .def_property_readonly("network", [](Organism& org) {
-        return org.network.get();
+         return org.network();
       }, py::return_value_policy::reference_internal)
     ;
 

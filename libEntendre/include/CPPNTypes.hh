@@ -5,8 +5,6 @@
 
 typedef float _float_;
 
-enum class ConnectionType { Normal, Recurrent };
-
 // TODO:
 /*
   Consider creating an enum-factory for the NodeType activation function which
@@ -42,10 +40,6 @@ enum class ActivationFunction {
   //Exp,
     MaxNodeType=Square
 };
-
-inline bool IsSensor(const NodeType& type) {
-  return type == NodeType::Input || type == NodeType::Bias;
-}
 
 namespace {
   static const _float_ max_exp_signal = std::log(std::numeric_limits<_float_>::max());

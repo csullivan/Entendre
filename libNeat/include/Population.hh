@@ -1,41 +1,15 @@
 #pragma once
 #include "Genome.hh"
 #include "NeuralNet.hh"
+#include "PopulationHelpers.hh"
+#include "FitnessEvaluator.hh"
+#include "CompositeNet.hh"
 
 #include <vector>
 #include <limits>
 #include <unordered_map>
 
-struct Organism {
-  Organism(const Genome& gen, std::unique_ptr<NeuralNet>&& net)
-    : fitness(std::numeric_limits<double>::quiet_NaN()),
-      adj_fitness(std::numeric_limits<double>::quiet_NaN()),
-      genome(gen) , network(std::move(net)) { ; }
-  Organism(const Organism& org)
-    : fitness(org.fitness), adj_fitness(org.adj_fitness),
-      genome(org.genome), network(org.network->clone()) { ; }
-  Organism& operator=(const Organism& rhs) {
-    fitness = rhs.fitness;
-    adj_fitness = rhs.adj_fitness;
-    genome = rhs.genome;
-    network = rhs.network->clone();
-    return *this;
-  }
-  _float_ fitness;
-  _float_ adj_fitness;
-  Genome genome;
-  std::unique_ptr<NeuralNet> network;
-};
 
-struct Species {
-  std::vector<Organism> organisms;
-
-  unsigned int id;
-  Genome representative;
-  unsigned int age;
-  //unsigned int age_since_last_improvement;
-  double best_fitness;
-};
 
 class Population : public uses_random_numbers,
                    public requires<Probabilities> {
@@ -62,16 +36,66 @@ public:
   void Evaluate(Callable&& fitness) {
     for(auto& spec : species) {
       for(auto& org : spec.organisms) {
-        org.fitness = fitness(*org.network);
+        org.fitness = fitness(*org.network());
       }
     }
     CalculateAdjustedFitness();
   }
 
+  void Evaluate(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+
+    struct fitness_kernel {
+      NetProxy proxy;
+      std::unique_ptr<FitnessEvaluator> eval;
+      std::vector<_float_> result;
+    };
+    std::vector<fitness_kernel> kernels;
+
+    for (auto& spec : species) {
+      for (auto& org : spec.organisms) {
+        kernels.push_back({ &org, evaluator_factory(), {} });
+      }
+    }
+
+    while (true) {
+      bool continue_looping = false;
+      // load one set of inputs for each network
+      // or finalize and set fitness value
+      for (auto& kernel : kernels) {
+        kernel.eval->step(kernel.proxy);
+      }
+
+      // eval each network with loaded inputs
+      for (auto& kernel : kernels) {
+        if (kernel.proxy.has_inputs()) {
+          kernel.result = kernel.proxy.evaluate();
+          continue_looping = true;
+        }
+      }
+
+      // if there are no more inputs then
+      // the fitness function has been evaluated
+      // and we are done
+      if (!continue_looping) { break; }
+
+      // call the proxy callbacks
+      for (auto& kernel : kernels) {
+        kernel.proxy.callback(kernel.result);
+        kernel.proxy.clear();
+      }
+    }
+
+    CalculateAdjustedFitness();
+  }
+
+  Population Reproduce(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+    Evaluate(evaluator_factory);
+    return Reproduce();
+  }
+
   /// Reproduce, using the fitness function given.
-  template <class Callable>
-  Population Reproduce(Callable&& fitness) {
-    Evaluate(std::forward<Callable>(fitness));
+  Population Reproduce(std::function<double(NeuralNet&) > fitness) {
+    Evaluate(fitness);
     return Reproduce();
   }
 
@@ -86,7 +110,7 @@ public:
      Uses the fitness value calculated by the most recent call to Evaluate or Reproduce.
      If neither has been called, returns nullptr.
    */
-  NeuralNet* BestNet() const;
+  NeuralNet* BestNet();
 
   /// Returns the number of species in the population
   /**
@@ -101,16 +125,6 @@ public:
   std::pair<double, double> MeanStdDev() const;
 
   const std::vector<Species>& GetSpecies() const { return species; }
-
-  struct GenomeConverter {
-    virtual std::unique_ptr<NeuralNet> convert(const Genome&) = 0;
-  };
-  template<typename NetType>
-  struct GenomeConverter_Impl : GenomeConverter {
-    virtual std::unique_ptr<NeuralNet> convert(const Genome& genome) {
-      return genome.MakeNet<NetType>();
-    }
-  };
 
   template<typename NetType>
   void SetNetType() {

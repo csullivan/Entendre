@@ -21,7 +21,13 @@ struct ConnectionGene;
 
 class Genome : public uses_random_numbers,
                public requires<Probabilities> {
+
+  template<typename NetType>
+  friend std::unique_ptr<NeuralNet> BuildCompositeNet(const std::vector<Genome*>& genomes, bool hetero_inputs);
+
+
 public:
+
   Genome();
   static Genome ConnectedSeed(int num_inputs, int num_outputs,
                               ActivationFunction func = ActivationFunction::Sigmoid);
