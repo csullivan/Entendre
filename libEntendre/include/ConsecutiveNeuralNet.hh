@@ -17,13 +17,19 @@ public:
   virtual std::vector<_float_> evaluate(std::vector<_float_> inputs);
 
   std::vector<NodeType> node_types() const;
-  virtual void add_node(const NodeType& type) { nodes.emplace_back(type); }
+  virtual void add_node(NodeType type, ActivationFunction func) {
+    nodes.emplace_back(type,func);
+  }
 
   virtual Connection get_connection(unsigned int i) const {
     return connections[i];
   }
   virtual NodeType get_node_type(unsigned int i) const {
     return nodes[i].type;
+  }
+
+  virtual ActivationFunction get_activation_func(unsigned int i) const {
+    return nodes[i].func;
   }
 
   virtual void print_network(std::ostream& os) const;

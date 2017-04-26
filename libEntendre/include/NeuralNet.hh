@@ -12,9 +12,10 @@ struct Node {
   _float_ value;
   bool is_activated;
   NodeType type;
-  Node(NodeType _type)
+  ActivationFunction func;
+  Node(NodeType _type, ActivationFunction _func)
     : value(0.0),
-      is_activated(false), type(_type) {;}
+      is_activated(false), type(_type), func(_func) {;}
   operator _float_() { return value; }
 };
 
@@ -38,12 +39,14 @@ public:
   virtual ~NeuralNet() { ; }
 
 
-  virtual void add_node(const NodeType& type) = 0;
+  virtual void add_node(NodeType type,
+                        ActivationFunction func=ActivationFunction::Sigmoid) = 0;
   virtual void add_connection(int origin, int dest, _float_ weight) = 0;
   virtual unsigned int num_nodes() = 0;
   virtual unsigned int num_connections() = 0;
   virtual Connection get_connection(unsigned int i) const = 0;
   virtual NodeType get_node_type(unsigned int i) const = 0;
+  virtual ActivationFunction get_activation_func(unsigned int i) const = 0;
   virtual std::vector<_float_> evaluate(std::vector<_float_> inputs) = 0;
   virtual std::unique_ptr<NeuralNet> clone() const = 0;
 

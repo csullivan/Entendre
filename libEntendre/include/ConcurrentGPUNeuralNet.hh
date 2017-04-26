@@ -11,7 +11,7 @@ public:
 
   virtual ~ConcurrentGPUNeuralNet();
 
-  virtual void add_node(const NodeType& type);
+  virtual void add_node(NodeType type, ActivationFunction func);
   virtual void add_connection(int origin, int dest, _float_ weight);
   virtual unsigned int num_nodes() { return nodes.size(); }
   virtual unsigned int num_connections() { return connections.size(); }
@@ -31,7 +31,11 @@ public:
     // TODO: Update this for CPPN node types.
     // NodeType::Hidden was changed temporarily to NodeType::Sigmoid
     return (i<num_inputs) ? NodeType::Input :
-      (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Sigmoid;
+      (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
+  }
+
+  virtual ActivationFunction get_activation_func(unsigned int i) const {
+    return ActivationFunction::Sigmoid;
   }
 
 private:

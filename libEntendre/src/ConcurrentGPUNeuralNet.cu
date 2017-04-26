@@ -226,7 +226,7 @@ void ConcurrentGPUNeuralNet::ConcurrentGPUNeuralNet::build_action_list() {
 
 ////////////////////////////////////////////////////////////////////////////
 
-void ConcurrentGPUNeuralNet::add_node(const NodeType& type) {
+void ConcurrentGPUNeuralNet::add_node(NodeType type, ActivationFunction func) {
   switch (type) {
   case NodeType::Bias:
   case NodeType::Input:
@@ -238,6 +238,10 @@ void ConcurrentGPUNeuralNet::add_node(const NodeType& type) {
   default: // all hidden nodes
     break;
   };
+
+  // Only sigmoid nodes implementated for ConcurrentGPUNeuralNet
+  assert(func == ActivationFunction::Sigmoid);
+
   nodes.push_back(0.0);
 }
 

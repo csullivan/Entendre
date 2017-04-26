@@ -11,7 +11,7 @@ TEST(ConsecutiveNeuralNet,EvaluateNetwork){
     auto genome = Genome()
         .AddNode(NodeType::Bias)
         .AddNode(NodeType::Input)
-        .AddNode(NodeType::Sigmoid)
+        .AddNode(NodeType::Hidden)
         .AddNode(NodeType::Output)
         .AddConnection(0,3,true,1.)
         .AddConnection(1,3,true,1.)
@@ -30,7 +30,7 @@ TEST(ConsecutiveNeuralNet,EvaluateRecurrentNetwork){
     auto genome = Genome()
         .AddNode(NodeType::Bias)
         .AddNode(NodeType::Input)
-        .AddNode(NodeType::Sigmoid)
+        .AddNode(NodeType::Hidden)
         .AddNode(NodeType::Output)
         .AddConnection(0,3,true,1.)
         .AddConnection(1,3,true,1.)
@@ -65,7 +65,7 @@ TEST(ConsecutiveNeuralNet,EvaluateLargeNetwork){
         genome.AddNode(NodeType::Input);
     }
     for (auto i=0u;i<nHidden; i++) {
-        genome.AddNode(NodeType::Sigmoid);
+        genome.AddNode(NodeType::Hidden);
     }
     for (auto i=0u;i<nOutputs; i++) {
         genome.AddNode(NodeType::Output);
@@ -145,7 +145,7 @@ TEST(ConcurrentNeuralNet,EvaluateLargeNetwork){
         genome.AddNode(NodeType::Input);
     }
     for (auto i=0u;i<nHidden; i++) {
-        genome.AddNode(NodeType::Sigmoid);
+        genome.AddNode(NodeType::Hidden);
     }
     for (auto i=0u;i<nOutputs; i++) {
         genome.AddNode(NodeType::Output);
@@ -233,7 +233,7 @@ TEST(ConcurrentGPUNeuralNet,EvaluateLargeNetwork){
         genome.AddNode(NodeType::Input);
     }
     for (auto i=0u;i<nHidden; i++) {
-        genome.AddNode(NodeType::Sigmoid);
+        genome.AddNode(NodeType::Hidden);
     }
     for (auto i=0u;i<nOutputs; i++) {
         genome.AddNode(NodeType::Output);
@@ -302,8 +302,8 @@ TEST(ConcurrentGPUNeuralNet,CompareEvaluation) {
     .AddNode(NodeType::Input)
     .AddNode(NodeType::Input)
     .AddNode(NodeType::Output)
-    .AddNode(NodeType::Sigmoid)
-    .AddNode(NodeType::Sigmoid)
+    .AddNode(NodeType::Hidden)
+    .AddNode(NodeType::Hidden)
     .AddConnection(0,4,true,1.)
     .AddConnection(1,3,true,1.)
     .AddConnection(4,4,true,1.) // self-recurrent

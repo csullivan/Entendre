@@ -13,7 +13,7 @@ public:
 
   void sort_connections() override;
   std::vector<_float_> evaluate(std::vector<_float_> inputs);
-  virtual void add_node(const NodeType& type);
+  virtual void add_node(NodeType type, ActivationFunction func);
 
 
   virtual Connection get_connection(unsigned int i) const {
@@ -21,9 +21,11 @@ public:
   }
   virtual NodeType get_node_type(unsigned int i) const {
     return (i<num_inputs) ? NodeType::Input :
-      // TODO: Update this for CPPN node types.
-      // NodeType::Hidden was changed temporarily to NodeType::Sigmoid
-      (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Sigmoid;
+      (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
+  }
+
+  virtual ActivationFunction get_activation_func(unsigned int /*i*/) const {
+    return ActivationFunction::Sigmoid;
   }
 
 

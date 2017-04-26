@@ -37,7 +37,7 @@ void Genome::MakeNet(NeuralNet& net) const {
   // which have a path to an output and from an input
   //NeuralNet net(node_genes);
   for (auto& gene: node_genes) {
-    net.add_node(gene.type);
+    net.add_node(gene.type, gene.func);
   }
   for(auto& gene : connection_genes) {
     if (gene.enabled) {
@@ -52,7 +52,8 @@ void Genome::MakeNet(NeuralNet& net) const {
 }
 
 
-Genome Genome::ConnectedSeed(int num_inputs, int num_outputs) {
+Genome Genome::ConnectedSeed(int num_inputs, int num_outputs,
+                             ActivationFunction func) {
   Genome output;
 
   output.AddNode(NodeType::Bias);
@@ -60,7 +61,7 @@ Genome Genome::ConnectedSeed(int num_inputs, int num_outputs) {
     output.AddNode(NodeType::Input);
   }
   for(int i=0; i<num_outputs; i++) {
-    output.AddNode(NodeType::Output);
+    output.AddNode(NodeType::Output, func);
   }
 
   for(int from=0; from<num_inputs+1; from++) {
@@ -130,7 +131,7 @@ Genome Genome::GeneticAncestry() const {
     if(gene.type == NodeType::Input ||
        gene.type == NodeType::Bias ||
        gene.type == NodeType::Output) {
-      descendant.AddNodeByInnovation(gene.type, gene.innovation);
+      descendant.AddNodeByInnovation(gene.type, gene.func, gene.innovation);
     }
   }
 
@@ -212,7 +213,7 @@ Genome& Genome::RandomizeWeights() {
   return *this;
 }
 
-Genome& Genome::AddNode(NodeType type) {
+Genome& Genome::AddNode(NodeType type, ActivationFunction func) {
   // User-defined nodes, no real innovation number
   // Instead, make something up to ensure unique ids for each.
 
@@ -232,12 +233,13 @@ Genome& Genome::AddNode(NodeType type) {
     break;
   }
 
-  return AddNodeByInnovation(type, innovation);
+  return AddNodeByInnovation(type, func, innovation);
 }
 
-Genome& Genome::AddNodeByInnovation(NodeType type, unsigned long innovation) {
+Genome& Genome::AddNodeByInnovation(NodeType type, ActivationFunction func,
+                                    unsigned long innovation) {
   assert(node_lookup.count(innovation) == 0);
-  NodeGene gene(type, innovation);
+  NodeGene gene(type, func, innovation);
   AddNodeGene(gene);
   return *this;
 }
@@ -468,11 +470,11 @@ void Genome::MutateNode() {
   //        set for each activation function which are exposed in the parameters.
   //        Currently, all activation functions have equal probability
   //        2. Additionally, the node type should be used in innovation hashing
-  auto type = required()->use_compositional_pattern_producing_networks ?
-    NodeType(random()*((int(NodeType::MaxNodeType)+1)-3) + 3) :
-    NodeType::Sigmoid;
+  auto func = required()->use_compositional_pattern_producing_networks ?
+    ActivationFunction(random()*(int(ActivationFunction::MaxNodeType)+1)) :
+    ActivationFunction::Sigmoid;
 
-  AddNodeByInnovation(type, new_node_innov);
+  AddNodeByInnovation(NodeType::Hidden, func, new_node_innov);
 
   // disable old gene
   GetConnByInnovation(split_conn.innovation)->enabled = false;

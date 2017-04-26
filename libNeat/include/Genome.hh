@@ -23,7 +23,8 @@ class Genome : public uses_random_numbers,
                public requires<Probabilities> {
 public:
   Genome();
-  static Genome ConnectedSeed(int num_inputs, int num_outputs);
+  static Genome ConnectedSeed(int num_inputs, int num_outputs,
+                              ActivationFunction func = ActivationFunction::Sigmoid);
 
   template<typename NetType>
   std::unique_ptr<NeuralNet> MakeNet() const {
@@ -33,7 +34,7 @@ public:
   }
 
   Genome& operator=(const Genome&);
-  Genome& AddNode(NodeType type);
+  Genome& AddNode(NodeType type, ActivationFunction func=ActivationFunction::Sigmoid);
   Genome& AddConnection(unsigned long origin, unsigned long dest,
                         bool status, double weight);
   Genome& RandomizeWeights();
@@ -91,7 +92,8 @@ private:
    */
   void AddConnectionGene(ConnectionGene gene);
 
-  Genome& AddNodeByInnovation(NodeType type, unsigned long innovation);
+  Genome& AddNodeByInnovation(NodeType type, ActivationFunction func,
+                              unsigned long innovation);
   void AddConnectionByInnovation(unsigned long origin, unsigned long dest,
                                  bool status, double weight);
 
@@ -132,9 +134,13 @@ struct ConnectionGene {
 
 struct NodeGene {
   NodeGene() = delete;
-  NodeGene(const NodeType& type_) : type(type_), innovation(0) {;}
-  NodeGene(const NodeType& type_, unsigned long innov) : type(type_), innovation(innov) {;}
+  NodeGene(NodeType type,
+           ActivationFunction func = ActivationFunction::Sigmoid,
+           unsigned long innovation = 0)
+    : type(type), func(func), innovation(innovation) { }
+
   NodeType type;
+  ActivationFunction func;
   unsigned long innovation;
 };
 

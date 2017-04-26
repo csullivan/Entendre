@@ -110,17 +110,20 @@ PYBIND11_PLUGIN(pyneat) {
     .value("Bias",NodeType::Bias)
     .value("Input",NodeType::Input)
     .value("Output",NodeType::Output)
-    .value("Sigmoid",NodeType::Sigmoid)
-    .value("Tanh",NodeType::Tanh)
-    .value("Relu",NodeType::Relu)
-    .value("Gaussian",NodeType::Gaussian)
-    .value("Sin",NodeType::Sin)
-    .value("Cos",NodeType::Cos)
-    .value("Abs",NodeType::Abs)
-    .value("Square",NodeType::Square);
-      //.value("Cube",NodeType::Cube);
-      //.value("Log",NodeType::Log);
-      //.value("Exp",NodeType::Exp);
+    .value("Hidden",NodeType::Hidden);
+
+  py::enum_<ActivationFunction>(m, "ActivationFunction")
+    .value("Sigmoid",ActivationFunction::Sigmoid)
+    .value("Tanh",ActivationFunction::Tanh)
+    .value("Relu",ActivationFunction::Relu)
+    .value("Gaussian",ActivationFunction::Gaussian)
+    .value("Sin",ActivationFunction::Sin)
+    .value("Cos",ActivationFunction::Cos)
+    .value("Abs",ActivationFunction::Abs)
+    .value("Square",ActivationFunction::Square);
+      //.value("Cube",ActivationFunction::Cube);
+      //.value("Log",ActivationFunction::Log);
+      //.value("Exp",ActivationFunction::Exp);
 
   py::class_<Genome>(m, "Genome")
     .def(py::init<>())
@@ -142,6 +145,14 @@ PYBIND11_PLUGIN(pyneat) {
                                node_types.push_back(net.get_node_type(i));
                              }
                              return node_types;
+                           })
+    .def_property_readonly("activation_functions",
+                           [](NeuralNet& net){
+                             std::vector<ActivationFunction> output;
+                             for (auto i=0u; i<net.num_nodes(); i++) {
+                               output.push_back(net.get_activation_func(i));
+                             }
+                             return output;
                            })
     .def_property_readonly("connections",
                            [](NeuralNet& net){

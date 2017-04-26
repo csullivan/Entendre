@@ -61,7 +61,7 @@ std::vector<_float_> ConsecutiveNeuralNet::read_output_vals() {
 _float_ ConsecutiveNeuralNet::get_node_val(unsigned int i) {
   if(!nodes[i].is_activated) {
     //nodes[i].value = sigmoid(nodes[i].value);
-    nodes[i].value = activate(nodes[i].type,nodes[i].value);
+    nodes[i].value = activate(nodes[i].func, nodes[i].value);
     nodes[i].is_activated = true;
   }
   return nodes[i].value;

@@ -24,7 +24,12 @@ enum class NodeType {
   Bias,
     Input,
     Output,
-    Sigmoid,
+    Hidden
+    };
+
+enum class ActivationFunction {
+  Sigmoid,
+    Identity,
     Tanh,
     Relu,
     Gaussian,
@@ -36,7 +41,7 @@ enum class NodeType {
   //Log,
   //Exp,
     MaxNodeType=Square
-    };
+};
 
 inline bool IsSensor(const NodeType& type) {
   return type == NodeType::Input || type == NodeType::Bias;
@@ -70,38 +75,34 @@ namespace {
   inline _float_ logistic     (_float_ val) { return 1/(1 + std::exp(-val)); }
 
 
-  inline _float_ activate     (NodeType type, _float_ val) {
+  inline _float_ activate     (ActivationFunction type, _float_ val) {
     switch(type) {
-    case NodeType::Bias:
-      return identity(val);
-    case NodeType::Input:
-      return identity(val);
-    case NodeType::Output:
-      return identity(val);
-    case NodeType::Sigmoid:
+    case ActivationFunction::Sigmoid:
       return logistic(val);
-    case NodeType::Tanh:
+    case ActivationFunction::Identity:
+      return identity(val);
+    case ActivationFunction::Tanh:
       return tanh(val);
-    case NodeType::Relu:
+    case ActivationFunction::Relu:
       return relu(val);
-    case NodeType::Gaussian:
+    case ActivationFunction::Gaussian:
       return gaussian(val);
-    case NodeType::Sin:
+    case ActivationFunction::Sin:
       return sin(val);
-    case NodeType::Cos:
+    case ActivationFunction::Cos:
       return cos(val);
-    case NodeType::Abs:
+    case ActivationFunction::Abs:
       return abs(val);
-    case NodeType::Square:
+    case ActivationFunction::Square:
       return square(val);
-    // case NodeType::Cube:
+    // case ActivationFunction::Cube:
     //   return cube(val);
-    // case NodeType::Log:
+    // case ActivationFunction::Log:
     //   return log(val);
-      //case NodeType::Exp:
+      //case ActivationFunction::Exp:
       //return exp(val);
     default:
-      throw std::runtime_error("Unimplemented NodeType activation function.");
+      throw std::runtime_error("Unimplemented ActivationFunction activation function.");
     };
   }
 }
