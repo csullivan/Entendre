@@ -122,8 +122,7 @@ private:
   std::set<std::pair<unsigned long, unsigned long> > connections_existing;
 
   // innovation record keeping
-  unsigned long last_conn_innov;
-  unsigned long last_node_innov;
+  unsigned long last_innovation;
 };
 
 
