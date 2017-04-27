@@ -82,9 +82,9 @@ int main() {
                  std::make_shared<RNG_MersenneTwister>(12),
                  prob);
 
-  pop.SetNetType<ConsecutiveNeuralNet>();
-  //pop.SetNetType<ConcurrentNeuralNet>();
-  //pop.EnableCompositeNet();
+  //pop.SetNetType<ConsecutiveNeuralNet>();
+  pop.SetNetType<ConcurrentNeuralNet>();
+  //pop.EnableCompositeNet(false);
 
   auto max_generations = 1000u;
 

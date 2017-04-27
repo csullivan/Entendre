@@ -367,7 +367,7 @@ TEST(NeuralNet,BiasSymmetry) {
 template<typename NetType>
 std::vector<std::pair<_float_,_float_>> CompareCompositeNetEvaluation() {
 
-  std::vector<Genome*> genomes(20);
+  std::vector<Genome*> genomes(2);
 
   auto seed = Genome()
     .AddNode(NodeType::Bias)
@@ -393,10 +393,12 @@ std::vector<std::pair<_float_,_float_>> CompareCompositeNetEvaluation() {
     genome->Mutate();
   }
 
-  std::vector<_float_> inputs = {0.5,0.8};
+  //std::vector<_float_> inputs = {0.5,0.8,0.5,0.8};
+  std::vector<_float_> inputs_single = {0.5,0.8};
+  std::vector<_float_> inputs = inputs_single;
 
   auto net = BuildCompositeNet<NetType>(genomes,false);
-  auto num_evals = 10u;
+  auto num_evals = 1u;
 
   std::vector<std::vector<std::vector<_float_>>> single_results(genomes.size());
   for (auto i=0u; i<genomes.size(); i++) {
@@ -404,7 +406,7 @@ std::vector<std::pair<_float_,_float_>> CompareCompositeNetEvaluation() {
     single_results[i].reserve(num_evals);
 
     for (auto n = 0u; n<num_evals; n++) {
-      single_results[i].push_back(single_net->evaluate(inputs));
+      single_results[i].push_back(single_net->evaluate(inputs_single));
     }
   }
 
@@ -424,23 +426,23 @@ std::vector<std::pair<_float_,_float_>> CompareCompositeNetEvaluation() {
 }
 
 
-// TEST(NeuralNet,CompositeNet) {
+TEST(NeuralNet,CompositeNet) {
 
-//   // TODO: currently there is an issue with a CompositeNet of NetType=ConsecutiveNeuralNet
+  // TODO: currently there is an issue with a CompositeNet of NetType=ConsecutiveNeuralNet
 
-//   // auto results_consecutive = CompareCompositeNetEvaluation<ConsecutiveNeuralNet>();
-//   // for (auto& result : results_consecutive) {
-//   //   EXPECT_FLOAT_EQ(result.first,result.second);
-//   // }
+  // auto results_consecutive = CompareCompositeNetEvaluation<ConsecutiveNeuralNet>();
+  // for (auto& result : results_consecutive) {
+  //   EXPECT_FLOAT_EQ(result.first,result.second);
+  // }
 
-//   auto results_concurrent = CompareCompositeNetEvaluation<ConcurrentNeuralNet>();
-//   for (auto& result : results_concurrent) {
-//     EXPECT_FLOAT_EQ(result.first,result.second);
-//   }
+  auto results_concurrent = CompareCompositeNetEvaluation<ConcurrentNeuralNet>();
+  for (auto& result : results_concurrent) {
+    EXPECT_FLOAT_EQ(result.first,result.second);
+  }
 
-//   auto results_concurrent_gpu = CompareCompositeNetEvaluation<ConcurrentGPUNeuralNet>();
-//   for (auto& result : results_concurrent_gpu) {
-//     EXPECT_FLOAT_EQ(result.first,result.second);
-//   }
+  auto results_concurrent_gpu = CompareCompositeNetEvaluation<ConcurrentGPUNeuralNet>();
+  for (auto& result : results_concurrent_gpu) {
+    EXPECT_FLOAT_EQ(result.first,result.second);
+  }
 
-// }
+}
