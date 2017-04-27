@@ -233,16 +233,21 @@ void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
 void ConcurrentNeuralNet::add_node(const NodeType& type) {
   switch (type) {
   case NodeType::Bias:
+    num_inputs++;
+    nodes.push_back(1.0);
+    break;
   case NodeType::Input:
     num_inputs++;
+    nodes.push_back(0.0);
     break;
   case NodeType::Output:
     num_outputs++;
+    nodes.push_back(0.0);
     break;
   case NodeType::Hidden:
+    nodes.push_back(0.0);
     break;
   };
-  nodes.push_back(0.0);
 }
 
 void ConcurrentNeuralNet::clear_nodes(unsigned int* list, unsigned int n) {
@@ -271,11 +276,11 @@ void ConcurrentNeuralNet::apply_connections(Connection* list, unsigned int n) {
 }
 
 std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) {
-  assert(inputs.size() == num_inputs);
+  assert(inputs.size() == num_inputs-1);
   sort_connections();
 
   // copy inputs in to network
-  std::copy(inputs.begin(),inputs.end(),nodes.begin());
+  std::copy(inputs.begin(),inputs.end(),nodes.begin()+1);
 
   auto i = 0u;
   int how_many_zero_out = action_list[i++];
@@ -307,8 +312,43 @@ std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) 
 
 void ConcurrentNeuralNet::print_network(std::ostream& os) const {
   std::stringstream ss; ss.str("");
-  for (auto& conn : connections) {
-    ss << conn.origin << " -> " << conn.dest << "  in set " << conn.set << "\n";
+  ss << "Action List: \n\n";
+
+  auto i = 0u;
+  int how_many_zero_out = action_list[i++];
+  ss << "# Zero out: " << how_many_zero_out << "\n";
+  i += how_many_zero_out;
+
+  int how_many_sigmoid = action_list[i++];
+  ss << "# Sigmoid: " << how_many_sigmoid << "\n";
+  i += how_many_sigmoid;
+
+  std::vector<unsigned int> num_conn_to_apply;
+  int current_conn = 0;
+  while(i<action_list.size()) {
+    int how_many_conn = action_list[i++];
+    ss << "# Connections: " << how_many_conn << "\n";
+    current_conn += how_many_conn;
+    num_conn_to_apply.push_back(how_many_conn);
+
+    int how_many_zero_out = action_list[i++];
+    ss << "# Zero out: " << how_many_zero_out << "\n";
+    i += how_many_zero_out;
+
+    int how_many_sigmoid = action_list[i++];
+    ss << "# Sigmoid: " << how_many_sigmoid << "\n";
+    i += how_many_sigmoid;
   }
+  os << ss.str();
+
+  ss.str("");
+  ss << "\nConnection sets:\n";
+  int counter = 0;
+  unsigned int num = num_conn_to_apply[counter];
+  for (auto i=0u; i<connections.size(); i++) {
+    ss << connections[i].origin << " -> " << connections[i].dest << "\n";
+    if (i == num-1) { num += num_conn_to_apply[++counter]; ss << "\n";}
+  }
+
   os << ss.str();
 }

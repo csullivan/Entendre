@@ -79,10 +79,12 @@ int main() {
   prob->keep_non_matching_father_gene = 0;
 
   Population pop(seed,
-                 std::make_shared<RNG_MersenneTwister>(),
+                 std::make_shared<RNG_MersenneTwister>(12),
                  prob);
 
   pop.SetNetType<ConsecutiveNeuralNet>();
+  //pop.SetNetType<ConcurrentNeuralNet>();
+  //pop.EnableCompositeNet();
 
   auto max_generations = 1000u;
 
