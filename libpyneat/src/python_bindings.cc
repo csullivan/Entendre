@@ -130,7 +130,11 @@ PYBIND11_PLUGIN(pyneat) {
     .def("AddNode",&Genome::AddNode)
     .def("AddConnection",&Genome::AddConnection)
     .def("Size",&Genome::Size)
-    .def_static("ConnectedSeed", &Genome::ConnectedSeed);
+    .def_static("ConnectedSeed", &Genome::ConnectedSeed,
+                py::arg("num_inputs"),
+                py::arg("num_outputs"),
+                py::arg("func") = ActivationFunction::Sigmoid)
+    ;
 
   py::class_<NeuralNet>(m, "NeuralNet")
     .def("evaluate", &NeuralNet::evaluate)
