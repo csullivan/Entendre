@@ -6,6 +6,8 @@
 #include <map>
 #include <sstream>
 
+#include "Hash.hh"
+
 Genome::Genome() : num_inputs(0),
                    last_innovation(0) { }
 
@@ -215,21 +217,7 @@ Genome& Genome::AddNode(NodeType type, ActivationFunction func) {
   // User-defined nodes, no real innovation number
   // Instead, make something up to ensure unique ids for each.
 
-  unsigned long innovation = node_genes.size();
-  switch(type) {
-  case NodeType::Bias:
-    innovation = Hash(0, last_innovation);
-    break;
-  case NodeType::Input:
-    innovation = Hash(1, last_innovation);
-    break;
-  case NodeType::Output:
-    innovation = Hash(2, last_innovation);
-    break;
-  default: // all hidden nodes
-    innovation = Hash(3, last_innovation);
-    break;
-  }
+  unsigned long innovation = Hasher::hash(last_innovation, type, func);
 
   return AddNodeByInnovation(type, func, innovation);
 }
@@ -244,12 +232,7 @@ Genome& Genome::AddNodeByInnovation(NodeType type, ActivationFunction func,
 
 Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
                               bool status, double weight) {
-  // first gene only
-  if (last_innovation == 0) {
-    last_innovation = Hash(origin,dest,0);
-  }
-
-  // // build look up table from innovation hash to vector index
+  // build look up table from innovation hash to vector index
   // node_lookup.insert({node_genes[origin].innovation, origin});
   // node_lookup.insert({node_genes[dest].innovation, dest});
 
@@ -262,7 +245,7 @@ Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
 void Genome::AddConnectionByInnovation(unsigned long origin, unsigned long dest,
                                        bool status, double weight) {
   ConnectionGene gene;
-  gene.innovation = Hash(origin, dest, last_innovation);
+  gene.innovation = Hasher::hash(last_innovation, origin, dest);
   gene.origin = origin;
   gene.dest = dest;
   gene.weight = weight;
@@ -463,7 +446,7 @@ void Genome::MutateNode() {
 
   // add a new node:
   // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
-  auto new_node_innov = Hash(split_conn.innovation, last_innovation);
+  auto new_node_innov = Hasher::hash(last_innovation, split_conn.innovation);
   // TODO:  1. HyperNEAT performs a random roulette choice based on probabilities
   //        set for each activation function which are exposed in the parameters.
   //        Currently, all activation functions have equal probability
