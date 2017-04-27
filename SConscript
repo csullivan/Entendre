@@ -2,7 +2,7 @@ Import('env')
 
 #env.OptionalCUDA()
 
-env.Append(CPPPATH=['include'])
+env.Append(CPPPATH=[Dir('include').RDirs('.')])
 env.Append(CPPPATH=['glog/include'])
 env.SharedLibraryDir('glog')
 
