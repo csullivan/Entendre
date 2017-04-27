@@ -20,7 +20,7 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
 //#ifndef NDEBUG
   if (code != cudaSuccess) {
     fprintf(stderr,"cuda_assert: %s %s %d\n", cudaGetErrorString(code), file, line);
-    if (abort) exit(code);
+    if (abort) { throw code; }
   }
 //#endif
 }
@@ -341,7 +341,7 @@ __global__ void device_apply_connections(_float_* node, unsigned int* origin, un
   }
 }
 
-std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> inputs) {
+std::vector<_float_> ConcurrentGPUNeuralNet::host_evaluate(std::vector<_float_> inputs) {
   assert(inputs.size() == num_inputs-1);
   sort_connections();
 
@@ -375,7 +375,7 @@ std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> input
   return std::vector<_float_> (nodes.begin()+num_inputs,nodes.begin()+num_inputs+num_outputs);
 }
 
-std::vector<_float_> ConcurrentGPUNeuralNet::device_evaluate(std::vector<_float_> inputs, unsigned int num_threads) {
+std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> inputs) {
   assert(inputs.size() == num_inputs-1);
   sort_connections();
   unsigned int num_blocks = 0;

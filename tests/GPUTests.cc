@@ -64,7 +64,7 @@ TEST(ConcurrentGPUNeuralNet,OneToManyNoHidden){
   //   //auto net = genome.MakeNet<ConcurrentGPUNeuralNet>();
   //   // First evaluation includes network sorting (construction)
   //   // so we will time the evaluations thereafter
-  //   net->device_evaluate(inputs);
+  //   net->evaluate(inputs);
 
   //   // Time the network evaluation
   //   for (auto i=0u; i < nTrials; i++)
@@ -72,7 +72,7 @@ TEST(ConcurrentGPUNeuralNet,OneToManyNoHidden){
 
 
   //     auto  t1 = chrono::high_resolution_clock::now();
-  //     auto result = net->device_evaluate(inputs);
+  //     auto result = net->evaluate(inputs);
   //     auto  t2 = chrono::high_resolution_clock::now();
   //     tperformance2 += chrono::duration_cast<chrono::nanoseconds>(t2-t1).count();
   //     std::cout << result[0] << "\r" << std::flush;
@@ -81,7 +81,7 @@ TEST(ConcurrentGPUNeuralNet,OneToManyNoHidden){
   //     Timer teval([&tperformance](auto elapsed) {
   //         tperformance+=elapsed;
   //       });
-  //     result = net->device_evaluate(inputs);
+  //     result = net->evaluate(inputs);
   //     std::cout << result[0] << "\r" << std::flush;
   //   }
   //   std::cout << tperformance/nTrials/1.0e6 << " ms"
@@ -92,7 +92,7 @@ TEST(ConcurrentGPUNeuralNet,OneToManyNoHidden){
   //             << std::endl;
 
 
-  //   results.push_back(net->device_evaluate(inputs));
+  //   results.push_back(net->evaluate(inputs));
   // }
 
 
@@ -144,7 +144,7 @@ TEST(ConcurrentGPUNeuralNet,ManyToManyNoHidden){
 
   {
     auto draw_net = static_unique_ptr_cast<ConcurrentGPUNeuralNet>(genome.MakeNet<ConcurrentGPUNeuralNet>());
-    draw_net->device_evaluate(inputs);
+    draw_net->evaluate(inputs);
     std::cout << *draw_net << std::endl;
   }
 
@@ -218,7 +218,7 @@ TEST(ConcurrentGPUNeuralNet,MNISTTopology){
 
   // {
   //   auto draw_net = static_unique_ptr_cast<ConcurrentGPUNeuralNet>(genome.MakeNet<ConcurrentGPUNeuralNet>());
-  //   draw_net->device_evaluate(inputs);
+  //   draw_net->evaluate(inputs);
   //   std::cout << *draw_net << std::endl;
   // }
 
@@ -290,7 +290,7 @@ TEST(ConcurrentGPUNeuralNet,FakePopulationTest){
   std::vector<_float_> inputs(num_subnets*2,0.5);
   {
     auto draw_net = static_unique_ptr_cast<ConcurrentGPUNeuralNet>(genome.MakeNet<ConcurrentGPUNeuralNet>());
-    draw_net->device_evaluate(inputs);
+    draw_net->evaluate(inputs);
     std::cout << *draw_net << std::endl;
   }
 
@@ -323,14 +323,14 @@ struct Network;
 template<>
 struct Network<true> {
   static std::vector<_float_> evaluate(auto const& net, const std::vector<_float_>& inputs) {
-    return net->device_evaluate(inputs);
+    return net->evaluate(inputs);
   }
 };
 
 template<>
 struct Network<false> {
   static std::vector<_float_> evaluate(auto const& net, const std::vector<_float_>& inputs) {
-    return net->evaluate(inputs);
+    return net->host_evaluate(inputs);
   }
 };
 

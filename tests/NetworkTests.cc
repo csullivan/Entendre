@@ -339,7 +339,7 @@ TEST(ConcurrentGPUNeuralNet,CompareEvaluation) {
   auto result = consecutive->evaluate({0.5,1.5});
   auto result2 = concurrent->evaluate({0.5,1.5});
   auto result3 = concurrentgpu->evaluate({0.5,1.5});
-  auto result4 = ccgpu_raw->device_evaluate({0.5,1.5});
+  auto result4 = ccgpu_raw->host_evaluate({0.5,1.5});
   EXPECT_FLOAT_EQ(result[0],result2[0]);
   EXPECT_FLOAT_EQ(result[0],result3[0]);
   EXPECT_FLOAT_EQ(result[0],result4[0]);
@@ -357,7 +357,7 @@ TEST(NeuralNet,BiasSymmetry) {
   auto result = consecutive->evaluate({0.5,1.5});
   auto result2 = concurrent->evaluate({0.5,1.5});
   auto result3 = concurrentgpu->evaluate({0.5,1.5});
-  auto result4 = ccgpu_raw->device_evaluate({0.5,1.5});
+  auto result4 = ccgpu_raw->host_evaluate({0.5,1.5});
   EXPECT_FLOAT_EQ(result[0],result2[0]);
   EXPECT_FLOAT_EQ(result[0],result3[0]);
   EXPECT_FLOAT_EQ(result[0],result4[0]);

@@ -68,6 +68,22 @@ public:
    */
   NeuralNet* BestNet();
 
+  template<typename NetType>
+  auto BestNet() {
+    std::unique_ptr<NeuralNet> output = nullptr;
+    double best_fitness = -std::numeric_limits<double>::max();
+    for(auto& spec : species) {
+      for(auto& org : spec.organisms) {
+        if(org.fitness > best_fitness) {
+          output = org.genome.MakeNet<NetType>();
+          best_fitness = org.fitness;
+        }
+      }
+    }
+    return output;
+  }
+
+
   /// Returns the number of species in the population
   /**
      Uses the speciation from the most recent call to Reproduce.

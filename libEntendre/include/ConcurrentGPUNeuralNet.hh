@@ -15,8 +15,8 @@ public:
   virtual void add_connection(int origin, int dest, _float_ weight, unsigned int set=std::numeric_limits<unsigned int>::max());
   virtual unsigned int num_nodes() { return nodes.size(); }
   virtual unsigned int num_connections() { return connections.size(); }
-  virtual std::vector<_float_> evaluate(std::vector<_float_> inputs);
-  std::vector<_float_> device_evaluate(std::vector<_float_> inputs, unsigned int num_threads=16);
+  virtual std::vector<_float_> host_evaluate(std::vector<_float_> inputs);
+  std::vector<_float_> evaluate(std::vector<_float_> inputs);
 
   virtual std::unique_ptr<NeuralNet> clone() const {
     return std::unique_ptr<ConcurrentGPUNeuralNet>(new ConcurrentGPUNeuralNet(*this));
@@ -33,6 +33,7 @@ public:
   }
   virtual void sort_connections(unsigned int first=0, unsigned int num_connections=0);
   std::vector<Connection>& get_connections() { return connections; }
+  void set_threads_per_block(size_t num_threads) { num_threads = num_threads; }
 
 private:
   bool would_make_loop(unsigned int i, unsigned int j, unsigned int set=std::numeric_limits<unsigned int>::max());
@@ -45,7 +46,6 @@ private:
 
   size_t num_inputs = 0;
   size_t num_outputs = 0;
-
 
   struct Connections {
     Connections() { ; }
@@ -63,6 +63,7 @@ private:
   std::vector<unsigned int> action_list;
 
   // device pointers
+  unsigned int num_threads=32;
   _float_* node_ = nullptr;
   unsigned int* origin_ = nullptr;
   unsigned int* dest_ = nullptr;
