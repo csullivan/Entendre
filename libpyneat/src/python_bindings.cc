@@ -114,6 +114,7 @@ PYBIND11_PLUGIN(pyneat) {
 
   py::enum_<ActivationFunction>(m, "ActivationFunction")
     .value("Sigmoid",ActivationFunction::Sigmoid)
+    .value("Identity",ActivationFunction::Identity)
     .value("Tanh",ActivationFunction::Tanh)
     .value("Relu",ActivationFunction::Relu)
     .value("Gaussian",ActivationFunction::Gaussian)
