@@ -28,7 +28,7 @@ public:
       EachAnswer(0,1),
       EachAnswer(1,0),
       EachAnswer(1,1)} {
-    std::random_shuffle(all_answers.begin(), all_answers.end());
+    //std::random_shuffle(all_answers.begin(), all_answers.end());
   }
 
   void step(NetProxy& proxy) {
@@ -84,7 +84,7 @@ int main() {
 
   //pop.SetNetType<ConsecutiveNeuralNet>();
   pop.SetNetType<ConcurrentNeuralNet>();
-  //pop.EnableCompositeNet(false);
+  pop.EnableCompositeNet(/*hetero_inputs = */false);
 
   auto max_generations = 1000u;
 

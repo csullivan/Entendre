@@ -3,7 +3,6 @@
 #include "NeuralNet.hh"
 #include "PopulationHelpers.hh"
 #include "FitnessEvaluator.hh"
-#include "CompositeNet.hh"
 
 #include <vector>
 #include <limits>
@@ -42,51 +41,8 @@ public:
     CalculateAdjustedFitness();
   }
 
-  void Evaluate(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+  void Evaluate(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory);
 
-    struct fitness_kernel {
-      NetProxy proxy;
-      std::unique_ptr<FitnessEvaluator> eval;
-      std::vector<_float_> result;
-    };
-    std::vector<fitness_kernel> kernels;
-
-    for (auto& spec : species) {
-      for (auto& org : spec.organisms) {
-        kernels.push_back({ &org, evaluator_factory(), {} });
-      }
-    }
-
-    while (true) {
-      bool continue_looping = false;
-      // load one set of inputs for each network
-      // or finalize and set fitness value
-      for (auto& kernel : kernels) {
-        kernel.eval->step(kernel.proxy);
-      }
-
-      // eval each network with loaded inputs
-      for (auto& kernel : kernels) {
-        if (kernel.proxy.has_inputs()) {
-          kernel.result = kernel.proxy.evaluate();
-          continue_looping = true;
-        }
-      }
-
-      // if there are no more inputs then
-      // the fitness function has been evaluated
-      // and we are done
-      if (!continue_looping) { break; }
-
-      // call the proxy callbacks
-      for (auto& kernel : kernels) {
-        kernel.proxy.callback(kernel.result);
-        kernel.proxy.clear();
-      }
-    }
-
-    CalculateAdjustedFitness();
-  }
 
   Population Reproduce(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
     Evaluate(evaluator_factory);
@@ -130,8 +86,16 @@ public:
   void SetNetType() {
     converter = std::make_shared<GenomeConverter_Impl<NetType> >();
   }
+  void EnableCompositeNet (bool heterogeneous_inputs) {
+    this->heterogeneous_inputs = heterogeneous_inputs;
+    this->use_composite_net = true;
+  }
+  void DisableCompositeNet() { use_composite_net = true; }
 
 private:
+  void EvaluateSequential(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory);
+  void EvaluateComposite(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory);
+
   std::vector<Species> MakeNextGenerationSpecies();
   std::vector<Genome> MakeNextGenerationGenomes();
   void DistributeChildrenByRank(std::vector<unsigned int>&) const;
@@ -144,4 +108,8 @@ private:
 
   std::vector<Species> species;
   std::shared_ptr<GenomeConverter> converter;
+
+  // composite net options
+  bool use_composite_net;
+  bool heterogeneous_inputs;
 };

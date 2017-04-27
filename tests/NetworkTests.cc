@@ -367,7 +367,7 @@ TEST(NeuralNet,BiasSymmetry) {
 template<typename NetType>
 std::vector<std::pair<_float_,_float_>> CompareCompositeNetEvaluation() {
 
-  std::vector<Genome*> genomes(2);
+  std::vector<Genome*> genomes(20);
 
   auto seed = Genome()
     .AddNode(NodeType::Bias)
@@ -393,12 +393,14 @@ std::vector<std::pair<_float_,_float_>> CompareCompositeNetEvaluation() {
     genome->Mutate();
   }
 
-  //std::vector<_float_> inputs = {0.5,0.8,0.5,0.8};
   std::vector<_float_> inputs_single = {0.5,0.8};
-  std::vector<_float_> inputs = inputs_single;
+  std::vector<_float_> inputs;
+  for (auto i=0u;i<genomes.size();i++) {
+    std::copy(inputs_single.begin(),inputs_single.end(),std::back_inserter(inputs));
+  }
 
-  auto net = BuildCompositeNet<NetType>(genomes,false);
-  auto num_evals = 1u;
+  auto net = BuildCompositeNet<NetType>(genomes,true);
+  auto num_evals = 10u;
 
   std::vector<std::vector<std::vector<_float_>>> single_results(genomes.size());
   for (auto i=0u; i<genomes.size(); i++) {

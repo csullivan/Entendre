@@ -55,7 +55,9 @@ public:
   float   GeneticDistance(const Genome&) const;
   Genome  GeneticAncestry() const;
   void    PrintInnovations() const;
-  size_t  Size() { return connection_genes.size(); }
+  size_t  Size() const { return connection_genes.size(); }
+  size_t  NumInputs () const { return num_inputs;  }
+  size_t  NumOutputs() const { return num_outputs; }
 
   bool IsStructurallyEqual(const Genome& other) const;
 
@@ -108,9 +110,9 @@ private:
     return ((id*10000169UL) xor (previous_hash*44721359UL) xor (111181111UL));
   }
 
-
 private:
   size_t num_inputs;
+  size_t num_outputs;
 
   std::vector<NodeGene> node_genes;
   std::unordered_map<unsigned long,unsigned int> node_lookup;
