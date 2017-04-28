@@ -108,6 +108,16 @@ public:
   }
   void DisableCompositeNet() { use_composite_net = true; }
 
+  inline auto GetPopulation() {
+    std::vector<Genome*> genomes;
+    for (auto& spec : species) {
+      for (auto& org : spec.organisms) {
+        genomes.push_back(&org.genome);
+      }
+    }
+    return genomes;
+  }
+
 private:
   void EvaluateSequential(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory);
   void EvaluateComposite(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory);

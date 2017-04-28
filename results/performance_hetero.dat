@@ -1,0 +1,30 @@
+Population Size: 1024
+92.5777 ms for Composite net construction. 
+3.89101 ms for construction of all networks individually. 
+0.115857 ms for composite net evaluation. 
+0.283059 ms for evaluation of all networks individually. 
+Population Size: 2048
+466.09 ms for Composite net construction. 
+9.3885 ms for construction of all networks individually. 
+0.130778 ms for composite net evaluation. 
+0.591198 ms for evaluation of all networks individually. 
+Population Size: 4096
+2079.41 ms for Composite net construction. 
+20.3647 ms for construction of all networks individually. 
+0.144349 ms for composite net evaluation. 
+1.21699 ms for evaluation of all networks individually. 
+Population Size: 8192
+1813.96 ms for Composite net construction. 
+44.4141 ms for construction of all networks individually. 
+0.146095 ms for composite net evaluation. 
+2.58251 ms for evaluation of all networks individually. 
+Population Size: 16384
+1442.88 ms for Composite net construction. 
+85.3639 ms for construction of all networks individually. 
+0.196128 ms for composite net evaluation. 
+5.38053 ms for evaluation of all networks individually. 
+Population Size: 32768
+689.949 ms for Composite net construction. 
+201.551 ms for construction of all networks individually. 
+0.299611 ms for composite net evaluation. 
+Population Size: 65526
