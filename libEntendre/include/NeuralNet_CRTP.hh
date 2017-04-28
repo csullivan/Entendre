@@ -7,6 +7,8 @@
 #include <cmath>
 #include <memory>
 #include <map>
+#include <string>
+#include <ostream>
 
 
 

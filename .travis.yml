@@ -13,23 +13,14 @@ matrix:
     #   env:
     #     - COMPILER=g++-4.7
 
-    - os: linux
-      compiler: gcc
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-4.8']
-      env:
-        - COMPILER=g++-4.8
-
-    - os: linux
-      compiler: gcc
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-4.9']
-      env:
-        - COMPILER=g++-4.9
+    # - os: linux
+    #   compiler: gcc
+    #   addons:
+    #     apt:
+    #       sources: ['ubuntu-toolchain-r-test']
+    #       packages: ['g++-4.8']
+    #   env:
+    #     - COMPILER=g++-4.8
 
     - os: linux
       compiler: gcc
@@ -58,19 +49,19 @@ matrix:
       env:
         - COMPILER=g++-6
 
-    - os: linux
-      compiler: clang
-      env:
-        - COMPILER=clang++
+    # - os: linux
+    #   compiler: clang
+    #   env:
+    #     - COMPILER=clang++
 
-    - os: linux
-      compiler: clang
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
-          packages: ['clang-3.5']
-      env:
-        - COMPILER=clang++-3.5
+    # - os: linux
+    #   compiler: clang
+    #   addons:
+    #     apt:
+    #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+    #       packages: ['clang-3.5']
+    #   env:
+    #     - COMPILER=clang++-3.5
 
     - os: linux
       compiler: clang
@@ -105,7 +96,7 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-3.9']
-          packages: ['clang-3.9']
+          packages: ['clang-3.9', 'g++-6'] #Adding g++-6 so that the newer libstdc++ is present
       env:
         - COMPILER=clang++-3.9
 
@@ -115,28 +106,35 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0']
-          packages: ['clang-4.0']
+          packages: ['clang-4.0', 'g++-6'] #Adding g++-6 so that the newer libstdc++ is present
       env:
         - COMPILER=clang++-4.0
 
     - os: osx
       osx_image: xcode6.4
       compiler: clang
+      install:
+        - brew install scons
       env:
         - COMPILER=clang++
 
     - os: osx
       osx_image: xcode7.3
       compiler: clang
+      install:
+        - brew install scons
       env:
         - COMPILER=clang++
 
     - os: osx
       osx_image: xcode8.3
       compiler: clang
+      install:
+        - brew install scons
       env:
         - COMPILER=clang++
 
 
 script:
-- CXX=$COMPILER scons && bin/entendre_tests
+- $COMPILER --version
+- CXX=$COMPILER scons VERBOSE=1 && bin/entendre_tests
