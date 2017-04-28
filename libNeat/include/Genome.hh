@@ -34,7 +34,7 @@ public:
 
   template<typename NetType>
   std::unique_ptr<NeuralNet> MakeNet() const {
-    auto output = std::make_unique<NetType>();
+    std::unique_ptr<NeuralNet> output = std::make_unique<NetType>();
     MakeNet(*output);
     return output;
   }

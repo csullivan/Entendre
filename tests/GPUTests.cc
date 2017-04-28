@@ -322,14 +322,16 @@ struct Network;
 
 template<>
 struct Network<true> {
-  static std::vector<_float_> evaluate(auto const& net, const std::vector<_float_>& inputs) {
+  template<typename T>
+  static std::vector<_float_> evaluate(T const& net, const std::vector<_float_>& inputs) {
     return net->device_evaluate(inputs);
   }
 };
 
 template<>
 struct Network<false> {
-  static std::vector<_float_> evaluate(auto const& net, const std::vector<_float_>& inputs) {
+  template<typename T>
+  static std::vector<_float_> evaluate(T const& net, const std::vector<_float_>& inputs) {
     return net->evaluate(inputs);
   }
 };
