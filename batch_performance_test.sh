@@ -1,9 +1,12 @@
 #!/bin/bash
 
 
-pop_sizes=("1024" "2048" "4096" "8192" "16384" "32768" "65526" "131072" "262144")
+#num_networks=("65536" "131072" "262144")
+#num_networks=("1024" "2048" "4096" "8192" "16384" "32768" "65536" "131072" "262144")
+num_networks=("1024" "2048" "4096" "8192" "16384" "32768" "65536")
 
-for pop_size in "${pop_sizes[@]}"; do
-	echo "Population Size:" $pop_size
-	time ./bin/performance_tests -p $pop_size
+
+for num_network in "${num_networks[@]}"; do
+	echo "Number of networks to evaluate:" $num_network
+	time ./bin/performance_tests -n $num_network
 done

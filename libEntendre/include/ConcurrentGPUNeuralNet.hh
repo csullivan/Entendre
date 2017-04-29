@@ -33,7 +33,7 @@ public:
   }
   virtual void sort_connections(unsigned int first=0, unsigned int num_connections=0);
   std::vector<Connection>& get_connections() { return connections; }
-  void set_threads_per_block(size_t num_threads) { num_threads = num_threads; }
+  void set_threads_per_block(size_t nthreads) { num_threads = nthreads; }
 
 private:
   bool would_make_loop(unsigned int i, unsigned int j, unsigned int set=std::numeric_limits<unsigned int>::max());

@@ -23,9 +23,9 @@ auto population_from_xor_experiment(unsigned int pop_size = 2000, unsigned int n
                  std::make_shared<RNG_MersenneTwister>(),
                  prob);
 
-  //pop.SetNetType<ConsecutiveNeuralNet>();
-  pop.SetNetType<ConcurrentGPUNeuralNet>();
-  pop.EnableCompositeNet(/*hetero_inputs = */true);
+  pop.SetNetType<ConsecutiveNeuralNet>();
+  //pop.SetNetType<ConcurrentGPUNeuralNet>();
+  //pop.EnableCompositeNet(/*hetero_inputs = */true);
 
 
   for (unsigned int generation = 0u; generation < num_generations; generation++) {
@@ -41,14 +41,18 @@ int main(int argc, char** argv) {
   bool help = false;
   unsigned int num_trials;
   unsigned int pop_size;
+  unsigned int num_networks;
   unsigned int num_gen;
 
   /////////////////////////////////////////////////////////////////////////////////////
   ArgParser parser;
   parser.option("p population_size", &pop_size)
     .description("Number of networks in population.")
-    .default_value(100);
-  parser.option("n num_trials", &num_trials)
+    .default_value(1024);
+  parser.option("n num_networks", &num_networks)
+    .description("Number of networks to evaluate.")
+    .default_value(1024);
+  parser.option("N num_trials", &num_trials)
     .description("Number of trials for performance evaluation.")
     .default_value(100);
   parser.option("g num_generations", &num_gen)
@@ -60,10 +64,28 @@ int main(int argc, char** argv) {
   if (help) { std::cout << parser << std::endl; return 0;}
   /////////////////////////////////////////////////////////////////////////////////////
 
+
   auto xor_pop = std::move(population_from_xor_experiment(pop_size,num_gen));
   auto xor_genomes = xor_pop.GetPopulation();
-  std::unique_ptr<NeuralNet> xor_composite_net = nullptr;
+  std::cout << "/* Seed population built (size: " << xor_genomes.size() << ") */" << std::endl;
 
+  std::vector<Genome> xor_genomes_expanded;
+  xor_genomes_expanded.reserve(num_networks);
+
+  for (auto i=0u; i<num_networks; i++) {
+    xor_genomes_expanded.push_back(*xor_genomes.at(i%xor_genomes.size()));
+  }
+  xor_genomes.clear();
+  xor_genomes.reserve(xor_genomes_expanded.size());
+  for (auto& genome : xor_genomes_expanded) {
+    genome.RandomizeWeights();
+    xor_genomes.push_back(&genome);
+  }
+  std::cout << "/* Expanded genome set built (size: " << xor_genomes.size() << ") */" << std::endl;
+
+
+
+  std::unique_ptr<NeuralNet> xor_composite_net = nullptr;
 
   double tperformance = 0.0;
   //----------------------------------------------------------------------------------
@@ -71,6 +93,8 @@ int main(int argc, char** argv) {
     Timer teval([&tperformance](auto elapsed) { tperformance+=elapsed; });
     xor_composite_net = BuildCompositeNet<ConcurrentGPUNeuralNet>(xor_genomes,false);
   } std:: cout << tperformance/1.0e6 << " ms" << " for Composite net construction. " << std::endl;
+  //ConcurrentGPUNeuralNet* ccgpu_composite = dynamic_cast<ConcurrentGPUNeuralNet*>((NeuralNet*)xor_composite_net.get());
+  //ccgpu_composite->set_threads_per_block(32);
 
   //----------------------------------------------------------------------------------
   tperformance = 0.0;
@@ -96,9 +120,15 @@ int main(int argc, char** argv) {
     outputs = xor_composite_net->evaluate(inputs);
     dummy(outputs);
   } std:: cout << tperformance/num_trials/1.0e6 << " ms" << " for composite net evaluation. " << std::endl;
+  std::vector<_float_> gpuoutputs = std::move(outputs);
+  auto tgpu = tperformance/num_trials/1.0e6;
   //----------------------------------------------------------------------------------
+
+  std::vector<_float_> cpuoutputs;
+  cpuoutputs.reserve(gpuoutputs.size());
   for (auto& net : xor_networks) {
     outputs = net->evaluate(inputs);
+    std::copy(outputs.begin(),outputs.end(),std::back_inserter(cpuoutputs));
   }
   dummy(outputs);
   tperformance = 0.0;
@@ -109,7 +139,14 @@ int main(int argc, char** argv) {
     }
     dummy(outputs);
   } std:: cout << tperformance/num_trials/1.0e6 << " ms" << " for evaluation of all networks individually. " << std::endl;
+  auto tcpu = tperformance/num_trials/1.0e6;
 
 
+  for (auto i=0u; i<gpuoutputs.size(); i++) {
+    assert(std::abs(gpuoutputs[i]-cpuoutputs[i]) < 1e-4);
+  }
+  std::cout << "/* PASS: outputs from GPU and CPU implementations are identical. */" << std::endl;
+  std::cout << "~*~*~*~* GPU speed up: " << tcpu/tgpu << " *~*~*~*~" <<std::endl << std::endl;
+  //std::cout << *xor_composite_net << std::endl;
   return 0;
 }

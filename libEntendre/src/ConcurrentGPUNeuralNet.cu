@@ -571,14 +571,14 @@ void ConcurrentGPUNeuralNet::print_network(std::ostream& os) const {
   }
   os << ss.str();
 
-  ss.str("");
-  ss << "\nConnection sets:\n";
-  int counter = 0;
-  int num = num_conn_to_apply[counter];
-  for (auto i=0u; i<connection_list.size(); i++) {
-    ss << connection_list.origin[i] << " -> " << connection_list.dest[i] << "\n";
-    if (i == num-1) { num += num_conn_to_apply[++counter]; ss << "\n";}
-  }
+  // ss.str("");
+  // ss << "\nConnection sets:\n";
+  // int counter = 0;
+  // int num = num_conn_to_apply[counter];
+  // for (auto i=0u; i<connection_list.size(); i++) {
+  //   ss << connection_list.origin[i] << " -> " << connection_list.dest[i] << "\n";
+  //   if (i == num-1) { num += num_conn_to_apply[++counter]; ss << "\n";}
+  // }
 
-  os << ss.str();
+  // os << ss.str();
 }
