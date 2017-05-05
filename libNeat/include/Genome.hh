@@ -13,6 +13,7 @@
 #include "ReachabilityChecker.hh"
 #include "ConsecutiveNeuralNet.hh"
 #include "ConcurrentNeuralNet.hh"
+#include "ConcurrentGPUNeuralNet.hh"
 
 
 struct NodeGene;
@@ -20,12 +21,22 @@ struct ConnectionGene;
 
 class Genome : public uses_random_numbers,
                public requires<Probabilities> {
+
+  template<typename NetType>
+  friend std::unique_ptr<NeuralNet> BuildCompositeNet(const std::vector<Genome*>& genomes, bool hetero_inputs);
+
+
 public:
+
   Genome();
   static Genome ConnectedSeed(int num_inputs, int num_outputs);
 
   template<typename NetType>
-  std::unique_ptr<NeuralNet> MakeNet() const;
+  std::unique_ptr<NeuralNet> MakeNet() const {
+    auto output = std::make_unique<NetType>();
+    MakeNet(*output);
+    return output;
+  }
 
   Genome& operator=(const Genome&);
   Genome& AddNode(NodeType type);
@@ -44,7 +55,9 @@ public:
   float   GeneticDistance(const Genome&) const;
   Genome  GeneticAncestry() const;
   void    PrintInnovations() const;
-  size_t  Size() { return connection_genes.size(); }
+  size_t  Size() const { return connection_genes.size(); }
+  size_t  NumInputs () const { return num_inputs;  }
+  size_t  NumOutputs() const { return num_outputs; }
 
   bool IsStructurallyEqual(const Genome& other) const;
 
@@ -55,6 +68,8 @@ public:
   void AssertNoConnectionsToInput() const;
 
 private:
+  void MakeNet(NeuralNet& net) const;
+
   const NodeGene* GetNodeByN(unsigned int i) const;
   const NodeGene* GetNodeByInnovation(unsigned long innovation) const;
   const ConnectionGene* GetConnByN(unsigned int i) const;
@@ -95,9 +110,9 @@ private:
     return ((id*10000169UL) xor (previous_hash*44721359UL) xor (111181111UL));
   }
 
-
 private:
   size_t num_inputs;
+  size_t num_outputs;
 
   std::vector<NodeGene> node_genes;
   std::unordered_map<unsigned long,unsigned int> node_lookup;
@@ -130,3 +145,4 @@ struct NodeGene {
   NodeType type;
   unsigned long innovation;
 };
+

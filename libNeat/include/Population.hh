@@ -1,40 +1,14 @@
 #pragma once
 #include "Genome.hh"
 #include "NeuralNet.hh"
+#include "PopulationHelpers.hh"
+#include "FitnessEvaluator.hh"
 
 #include <vector>
 #include <limits>
 #include <unordered_map>
 
-struct Organism {
-  Organism(const Genome& gen, std::unique_ptr<NeuralNet>&& net)
-    : fitness(std::numeric_limits<double>::quiet_NaN()),
-      adj_fitness(std::numeric_limits<double>::quiet_NaN()),
-      genome(gen) , network(std::move(net)) { ; }
-  Organism(const Organism& org)
-    : fitness(org.fitness), adj_fitness(org.adj_fitness),
-      genome(org.genome), network(org.network->clone()) { ; }
-  Organism& operator=(const Organism& rhs) {
-    fitness = rhs.fitness;
-    adj_fitness = rhs.adj_fitness;
-    genome = rhs.genome;
-    network = rhs.network->clone();
-    return *this;
-  }
-  float fitness;
-  float adj_fitness;
-  Genome genome;
-  std::unique_ptr<NeuralNet> network;
-};
 
-struct Species {
-  std::vector<Organism> organisms;
-
-  unsigned int id;
-  Genome representative;
-  unsigned int age;
-  double best_fitness;
-};
 
 class Population : public uses_random_numbers,
                    public requires<Probabilities> {
@@ -61,16 +35,23 @@ public:
   void Evaluate(Callable&& fitness) {
     for(auto& spec : species) {
       for(auto& org : spec.organisms) {
-        org.fitness = fitness(*org.network);
+        org.fitness = fitness(*org.network());
       }
     }
     CalculateAdjustedFitness();
   }
 
+  void Evaluate(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory);
+
+
+  Population Reproduce(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+    Evaluate(evaluator_factory);
+    return Reproduce();
+  }
+
   /// Reproduce, using the fitness function given.
-  template <class Callable>
-  Population Reproduce(Callable&& fitness) {
-    Evaluate(std::forward<Callable>(fitness));
+  Population Reproduce(std::function<double(NeuralNet&) > fitness) {
+    Evaluate(fitness);
     return Reproduce();
   }
 
@@ -85,7 +66,23 @@ public:
      Uses the fitness value calculated by the most recent call to Evaluate or Reproduce.
      If neither has been called, returns nullptr.
    */
-  NeuralNet* BestNet() const;
+  NeuralNet* BestNet();
+
+  template<typename NetType>
+  auto BestNet() {
+    std::unique_ptr<NeuralNet> output = nullptr;
+    double best_fitness = -std::numeric_limits<double>::max();
+    for(auto& spec : species) {
+      for(auto& org : spec.organisms) {
+        if(org.fitness > best_fitness) {
+          output = org.genome.MakeNet<NetType>();
+          best_fitness = org.fitness;
+        }
+      }
+    }
+    return output;
+  }
+
 
   /// Returns the number of species in the population
   /**
@@ -101,24 +98,35 @@ public:
 
   const std::vector<Species>& GetSpecies() const { return species; }
 
-  struct GenomeConverter {
-    virtual std::unique_ptr<NeuralNet> convert(const Genome&) = 0;
-  };
-  template<typename NetType>
-  struct GenomeConverter_Impl : GenomeConverter {
-    virtual std::unique_ptr<NeuralNet> convert(const Genome& genome) {
-      return genome.MakeNet<NetType>();
-    }
-  };
-
   template<typename NetType>
   void SetNetType() {
     converter = std::make_shared<GenomeConverter_Impl<NetType> >();
   }
+  void EnableCompositeNet (bool heterogeneous_inputs) {
+    this->heterogeneous_inputs = heterogeneous_inputs;
+    this->use_composite_net = true;
+  }
+  void DisableCompositeNet() { use_composite_net = true; }
+
+  inline auto GetPopulation() {
+    std::vector<Genome*> genomes;
+    for (auto& spec : species) {
+      for (auto& org : spec.organisms) {
+        genomes.push_back(&org.genome);
+      }
+    }
+    return genomes;
+  }
 
 private:
+  void EvaluateSequential(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory);
+  void EvaluateComposite(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory);
+
   std::vector<Species> MakeNextGenerationSpecies();
   std::vector<Genome> MakeNextGenerationGenomes();
+  void DistributeChildrenByRank(std::vector<unsigned int>&) const;
+  void DistributeNurseryChildren(std::vector<unsigned int>&) const;
+
 
   void Speciate(std::vector<Species>& species,
                 const std::vector<Genome>& genomes);
@@ -126,4 +134,8 @@ private:
 
   std::vector<Species> species;
   std::shared_ptr<GenomeConverter> converter;
+
+  // composite net options
+  bool use_composite_net;
+  bool heterogeneous_inputs;
 };

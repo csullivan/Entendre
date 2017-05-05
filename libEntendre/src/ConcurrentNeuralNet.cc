@@ -1,5 +1,4 @@
 #include "ConcurrentNeuralNet.hh"
-#include "ConsecutiveNeuralNet.hh"
 
 #include <cassert>
 #include <stdexcept>
@@ -32,7 +31,13 @@ ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(co
     } else if (b.origin == b.dest) {
       return EvaluationOrder::GreaterThan;
     } else {
-      return EvaluationOrder::NotEqual;
+      // Choice here is absolutely arbitrary.
+      // This is arbitrary, and consistent.
+      if(a.origin < b.origin) {
+        return EvaluationOrder::GreaterThan;
+      } else {
+        return EvaluationOrder::LessThan;
+      }
     }
   }
 
@@ -40,65 +45,89 @@ ConcurrentNeuralNet::EvaluationOrder ConcurrentNeuralNet::compare_connections(co
   return EvaluationOrder::Unknown;
 }
 
-void ConcurrentNeuralNet::sort_connections() {
+void ConcurrentNeuralNet::sort_connections(unsigned int first, unsigned int num_connections) {
   if(connections_sorted) {
     return;
   }
 
-  unsigned int max_iterations =
-    connections.size()*connections.size()*connections.size()+1;
+  // if the first connection in the list to sort is not
+  // the first connection, and num_connections is zero
+  // this is an error
+  assert(!(first!=0 && num_connections==0));
+  // if num_connections is zero, then we will sort all connections
+  num_connections = num_connections > 0 ? num_connections : connections.size();
+  // the number of connections to sort cannot be
+  // larger than the total number of connections
+  assert(first+num_connections <= connections.size());
 
-  bool change_applied = false;
-  for(auto i_try=0u; i_try < max_iterations; i_try++) {
-    change_applied = false;
-
-    for(auto i=0u; i<connections.size(); i++) {
-      for(auto j=i+1; j<connections.size(); j++) {
-        Connection& conn1 = connections[i];
-        Connection& conn2 = connections[j];
-
-        switch(compare_connections(conn1,conn2)) {
+  // zero out connection set index for use in sorting
+  for (auto i=first; i<first+num_connections; i++) {
+    connections[i].set = 0;
+  }
+  for(auto i=first; i<first+num_connections; i++) {
+    for(auto j=i+1; j<first+num_connections; j++) {
+      Connection& conn1 = connections[i];
+      Connection& conn2 = connections[j];
+      switch(compare_connections(conn1,conn2)) {
         case EvaluationOrder::GreaterThan:
-          if (conn1.set <= conn2.set) {
-            conn1.set = conn2.set + 1;
-            change_applied = true;
-          }
+          conn1.set++;
           break;
 
         case EvaluationOrder::LessThan:
-          if(conn2.set <= conn1.set) {
-            conn2.set = conn1.set + 1;
-            change_applied = true;
-          }
-          break;
-
-        case EvaluationOrder::NotEqual:
-          if(conn1.set == conn2.set) {
-            conn2.set = conn1.set + 1;
-            change_applied = true;
-          }
+          conn2.set++;
           break;
 
         case EvaluationOrder::Unknown:
           break;
+      }
+    }
+  }
+
+  auto split_iter = connections.begin()+first;
+  auto last_iter = connections.begin()+first+num_connections;
+  size_t current_set_num = 0;
+  while(split_iter != last_iter) {
+    auto next_split = std::partition(split_iter, last_iter,
+                                     [](const Connection& conn) {
+                                       return conn.set == 0;
+                                     });
+    assert(next_split != split_iter);
+
+    // These could be run now, no longer need to track number of
+    // depencencies.
+    for(auto iter = split_iter; iter<next_split; iter++) {
+      iter->set = current_set_num;
+    }
+    current_set_num++;
+
+    // Decrease number of dependencies for everything else.
+    for(auto iter_done = split_iter; iter_done<next_split; iter_done++) {
+      for(auto iter_not_done = next_split; iter_not_done<last_iter; iter_not_done++) {
+        if (compare_connections(*iter_done,*iter_not_done) == EvaluationOrder::LessThan) {
+          iter_not_done->set--;
         }
       }
     }
 
-    if(!change_applied) {
-      break;
+    split_iter = next_split;
+  }
+
+  // build the action list if num_connections was the total set
+  // or if this is the last subset of connections (all others are sorted)
+  if (first + num_connections == connections.size()) {
+    // if first is nonzero then we have been sorting based on subsets and now all subset lock free buckets
+    // need to be merged in a sort of the entire connections list where set now is the lock free set index
+    // (before it was used as the subnet index)
+    if (first != 0) {
+      // sort connections based on evaluation set number if not already done
+      std::sort(connections.begin(),connections.end(),[](Connection a, Connection b){ return a.set < b.set; });
     }
+
+
+    build_action_list();
+    connections_sorted = true; // we are done sorting
   }
 
-  if(change_applied) {
-    throw std::runtime_error("Sort Error: change_applied == true on last possible iteration");
-  }
-
-  // sort connections based on evaluation set number
-  std::sort(connections.begin(),connections.end(),[](Connection a, Connection b){ return a.set < b.set; });
-  connections_sorted = true;
-
-  build_action_list();
 }
 
 void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
@@ -204,20 +233,21 @@ void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
 void ConcurrentNeuralNet::add_node(const NodeType& type) {
   switch (type) {
   case NodeType::Bias:
+    num_inputs++;
+    nodes.push_back(1.0);
+    break;
   case NodeType::Input:
     num_inputs++;
+    nodes.push_back(0.0);
     break;
   case NodeType::Output:
     num_outputs++;
+    nodes.push_back(0.0);
     break;
   case NodeType::Hidden:
+    nodes.push_back(0.0);
     break;
   };
-  nodes.push_back(0.0);
-}
-
-std::vector<_float_> node_values(std::vector<Node>& nodes) {
-  return std::vector<_float_>(nodes.begin(),nodes.end());
 }
 
 void ConcurrentNeuralNet::clear_nodes(unsigned int* list, unsigned int n) {
@@ -246,11 +276,11 @@ void ConcurrentNeuralNet::apply_connections(Connection* list, unsigned int n) {
 }
 
 std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) {
-  assert(inputs.size() == num_inputs);
+  assert(inputs.size() == num_inputs-1);
   sort_connections();
 
   // copy inputs in to network
-  std::copy(inputs.begin(),inputs.end(),nodes.begin());
+  std::copy(inputs.begin(),inputs.end(),nodes.begin()+1);
 
   auto i = 0u;
   int how_many_zero_out = action_list[i++];
@@ -276,7 +306,49 @@ std::vector<_float_> ConcurrentNeuralNet::evaluate(std::vector<_float_> inputs) 
     i += how_many_sigmoid;
   }
 
-  std::vector<_float_> outputs(nodes.end()-num_outputs,nodes.end());
+  return std::vector<_float_> (nodes.begin()+num_inputs,nodes.begin()+num_inputs+num_outputs);
+}
 
-  return outputs;
+
+void ConcurrentNeuralNet::print_network(std::ostream& os) const {
+  std::stringstream ss; ss.str("");
+  ss << "Action List: \n\n";
+
+  auto i = 0u;
+  int how_many_zero_out = action_list[i++];
+  ss << "# Zero out: " << how_many_zero_out << "\n";
+  i += how_many_zero_out;
+
+  int how_many_sigmoid = action_list[i++];
+  ss << "# Sigmoid: " << how_many_sigmoid << "\n";
+  i += how_many_sigmoid;
+
+  std::vector<unsigned int> num_conn_to_apply;
+  int current_conn = 0;
+  while(i<action_list.size()) {
+    int how_many_conn = action_list[i++];
+    ss << "# Connections: " << how_many_conn << "\n";
+    current_conn += how_many_conn;
+    num_conn_to_apply.push_back(how_many_conn);
+
+    int how_many_zero_out = action_list[i++];
+    ss << "# Zero out: " << how_many_zero_out << "\n";
+    i += how_many_zero_out;
+
+    int how_many_sigmoid = action_list[i++];
+    ss << "# Sigmoid: " << how_many_sigmoid << "\n";
+    i += how_many_sigmoid;
+  }
+  os << ss.str();
+
+  ss.str("");
+  ss << "\nConnection sets:\n";
+  int counter = 0;
+  unsigned int num = num_conn_to_apply[counter];
+  for (auto i=0u; i<connections.size(); i++) {
+    ss << connections[i].origin << " -> " << connections[i].dest << "\n";
+    if (i == num-1) { num += num_conn_to_apply[++counter]; ss << "\n";}
+  }
+
+  os << ss.str();
 }

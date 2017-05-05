@@ -9,25 +9,29 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/functional.h>
 
 namespace py = pybind11;
 
 PYBIND11_PLUGIN(pyneat) {
   py::module m("pyneat", "C++ implementation of NEAT");
 
+  typedef std::function<double(NeuralNet&)> FitnessFunc;
+  py::class_<FitnessFunc>(m, "CppFitnessFunc");
+
   py::class_<Population>(m, "Population")
     .def(py::init<Genome&,std::shared_ptr<RNG>,std::shared_ptr<Probabilities>>())
     .def(py::init<const Population&>())
     .def("Evaluate",
-         [](Population& pop, std::function<double(const NeuralNet&)> func) {
+         [](Population& pop, FitnessFunc func) {
            pop.Evaluate(func);
          })
     .def("Reproduce",
-         [](Population& pop, std::function<double(const NeuralNet&)> func) {
+         [](Population& pop, FitnessFunc func) {
            return pop.Reproduce(func);
-         })
-    .def("Reproduce",(Population (Population::*)())&Population::Reproduce)
+         }, py::return_value_policy::move)
+    .def("Reproduce",
+         (Population (Population::*)())&Population::Reproduce,
+         py::return_value_policy::move)
     .def_property_readonly("species", &Population::GetSpecies,
                            py::return_value_policy::reference_internal)
     ;
@@ -44,7 +48,7 @@ PYBIND11_PLUGIN(pyneat) {
     .def_readwrite("adj_fitness", &Organism::adj_fitness)
     .def_readwrite("genome", &Organism::genome)
     .def_property_readonly("network", [](Organism& org) {
-        return org.network.get();
+         return org.network();
       }, py::return_value_policy::reference_internal)
     ;
 
@@ -116,8 +120,8 @@ PYBIND11_PLUGIN(pyneat) {
 
   py::class_<NeuralNet>(m, "NeuralNet")
     .def("evaluate", &NeuralNet::evaluate)
-    .def("num_nodes", &NeuralNet::num_nodes)
-    .def("num_connections", &NeuralNet::num_connections)
+    .def_property_readonly("num_nodes", &NeuralNet::num_nodes)
+    .def_property_readonly("num_connections", &NeuralNet::num_connections)
     .def("get_node_type",&NeuralNet::get_node_type)
     .def("get_connection",&NeuralNet::get_connection)
     .def_property_readonly("node_types",

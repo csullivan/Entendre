@@ -1,16 +1,17 @@
 #pragma once
+#include "NeuralNet_CRTP.hh"
+
 #include <vector>
 #include <stdexcept>
 #include <functional>
-#include "NeuralNet.hh"
 
-class ConcurrentNeuralNet : public NeuralNetRecursiveBase<ConcurrentNeuralNet> {
-  friend class NeuralNetRecursiveBase;
+class ConcurrentNeuralNet : public NeuralNet_CRTP<ConcurrentNeuralNet> {
+  friend class NeuralNet_CRTP;
 public:
   //using NeuralNet::NeuralNet;
   virtual ~ConcurrentNeuralNet() { ; }
 
-  void sort_connections() override;
+  void sort_connections(unsigned int first=0, unsigned int num_connections=0) override;
   std::vector<_float_> evaluate(std::vector<_float_> inputs);
   virtual void add_node(const NodeType& type);
 
@@ -23,7 +24,7 @@ public:
       (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
   }
 
-
+  virtual void print_network(std::ostream& os) const override;
 private:
   void clear_nodes(unsigned int* list, unsigned int n);
   void sigmoid_nodes(unsigned int* list, unsigned int n);
@@ -31,7 +32,7 @@ private:
   void build_action_list();
 
 
-  enum class EvaluationOrder { GreaterThan, LessThan, NotEqual, Unknown };
+  enum class EvaluationOrder { GreaterThan, LessThan, Unknown };
   EvaluationOrder compare_connections(const Connection& a, const Connection& b);
 
   size_t num_inputs = 0;

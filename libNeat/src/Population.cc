@@ -8,13 +8,14 @@
 
 Population::Population(std::vector<Species> species,
                        std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params)
-  : species(std::move(species)) {
+  : species(std::move(species)), use_composite_net(false), heterogeneous_inputs(true) {
 
   required(params); set_generator(gen);
 }
 
 Population::Population(Genome& first,
-                       std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params) {
+                       std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params):
+  use_composite_net(false), heterogeneous_inputs(true) {
 
   required(params);
   set_generator(gen);
@@ -38,7 +39,7 @@ void Population::Speciate(std::vector<Species>& species,
     for(auto& spec : species) {
       double dist = genome.GeneticDistance(spec.representative);
       if(dist < required()->genetic_distance_species_threshold) {
-        spec.organisms.emplace_back(genome,converter->convert(genome));
+        spec.organisms.emplace_back(genome,converter);
         need_new_species = false;
         break;
       }
@@ -49,8 +50,9 @@ void Population::Speciate(std::vector<Species>& species,
       new_spec.id = random()*(1<<24);
       new_spec.representative = genome;
       new_spec.age = 0;
+      //new_spec.age_since_last_improvement = 0;
       new_spec.best_fitness = 0;
-      new_spec.organisms.emplace_back(genome,converter->convert(genome));
+      new_spec.organisms.emplace_back(genome,converter);
 
       species.push_back(new_spec);
     }
@@ -84,6 +86,157 @@ void Population::CalculateAdjustedFitness() {
   }
 }
 
+void Population::Evaluate(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+  if (use_composite_net) {
+    EvaluateComposite(evaluator_factory);
+  } else {
+    EvaluateSequential(evaluator_factory);
+  }
+}
+
+void Population::EvaluateSequential(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+  struct fitness_kernel {
+    NetProxy proxy;
+    std::unique_ptr<FitnessEvaluator> eval;
+    std::vector<_float_> result;
+  };
+
+  int num_organisms = 0;
+  for (auto& spec : species) {
+    num_organisms += spec.organisms.size();
+  }
+  std::vector<fitness_kernel> kernels;
+  kernels.reserve(num_organisms);
+
+  // build fitness evaluator kernels
+  for (auto& spec : species) {
+    for (auto& org : spec.organisms) {
+      kernels.push_back({ &org, evaluator_factory(), {} });
+    }
+  }
+
+  while (true) {
+    bool continue_looping = false;
+    // load one set of inputs for each network
+    // or finalize and set fitness value
+    for (auto& kernel : kernels) {
+      kernel.eval->step(kernel.proxy);
+    }
+
+    // eval each network with loaded inputs
+    for (auto& kernel : kernels) {
+      if (kernel.proxy.has_inputs()) {
+        kernel.result = kernel.proxy.evaluate();
+        continue_looping = true;
+      }
+    }
+
+    // if there are no more inputs then
+    // the fitness function has been evaluated
+    // and we are done
+    if (!continue_looping) { break; }
+
+    // call the proxy callbacks
+    for (auto& kernel : kernels) {
+      kernel.proxy.callback(kernel.result);
+      kernel.proxy.clear();
+    }
+  }
+
+  CalculateAdjustedFitness();
+}
+
+void Population::EvaluateComposite(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+  struct fitness_kernel {
+    NetProxy proxy;
+    std::unique_ptr<FitnessEvaluator> eval;
+    std::vector<_float_> result;
+    bool finished;
+  };
+
+  int num_organisms = 0;
+  for (auto& spec : species) {
+    num_organisms += spec.organisms.size();
+  }
+  std::vector<fitness_kernel> kernels;
+  std::vector<Genome*> genomes;
+  kernels.reserve(num_organisms);
+  genomes.reserve(num_organisms);
+
+  for (auto& spec : species) {
+    for (auto& org : spec.organisms) {
+      genomes.push_back(&org.genome);
+      kernels.push_back({ &org, evaluator_factory(), {}, false });
+    }
+  }
+
+  size_t num_inputs = genomes[0]->NumInputs();
+  size_t num_outputs = genomes[0]->NumOutputs();
+
+
+  auto composite_net = converter->convert(genomes,heterogeneous_inputs);
+
+  while (true) {
+    bool continue_looping = false;
+    // load one set of inputs for each network
+    // or finalize and set fitness value
+    for (auto& kernel : kernels) {
+      if(!kernel.finished) {
+        kernel.eval->step(kernel.proxy);
+      }
+    }
+
+    std::vector<_float_> all_inputs;
+
+    // Accumulate all inputs
+    if (heterogeneous_inputs) {
+      for (auto& kernel : kernels) {
+        if (kernel.proxy.has_inputs()) {
+          std::copy(kernel.proxy.inputs.begin(), kernel.proxy.inputs.end(),
+                    std::back_inserter(all_inputs));
+          continue_looping = true;
+        } else {
+          std::vector<_float_> zeros(0, num_inputs);
+          std::copy(zeros.begin(), zeros.end(),
+                    std::back_inserter(all_inputs));
+        }
+      }
+    } else {
+      auto& kernel = kernels[0];
+      if (kernel.proxy.has_inputs()) {
+        all_inputs = kernel.proxy.inputs;
+        continue_looping = true;
+      }
+    }
+
+    // if there are no more inputs then
+    // the fitness function has been evaluated
+    // and we are done
+    if (!continue_looping) { break; }
+
+    auto all_outputs = composite_net->evaluate(all_inputs);
+
+    // Separate the neural net outputs
+    auto iter = all_outputs.begin();
+    for(auto& kernel : kernels) {
+      kernel.result = {iter, iter+num_outputs};
+      iter += num_outputs;
+    }
+
+    // call the proxy callbacks
+    for (auto& kernel : kernels) {
+
+      if(kernel.proxy.has_inputs()) {
+        kernel.proxy.callback(kernel.result);
+        kernel.proxy.clear();
+      }
+    }
+  }
+
+  CalculateAdjustedFitness();
+}
+
+
 Population Population::Reproduce() {
   auto next_gen_species = MakeNextGenerationSpecies();
   auto next_gen_genomes = MakeNextGenerationGenomes();
@@ -92,6 +245,8 @@ Population Population::Reproduce() {
 
   Population pop(next_gen_species, get_generator(), required());
   pop.converter = converter;
+  pop.use_composite_net = use_composite_net;
+  pop.heterogeneous_inputs = heterogeneous_inputs;
 
   return pop;
 }
@@ -106,14 +261,15 @@ std::vector<Species> Population::MakeNextGenerationSpecies() {
     Species new_spec;
     new_spec.id = spec.id;
     new_spec.age = spec.age + 1;
+    //new_spec.age_since_last_improvement = spec.age_since_last_improvement + 1;
     new_spec.best_fitness = spec.best_fitness;
 
     bool species_has_members = spec.organisms.size() > 0;
 
     if(species_has_members) {
       auto& champion = spec.organisms.front();
-      if(champion.fitness > spec.best_fitness) {
-        new_spec.age = 0;
+      if((champion.fitness - spec.best_fitness)/spec.best_fitness > required()->necessary_species_improvement) {
+        //new_spec.age_since_last_improvement = 0;
         new_spec.best_fitness = champion.fitness;
       }
     }
@@ -133,39 +289,112 @@ std::vector<Species> Population::MakeNextGenerationSpecies() {
   return next_gen_species;
 }
 
+
+
+
+
+void Population::DistributeChildrenByRank(std::vector<unsigned int>& number_of_children) const {
+  std::vector<std::pair<unsigned int, _float_>> organism_fitnesses;
+  for (auto i=0u; i<species.size(); i++) {
+    auto& spec = species[i];
+    for (auto& org : spec.organisms) {
+      organism_fitnesses.push_back({i,org.fitness});
+    }
+  }
+  std::sort(organism_fitnesses.begin(),organism_fitnesses.end(),
+            [](auto& a, auto& b){ return a.second > b.second; });
+
+  // total number of organisms in top x percentile
+  auto num_organisms_in_percentile =
+    std::round(required()->species_survival_percentile*organism_fitnesses.size());
+
+  assert(num_organisms_in_percentile <= organism_fitnesses.size());
+
+  // count number of organisms in top x percentile for each species
+  std::vector<float> num_organisms_in_percentile_by_species(species.size(),0);
+  for (auto i=0u; i<num_organisms_in_percentile; i++) {
+    auto i_species = organism_fitnesses[i].first;
+    num_organisms_in_percentile_by_species[i_species]++;
+  }
+
+
+  // add children based on the relative performance of each species
+  std::vector<float> ratio_of_org_in_percentile_by_species(species.size(),0);
+  float total_org_in_percentile_ratio = 0.;
+  for (auto i=0u; i<number_of_children.size(); i++) {
+    auto species_size = species[i].organisms.size();
+    float ratio = (species_size > 0) ? num_organisms_in_percentile_by_species[i]/species_size : 0;
+    ratio_of_org_in_percentile_by_species[i] = ratio;
+    total_org_in_percentile_ratio += ratio;
+  }
+
+  for (auto i=0u; i<number_of_children.size(); i++) {
+    number_of_children[i] += ratio_of_org_in_percentile_by_species[i]/total_org_in_percentile_ratio*required()->population_size;
+  }
+}
+
+void Population::DistributeNurseryChildren(std::vector<unsigned int>& number_of_children) const {
+
+  // build list of nursery species
+  std::vector<unsigned int> nursery;
+  for (auto i=0u; i< species.size(); i++) {
+    if (species[i].age < required()->nursery_age) {
+      nursery.push_back(i);
+    }
+  }
+
+  if (!required()->fixed_nursery_size) { // each nursery species gets a fixed number of children
+    for (auto& i : nursery) {
+      number_of_children[i] += required()->number_of_children_given_in_nursery;
+    }
+
+  } else { // each nursery species gets children based on the amount of absolute fitness it has
+
+    // Determine total adjusted fitness for each species, and for the
+    // entire population.
+
+    double total_adj_fitness = 0;
+    std::vector<double> total_adj_fitness_by_species;
+    for(auto& i : nursery) {
+      auto& spec = species[i];
+      double species_total_adj_fitness = 0;
+
+      for(auto& org : spec.organisms) {
+        species_total_adj_fitness += org.adj_fitness;
+      }
+
+      // NOTICE: stale species are no longer implemented
+      // bool is_stale = spec.age_since_last_improvement >= required()->stale_species_num_generations;
+      // if(is_stale) {
+      //   species_total_adj_fitness *= required()->stale_species_penalty;
+      // }
+
+      total_adj_fitness += species_total_adj_fitness;
+      total_adj_fitness_by_species.push_back(species_total_adj_fitness);
+    }
+
+    // Determine number of children for each species.
+    double children_per_adj_fitness = required()->number_of_children_given_in_nursery / total_adj_fitness;
+    for(auto i=0u,j=0u; i<nursery.size(); i++) {
+      double spec_total_adj_fitness = total_adj_fitness_by_species[j++];
+      // Rounding differences here can cause slightly more or slightly
+      // fewer genomes to be created than population_size. This is
+      // probably ok, but should be studied.
+      unsigned int num_children = std::round(children_per_adj_fitness *
+                                             spec_total_adj_fitness);
+
+      number_of_children[nursery[i]] += num_children;
+    }
+  }
+
+
+}
+
 std::vector<Genome> Population::MakeNextGenerationGenomes() {
-  // Determine total adjusted fitness for each species, and for the
-  // entire population.
-  double total_adj_fitness = 0;
-  std::vector<double> total_adj_fitness_by_species;
-  for(auto& spec : species) {
-    double species_total_adj_fitness = 0;
 
-    for(auto& org : spec.organisms) {
-      species_total_adj_fitness += org.adj_fitness;
-    }
-
-    bool is_stale = spec.age >= required()->stale_species_num_generations;
-    if(is_stale) {
-      species_total_adj_fitness *= required()->stale_species_penalty;
-    }
-
-    total_adj_fitness += species_total_adj_fitness;
-    total_adj_fitness_by_species.push_back(species_total_adj_fitness);
-  }
-
-  // Determine number of children for each species.
-  double children_per_adj_fitness = required()->population_size / total_adj_fitness;
-  std::vector<int> num_children_by_species;
-  for(double spec_total_adj_fitness : total_adj_fitness_by_species) {
-    // Rounding differences here can cause slightly more or slightly
-    // fewer genomes to be created than population_size. This is
-    // probably ok, but should be studied.
-    int num_children = std::round(children_per_adj_fitness *
-                                  spec_total_adj_fitness);
-    num_children_by_species.push_back(num_children);
-  }
-
+  std::vector<unsigned int> num_children_by_species(species.size(),0);
+  DistributeNurseryChildren(num_children_by_species);
+  DistributeChildrenByRank(num_children_by_species);
 
   std::vector<Genome> progeny;
   //std::vector<Genome> progeny;
@@ -227,13 +456,13 @@ std::vector<Genome> Population::MakeNextGenerationGenomes() {
 
 
 
-NeuralNet* Population::BestNet() const {
+NeuralNet* Population::BestNet() {
   NeuralNet* output = nullptr;
   double best_fitness = -std::numeric_limits<double>::max();
   for(auto& spec : species) {
     for(auto& org : spec.organisms) {
       if(org.fitness > best_fitness) {
-        output = org.network.get();
+        output = org.network();
         best_fitness = org.fitness;
       }
     }

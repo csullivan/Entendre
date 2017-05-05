@@ -1,12 +1,13 @@
 #pragma once
+#include "NeuralNet_CRTP.hh"
+
 #include <vector>
 #include <stdexcept>
 #include <functional>
-#include "NeuralNet.hh"
 
 
-class ConsecutiveNeuralNet : public NeuralNetRecursiveBase<ConsecutiveNeuralNet> {
-  friend class NeuralNetRecursiveBase;
+class ConsecutiveNeuralNet : public NeuralNet_CRTP<ConsecutiveNeuralNet> {
+  friend class NeuralNet_CRTP;
 public:
   //using NeuralNet::NeuralNet;
   virtual ~ConsecutiveNeuralNet() { ; }
@@ -24,6 +25,7 @@ public:
   virtual NodeType get_node_type(unsigned int i) const {
     return nodes[i].type;
   }
+  void sort_connections(unsigned int first=0, unsigned int num_connections=0) override;
 
   virtual void print_network(std::ostream& os) const;
 
@@ -32,7 +34,6 @@ protected:
   void add_to_val(unsigned int i, _float_ val);
 
 private:
-  void sort_connections() override;
 
 
   std::vector<Node> nodes;
