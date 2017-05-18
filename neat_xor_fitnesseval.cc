@@ -29,7 +29,7 @@ public:
       EachAnswer(0,1),
       EachAnswer(1,0),
       EachAnswer(1,1)} {
-    std::random_shuffle(all_answers.begin(), all_answers.end());
+    //std::random_shuffle(all_answers.begin(), all_answers.end());
   }
 
   void step(NetProxy& proxy) {
@@ -80,10 +80,12 @@ int main() {
   prob->keep_non_matching_father_gene = 0;
 
   Population pop(seed,
-                 std::make_shared<RNG_MersenneTwister>(),
+                 std::make_shared<RNG_MersenneTwister>(12),
                  prob);
 
-  pop.SetNetType<ConsecutiveNeuralNet>();
+  //pop.SetNetType<ConsecutiveNeuralNet>();
+  pop.SetNetType<ConcurrentNeuralNet>();
+  pop.EnableCompositeNet(/*hetero_inputs = */false);
 
   auto max_generations = 1000u;
 

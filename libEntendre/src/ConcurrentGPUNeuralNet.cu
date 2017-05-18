@@ -256,23 +256,29 @@ void ConcurrentGPUNeuralNet::ConcurrentGPUNeuralNet::build_action_list() {
 
 ////////////////////////////////////////////////////////////////////////////
 
-void ConcurrentGPUNeuralNet::add_node(NodeType type, ActivationFunction func) {
+void ConcurrentGPUNeuralNet::add_node(const NodeType& type) {
   switch (type) {
   case NodeType::Bias:
+    num_inputs++;
+    nodes.push_back(1.0);
+    break;
   case NodeType::Input:
     num_inputs++;
+    nodes.push_back(0.0);
     break;
   case NodeType::Output:
     num_outputs++;
+    nodes.push_back(0.0);
     break;
-  default: // all hidden nodes
+
+  case NodeType::Hidden:
+    nodes.push_back(0.0);
     break;
-  };
+  }
 
   // Only sigmoid nodes implementated for ConcurrentGPUNeuralNet
   assert(func == ActivationFunction::Sigmoid);
 
-  nodes.push_back(0.0);
 }
 
 _float_ sigmoid(_float_ val) {
@@ -341,11 +347,11 @@ __global__ void device_apply_connections(_float_* node, unsigned int* origin, un
 }
 
 std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> inputs) {
-  assert(inputs.size() == num_inputs);
+  assert(inputs.size() == num_inputs-1);
   sort_connections();
 
   // copy inputs in to network
-  std::copy(inputs.begin(),inputs.end(),nodes.begin());
+  std::copy(inputs.begin(),inputs.end(),nodes.begin()+1);
 
   auto i = 0u;
   int how_many_zero_out = action_list[i++];
@@ -375,13 +381,13 @@ std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> input
 }
 
 std::vector<_float_> ConcurrentGPUNeuralNet::device_evaluate(std::vector<_float_> inputs, unsigned int num_threads) {
-  assert(inputs.size() == num_inputs);
+  assert(inputs.size() == num_inputs-1);
   sort_connections();
   unsigned int num_blocks = 0;
 
   // copy inputs in to network
   //std::copy(inputs.begin(),inputs.end(),nodes.begin());
-  cuda_assert(cudaMemcpy(node_,inputs.data(),inputs.size()*sizeof(_float_),cudaMemcpyHostToDevice));
+  cuda_assert(cudaMemcpy(&node_[1],inputs.data(),inputs.size()*sizeof(_float_),cudaMemcpyHostToDevice));
 
   auto i = 0u;
   int how_many_zero_out = action_list[i++];

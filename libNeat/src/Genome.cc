@@ -8,7 +8,7 @@
 
 #include "Hash.hh"
 
-Genome::Genome() : num_inputs(0),
+Genome::Genome() : num_inputs(0), num_outputs(0),
                    last_innovation(0) { }
 
 void Genome::MakeNet(NeuralNet& net) const {
@@ -81,6 +81,7 @@ Genome Genome::ConnectedSeed(int num_inputs, int num_outputs,
 
 Genome& Genome::operator=(const Genome& rhs) {
   this->num_inputs = rhs.num_inputs;
+  this->num_outputs = rhs.num_outputs;
   this->node_genes = rhs.node_genes;
   this->node_lookup = rhs.node_lookup;
   this->connection_genes = rhs.connection_genes;
@@ -264,6 +265,10 @@ void Genome::AddNodeGene(NodeGene gene) {
   if(IsSensor(gene.type)) {
     num_inputs++;
   }
+  else if(IsOutput(gene.type)) {
+    num_outputs++;
+  }
+
 
 
   if(needs_resort) {

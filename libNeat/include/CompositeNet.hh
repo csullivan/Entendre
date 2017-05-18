@@ -36,14 +36,17 @@ std::unique_ptr<NeuralNet> BuildCompositeNet(const std::vector<Genome*>& genomes
     }
   }
 
-  // add input and bias nodes
+  // manually add single bias node
+  net->add_node(NodeType::Bias); // first
+
+  // add input
   for (auto i=0u; i<genomes.size(); i++) {
     auto& genome = *genomes[i];
 
     // add all inputs assuming they are heterogenous across networks
     if (hetero_inputs || i==0) {
       for (auto& gene : genome.node_genes) {
-        if (IsSensor(gene.type)) {
+        if (IsInput(gene.type)) {
           net->add_node(gene.type);
         }
       }
@@ -85,7 +88,7 @@ std::unique_ptr<NeuralNet> BuildCompositeNet(const std::vector<Genome*>& genomes
   auto num_outputs_per_subnet = num_outputs/num_subnets;
 
   auto subnet_input_node = 0;
-  auto subnet_output_node = (hetero_inputs) ? num_subnets*num_sensors_per_subnet : num_sensors_per_subnet;
+  auto subnet_output_node = (hetero_inputs) ? num_subnets*(num_sensors_per_subnet-1) + 1 : num_sensors_per_subnet;
   auto subnet_hidden_node = subnet_output_node + num_subnets*num_outputs_per_subnet;
 
   for (auto n=0u; n<genomes.size(); n++) {
@@ -103,11 +106,13 @@ std::unique_ptr<NeuralNet> BuildCompositeNet(const std::vector<Genome*>& genomes
         // assumes inputs are before all other nodes, outputs are before hidden, hidden are the last nodes
         if (hetero_inputs) {
           i_composite
-            = (IsSensor(genome.node_genes[i].type)) ?  i + subnet_input_node
+            = (IsBias(genome.node_genes[i].type)) ?  0
+            : (IsInput(genome.node_genes[i].type)) ?  i + subnet_input_node
             : (IsOutput(genome.node_genes[i].type)) ? (i-num_sensors_per_subnet) + subnet_output_node
             : (i-num_sensors_per_subnet-num_outputs_per_subnet) + subnet_hidden_node; // hidden
           j_composite
-            = (IsSensor(genome.node_genes[j].type)) ?  j + subnet_input_node
+            = (IsBias(genome.node_genes[j].type)) ?  0
+            : (IsInput(genome.node_genes[j].type)) ?  j + subnet_input_node
             : (IsOutput(genome.node_genes[j].type)) ? (j-num_sensors_per_subnet) + subnet_output_node
             : (j-num_sensors_per_subnet-num_outputs_per_subnet) + subnet_hidden_node; // hidden
         } else {
@@ -129,7 +134,7 @@ std::unique_ptr<NeuralNet> BuildCompositeNet(const std::vector<Genome*>& genomes
     }
 
     // increment the node pointers by the number of nodes of a specific type for the current subnet
-    if (hetero_inputs){ subnet_input_node  += num_sensors_per_subnet; }
+    if (hetero_inputs){ subnet_input_node  += (num_sensors_per_subnet-1); }
     subnet_output_node += num_outputs_per_subnet;
     subnet_hidden_node += num_hidden;
   }

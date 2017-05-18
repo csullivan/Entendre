@@ -14,6 +14,7 @@ protected:
 };
 
 struct Probabilities {
+
   size_t population_size = 100;
   size_t min_size_for_champion = 5;
   float culling_ratio = 0.5;

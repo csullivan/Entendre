@@ -73,6 +73,12 @@ private:
 inline bool IsSensor(const NodeType& type) {
   return type == NodeType::Input || type == NodeType::Bias;
 }
+inline bool IsBias(const NodeType& type) {
+  return type == NodeType::Bias;
+}
+inline bool IsInput(const NodeType& type) {
+  return type == NodeType::Input;
+}
 inline bool IsOutput(const NodeType& type) {
   return type == NodeType::Output;
 }

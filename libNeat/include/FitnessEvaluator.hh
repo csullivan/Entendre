@@ -29,6 +29,5 @@ public:
 
   Organism* organism; // non-owning
   std::function<void(const std::vector<_float_>&)> callback;
-private:
   std::vector<_float_> inputs;
 };

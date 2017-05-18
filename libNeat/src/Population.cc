@@ -8,13 +8,14 @@
 
 Population::Population(std::vector<Species> species,
                        std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params)
-  : species(std::move(species)) {
+  : species(std::move(species)), use_composite_net(false), heterogeneous_inputs(true) {
 
   required(params); set_generator(gen);
 }
 
 Population::Population(Genome& first,
-                       std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params) {
+                       std::shared_ptr<RNG> gen, std::shared_ptr<Probabilities> params):
+  use_composite_net(false), heterogeneous_inputs(true) {
 
   required(params);
   set_generator(gen);
@@ -84,6 +85,157 @@ void Population::CalculateAdjustedFitness() {
   // }
 }
 
+void Population::Evaluate(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+  if (use_composite_net) {
+    EvaluateComposite(evaluator_factory);
+  } else {
+    EvaluateSequential(evaluator_factory);
+  }
+}
+
+void Population::EvaluateSequential(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+  struct fitness_kernel {
+    NetProxy proxy;
+    std::unique_ptr<FitnessEvaluator> eval;
+    std::vector<_float_> result;
+  };
+
+  int num_organisms = 0;
+  for (auto& spec : species) {
+    num_organisms += spec.organisms.size();
+  }
+  std::vector<fitness_kernel> kernels;
+  kernels.reserve(num_organisms);
+
+  // build fitness evaluator kernels
+  for (auto& spec : species) {
+    for (auto& org : spec.organisms) {
+      kernels.push_back({ &org, evaluator_factory(), {} });
+    }
+  }
+
+  while (true) {
+    bool continue_looping = false;
+    // load one set of inputs for each network
+    // or finalize and set fitness value
+    for (auto& kernel : kernels) {
+      kernel.eval->step(kernel.proxy);
+    }
+
+    // eval each network with loaded inputs
+    for (auto& kernel : kernels) {
+      if (kernel.proxy.has_inputs()) {
+        kernel.result = kernel.proxy.evaluate();
+        continue_looping = true;
+      }
+    }
+
+    // if there are no more inputs then
+    // the fitness function has been evaluated
+    // and we are done
+    if (!continue_looping) { break; }
+
+    // call the proxy callbacks
+    for (auto& kernel : kernels) {
+      kernel.proxy.callback(kernel.result);
+      kernel.proxy.clear();
+    }
+  }
+
+  CalculateAdjustedFitness();
+}
+
+void Population::EvaluateComposite(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
+  struct fitness_kernel {
+    NetProxy proxy;
+    std::unique_ptr<FitnessEvaluator> eval;
+    std::vector<_float_> result;
+    bool finished;
+  };
+
+  int num_organisms = 0;
+  for (auto& spec : species) {
+    num_organisms += spec.organisms.size();
+  }
+  std::vector<fitness_kernel> kernels;
+  std::vector<Genome*> genomes;
+  kernels.reserve(num_organisms);
+  genomes.reserve(num_organisms);
+
+  for (auto& spec : species) {
+    for (auto& org : spec.organisms) {
+      genomes.push_back(&org.genome);
+      kernels.push_back({ &org, evaluator_factory(), {}, false });
+    }
+  }
+
+  size_t num_inputs = genomes[0]->NumInputs();
+  size_t num_outputs = genomes[0]->NumOutputs();
+
+
+  auto composite_net = converter->convert(genomes,heterogeneous_inputs);
+
+  while (true) {
+    bool continue_looping = false;
+    // load one set of inputs for each network
+    // or finalize and set fitness value
+    for (auto& kernel : kernels) {
+      if(!kernel.finished) {
+        kernel.eval->step(kernel.proxy);
+      }
+    }
+
+    std::vector<_float_> all_inputs;
+
+    // Accumulate all inputs
+    if (heterogeneous_inputs) {
+      for (auto& kernel : kernels) {
+        if (kernel.proxy.has_inputs()) {
+          std::copy(kernel.proxy.inputs.begin(), kernel.proxy.inputs.end(),
+                    std::back_inserter(all_inputs));
+          continue_looping = true;
+        } else {
+          std::vector<_float_> zeros(0, num_inputs);
+          std::copy(zeros.begin(), zeros.end(),
+                    std::back_inserter(all_inputs));
+        }
+      }
+    } else {
+      auto& kernel = kernels[0];
+      if (kernel.proxy.has_inputs()) {
+        all_inputs = kernel.proxy.inputs;
+        continue_looping = true;
+      }
+    }
+
+    // if there are no more inputs then
+    // the fitness function has been evaluated
+    // and we are done
+    if (!continue_looping) { break; }
+
+    auto all_outputs = composite_net->evaluate(all_inputs);
+
+    // Separate the neural net outputs
+    auto iter = all_outputs.begin();
+    for(auto& kernel : kernels) {
+      kernel.result = {iter, iter+num_outputs};
+      iter += num_outputs;
+    }
+
+    // call the proxy callbacks
+    for (auto& kernel : kernels) {
+
+      if(kernel.proxy.has_inputs()) {
+        kernel.proxy.callback(kernel.result);
+        kernel.proxy.clear();
+      }
+    }
+  }
+
+  CalculateAdjustedFitness();
+}
+
+
 Population Population::Reproduce() {
   auto next_gen_species = MakeNextGenerationSpecies();
   auto next_gen_genomes = MakeNextGenerationGenomes();
@@ -92,6 +244,8 @@ Population Population::Reproduce() {
 
   Population pop(next_gen_species, get_generator(), required());
   pop.converter = converter;
+  pop.use_composite_net = use_composite_net;
+  pop.heterogeneous_inputs = heterogeneous_inputs;
 
   return pop;
 }

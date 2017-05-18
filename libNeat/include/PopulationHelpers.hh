@@ -1,12 +1,17 @@
 #pragma once
+#include "CompositeNet.hh"
 
 struct GenomeConverter {
   virtual std::unique_ptr<NeuralNet> convert(const Genome&) = 0;
+  virtual std::unique_ptr<NeuralNet> convert(const std::vector<Genome*>&,bool hetero_inputs=true) = 0;
 };
 template<typename NetType>
 struct GenomeConverter_Impl : GenomeConverter {
   virtual std::unique_ptr<NeuralNet> convert(const Genome& genome) {
     return genome.MakeNet<NetType>();
+  }
+  virtual std::unique_ptr<NeuralNet> convert(const std::vector<Genome*>& genomes, bool hetero_inputs=true) {
+    return BuildCompositeNet<NetType>(genomes,hetero_inputs);
   }
 };
 
