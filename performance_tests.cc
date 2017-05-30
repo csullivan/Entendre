@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
   auto xor_genomes = xor_pop.GetPopulation();
   std::cout << "/* Seed population built (size: " << xor_genomes.size() << ") */" << std::endl;
 
+
   std::vector<Genome> xor_genomes_expanded;
   xor_genomes_expanded.reserve(num_networks);
 
@@ -108,7 +109,9 @@ int main(int argc, char** argv) {
     }
   } std:: cout << tperformance/1.0e6 << " ms" << " for construction of all networks individually. " << std::endl;
 
+
   //----------------------------------------------------------------------------------
+
   std::vector<_float_> inputs = {1.,1.};
   std::vector<_float_> outputs;
   outputs = xor_composite_net->evaluate(inputs);
@@ -142,11 +145,36 @@ int main(int argc, char** argv) {
   auto tcpu = tperformance/num_trials/1.0e6;
 
 
+
+  //----------------------------------------------------------------------------------
+  float num_conn = 0;
+  float num_nodes = 0;
+  float sdev_conn = 0;
+  float sdev_nodes = 0;
+  for (auto& net : xor_networks) {
+    num_conn += net->num_connections();
+    num_nodes += net->num_nodes();
+    sdev_conn += std::pow(net->num_connections()-num_conn/xor_networks.size(),2);
+    sdev_nodes += std::pow(net->num_nodes()-num_nodes/xor_networks.size(),2);
+  }
+  auto avg_num_conn = num_conn/xor_networks.size();
+  auto avg_num_nodes = num_nodes/xor_networks.size();
+  auto sdev_num_conn = std::sqrt(sdev_conn/xor_networks.size());
+  auto sdev_num_nodes = std::sqrt(sdev_nodes/xor_networks.size());
+
+  std::cout << "Average network population topology\n      average # connections: " << avg_num_conn << " +- " << sdev_num_conn << "\n      average # nodes: " << avg_num_nodes << " +- " << sdev_num_nodes << std::endl;
+  //----------------------------------------------------------------------------------
+
   for (auto i=0u; i<gpuoutputs.size(); i++) {
     assert(std::abs(gpuoutputs[i]-cpuoutputs[i]) < 1e-4);
   }
   std::cout << "/* PASS: outputs from GPU and CPU implementations are identical. */" << std::endl;
   std::cout << "~*~*~*~* GPU speed up: " << tcpu/tgpu << " *~*~*~*~" <<std::endl << std::endl;
   //std::cout << *xor_composite_net << std::endl;
+
+
+
+
+
   return 0;
 }
