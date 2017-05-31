@@ -60,6 +60,8 @@ public:
   size_t  NumInputs () const { return num_inputs;  }
   size_t  NumOutputs() const { return num_outputs; }
 
+  unsigned long LastInnovationNumber() const { return last_innovation; }
+
   bool IsStructurallyEqual(const Genome& other) const;
 
   friend std::ostream& operator<<(std::ostream&, const Genome& genome);

@@ -81,3 +81,30 @@ TEST(CPPN, MutateOdds) {
     EXPECT_EQ(net->get_activation_func(2), odds.first);
   }
 }
+
+TEST(CPPN, ActivationFunction_InnovationNumber) {
+  Genome genome1 = Genome()
+    .AddNode(NodeType::Input)
+    .AddNode(NodeType::Output)
+    .AddConnection(0, 1, true, 1.0);
+
+  genome1.set_generator(std::make_shared<RNG_MersenneTwister>());
+  auto prob = std::make_shared<Probabilities>();
+  genome1.required(prob);
+
+  auto genome2 = Genome(genome1);
+
+  prob->use_compositional_pattern_producing_networks = true;
+  for(auto& obj : prob->cppn_odds) {
+    obj.second = 0;
+  }
+
+  prob->cppn_odds[ActivationFunction::Sigmoid] = 1;
+  genome1.MutateNode();
+  prob->cppn_odds[ActivationFunction::Sigmoid] = 0;
+  
+  prob->cppn_odds[ActivationFunction::Tanh] = 1;
+  genome2.MutateNode();
+
+  EXPECT_NE(genome1.LastInnovationNumber(), genome2.LastInnovationNumber());
+}

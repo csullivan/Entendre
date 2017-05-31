@@ -449,14 +449,11 @@ void Genome::MutateNode() {
     return;
   }
 
+  auto func = GenerateActivationFunction();
+
   // add a new node:
   // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
-  auto new_node_innov = Hasher::hash(last_innovation, split_conn.innovation);
-  // TODO:  1. HyperNEAT performs a random roulette choice based on probabilities
-  //        set for each activation function which are exposed in the parameters.
-  //        Currently, all activation functions have equal probability
-  //        2. Additionally, the node type should be used in innovation hashing
-  auto func = GenerateActivationFunction();
+  auto new_node_innov = Hasher::hash(last_innovation, split_conn.innovation, func);
 
   AddNodeByInnovation(NodeType::Hidden, func, new_node_innov);
 
