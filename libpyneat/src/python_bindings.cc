@@ -9,8 +9,12 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
 
 namespace py = pybind11;
+
+typedef std::map<ActivationFunction, float> cppn_odds_map;
+PYBIND11_MAKE_OPAQUE(cppn_odds_map);
 
 PYBIND11_PLUGIN(pyneat) {
   py::module m("pyneat", "C++ implementation of NEAT");
@@ -66,6 +70,8 @@ PYBIND11_PLUGIN(pyneat) {
     .def(py::init<unsigned long>(),
          py::arg("seed"));
 
+  py::bind_map<cppn_odds_map>(m, "CPPNOdds");
+
   py::class_<Probabilities, std::shared_ptr<Probabilities> >(m, "Probabilities")
     .def(py::init<>())
     .def_readwrite("population_size",&Probabilities::population_size)
@@ -91,7 +97,9 @@ PYBIND11_PLUGIN(pyneat) {
     .def_readwrite("genetic_distance_structural",&Probabilities::genetic_distance_structural)
     .def_readwrite("genetic_distance_weights",&Probabilities::genetic_distance_weights)
     .def_readwrite("genetic_distance_species_threshold",&Probabilities::genetic_distance_species_threshold)
-    .def_readwrite("use_compositional_pattern_producing_networks",&Probabilities::use_compositional_pattern_producing_networks);
+    .def_readwrite("use_compositional_pattern_producing_networks",&Probabilities::use_compositional_pattern_producing_networks)
+    .def_readwrite("cppn_odds", &Probabilities::cppn_odds,
+                   py::return_value_policy::reference_internal);
 
   py::class_<ReachabilityChecker>(m, "ReachabilityChecker")
     .def(py::init<size_t>())
