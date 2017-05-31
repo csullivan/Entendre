@@ -38,7 +38,6 @@ enum class ActivationFunction {
   //Cube,
   //Log,
   //Exp,
-    MaxNodeType=Square
 };
 
 namespace {

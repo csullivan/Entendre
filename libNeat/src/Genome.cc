@@ -456,9 +456,7 @@ void Genome::MutateNode() {
   //        set for each activation function which are exposed in the parameters.
   //        Currently, all activation functions have equal probability
   //        2. Additionally, the node type should be used in innovation hashing
-  auto func = required()->use_compositional_pattern_producing_networks ?
-    ActivationFunction(random()*(int(ActivationFunction::MaxNodeType)+1)) :
-    ActivationFunction::Sigmoid;
+  auto func = GenerateActivationFunction();
 
   AddNodeByInnovation(NodeType::Hidden, func, new_node_innov);
 
@@ -589,6 +587,29 @@ void Genome::AssertNoConnectionsToInput() const {
     auto dest = GetNodeByInnovation(conn_gene.dest);
     assert(!IsSensor(dest->type));
   }
+}
+
+ActivationFunction Genome::GenerateActivationFunction() {
+  if(!required()->use_compositional_pattern_producing_networks) {
+    return ActivationFunction::Sigmoid;
+  }
+
+  double sum_odds = 0;
+  for(auto& obj : required()->cppn_odds) {
+    sum_odds += obj.second;
+  }
+
+  double cumsum = 0;
+  double rand = random();
+  for(auto& obj : required()->cppn_odds) {
+    cumsum += obj.second/sum_odds;
+    if(cumsum > rand) {
+      return obj.first;
+    }
+  }
+
+  // Shouldn't be possible to get here, but just in case.
+  return ActivationFunction::Sigmoid;
 }
 
 std::ostream& operator<<(std::ostream& os, const Genome& genome) {
