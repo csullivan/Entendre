@@ -105,6 +105,13 @@ private:
   void AddConnectionByInnovation(unsigned long origin, unsigned long dest,
                                  bool status, double weight);
 
+  /// Generates a random activation function, according the the settings
+  /**
+     If CPPNs are enabled, uses the relative probabilities of each
+     possible node type.  Otherwise, returns a Sigmoid function.
+   */
+  ActivationFunction GenerateActivationFunction();
+
 private:
   size_t num_inputs;
   size_t num_outputs;

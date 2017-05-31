@@ -40,3 +40,44 @@ TEST(CPPN, EvaluateAllActivationFunctions) {
   test_single_func(ActivationFunction::Square, 2, 4);
   test_single_func(ActivationFunction::Square, -2, 4);
 }
+
+TEST(CPPN, MutateOdds) {
+  Genome seed = Genome()
+    .AddNode(NodeType::Input)
+    .AddNode(NodeType::Output)
+    .AddConnection(0, 1, true, 1.0);
+
+  seed.set_generator(std::make_shared<RNG_MersenneTwister>());
+  auto prob = std::make_shared<Probabilities>();
+  seed.required(prob);
+
+  auto reset_prob = [&]() {
+    prob->use_compositional_pattern_producing_networks = true;
+    for(auto& obj : prob->cppn_odds) {
+      obj.second = 0;
+    }
+  };
+
+
+  // One explicitly specified, to make sure that everything is fine with the odds map.
+  {
+    auto copy = Genome(seed);
+    reset_prob();
+    prob->cppn_odds[ActivationFunction::Tanh] = 1;
+    copy.MutateNode();
+    auto net = copy.MakeNet<ConsecutiveNeuralNet>();
+    ASSERT_EQ(net->num_nodes(), 3U);
+    EXPECT_EQ(net->get_activation_func(2), ActivationFunction::Tanh);
+  }
+
+  // Check everything in the odds map.
+  for(auto& odds : prob->cppn_odds) {
+    auto copy = Genome(seed);
+    reset_prob();
+    prob->cppn_odds[odds.first] = 1;
+    copy.MutateNode();
+    auto net = copy.MakeNet<ConsecutiveNeuralNet>();
+    ASSERT_EQ(net->num_nodes(), 3U);
+    EXPECT_EQ(net->get_activation_func(2), odds.first);
+  }
+}
