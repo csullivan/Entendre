@@ -11,7 +11,7 @@ public:
 
   virtual ~ConcurrentGPUNeuralNet();
 
-  virtual void add_node(const NodeType& type);
+  virtual void add_node(NodeType type, ActivationFunction func);
   virtual void add_connection(int origin, int dest, _float_ weight, unsigned int set=std::numeric_limits<unsigned int>::max());
   virtual unsigned int num_nodes() { return nodes.size(); }
   virtual unsigned int num_connections() { return connections.size(); }
@@ -32,7 +32,12 @@ public:
       (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
   }
   virtual void sort_connections(unsigned int first=0, unsigned int num_connections=0);
-  std::vector<Connection>& get_connections() { return connections; }
+  virtual std::vector<Connection>& get_connections() { return connections; }
+
+  virtual ActivationFunction get_activation_func(unsigned int i) const {
+    return ActivationFunction::Sigmoid;
+  }
+
   void set_threads_per_block(size_t nthreads) { num_threads = nthreads; }
 
 private:

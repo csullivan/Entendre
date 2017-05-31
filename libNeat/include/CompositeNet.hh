@@ -4,7 +4,7 @@
 
 template<typename NetType>
 std::unique_ptr<NeuralNet> BuildCompositeNet(const std::vector<Genome*>& genomes, bool hetero_inputs) {
-  auto net = std::make_unique<NetType>();
+  std::unique_ptr<NeuralNet> net = std::make_unique<NetType>();
 
   std::vector<std::unordered_set<unsigned int>> exclusion_lists(genomes.size());
 

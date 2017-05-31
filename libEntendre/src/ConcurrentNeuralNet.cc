@@ -230,7 +230,7 @@ void ConcurrentNeuralNet::ConcurrentNeuralNet::build_action_list() {
 
 ////////////////////////////////////////////////////////////////////////////
 
-void ConcurrentNeuralNet::add_node(const NodeType& type) {
+void ConcurrentNeuralNet::add_node(NodeType type, ActivationFunction func) {
   switch (type) {
   case NodeType::Bias:
     num_inputs++;
@@ -247,7 +247,10 @@ void ConcurrentNeuralNet::add_node(const NodeType& type) {
   case NodeType::Hidden:
     nodes.push_back(0.0);
     break;
-  };
+  }
+
+  // Only sigmoid nodes implemented for ConcurrentNeuralNet
+  assert(func == ActivationFunction::Sigmoid);
 }
 
 void ConcurrentNeuralNet::clear_nodes(unsigned int* list, unsigned int n) {

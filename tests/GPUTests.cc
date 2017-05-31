@@ -1,3 +1,5 @@
+#ifdef CUDA_ENABLED
+
 #include <gtest/gtest.h>
 #include "Genome.hh"
 #include "ConcurrentGPUNeuralNet.hh"
@@ -377,3 +379,5 @@ std::vector<_float_> evaluation_performance(const Genome& genome, const std::vec
 
   return Network<use_gpu>::evaluate(net,inputs);
 }
+
+#endif // CUDA_ENABLED

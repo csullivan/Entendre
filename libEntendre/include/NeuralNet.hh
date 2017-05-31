@@ -6,23 +6,21 @@
 #include <memory>
 #include <algorithm>
 
-
-typedef float _float_;
-
-
-enum class NodeType { Input, Hidden, Output, Bias };
+#include "CPPNTypes.hh"
 
 struct Node {
   _float_ value;
-  bool is_sigmoid;
+  bool is_activated;
   NodeType type;
-  Node(NodeType _type)
+  ActivationFunction func;
+  Node(NodeType _type, ActivationFunction _func)
     : value(0.0),
-      is_sigmoid(false), type(_type) {;}
+      is_activated(false), type(_type), func(_func) {;}
   operator _float_() { return value; }
 };
 
 enum class ConnectionType { Normal, Recurrent };
+
 struct Connection {
   unsigned int origin;
   unsigned int dest;
@@ -43,16 +41,19 @@ class  NeuralNet {
 public:
   virtual ~NeuralNet() { ; }
 
-
-  virtual void add_node(const NodeType& type) = 0;
+  virtual void add_node(NodeType type,
+                        ActivationFunction func=ActivationFunction::Sigmoid) = 0;
   virtual void add_connection(int origin, int dest, _float_ weight, unsigned int set=std::numeric_limits<unsigned int>::max()) = 0;
   virtual unsigned int num_nodes() = 0;
   virtual unsigned int num_connections() = 0;
   virtual Connection get_connection(unsigned int i) const = 0;
   virtual NodeType get_node_type(unsigned int i) const = 0;
+  virtual ActivationFunction get_activation_func(unsigned int i) const = 0;
   virtual std::vector<_float_> evaluate(std::vector<_float_> inputs) = 0;
   virtual void sort_connections(unsigned int first=0, unsigned int num_connections=0) = 0;
   virtual std::unique_ptr<NeuralNet> clone() const = 0;
+
+  virtual std::vector<Connection>& get_connections() = 0;
 
   virtual void print_network(std::ostream& os) const = 0;
   void register_sigmoid(std::function<_float_(_float_)> sig) {sigma = sig;}

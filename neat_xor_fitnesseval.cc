@@ -1,3 +1,4 @@
+#include <array>
 #include <algorithm>
 #include <random>
 #include <chrono>
@@ -119,7 +120,9 @@ int main() {
   };
 
 
-  std::function<std::unique_ptr<FitnessEvaluator>(void)> fitness_factory = [](){return std::make_unique<XorFitness>();};
+  std::function<std::unique_ptr<FitnessEvaluator>(void)> fitness_factory = [](){
+    return std::unique_ptr<FitnessEvaluator>(std::make_unique<XorFitness>());
+  };
 
   for (generation = 0u; generation < max_generations; generation++) {
 

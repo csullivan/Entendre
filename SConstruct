@@ -20,9 +20,13 @@ def default_environment():
     The environment that is used to build everything.
     """
     env = Environment(ENV = os.environ)
+    env['CC'] = os.environ.get('CC', env['CC'])
+    env['CXX'] = os.environ.get('CXX', env['CXX'])
+    env['ENV'].update(val for val in os.environ.items() if val[0].startswith('CCC_'))
 
     env['bin_dir'] = Dir('bin')
     env['lib_dir'] = Dir('lib')
+    env['pylib_dir'] = env['lib_dir']
     env['top_level'] = Dir('.')
     env.Append(source_file_globs = ['*.cc', '*.cpp', '*.cxx', '*.c++', '*.C++',
                                     '*.c', '*.C'])
@@ -39,11 +43,21 @@ def default_environment():
     if 'NOCOLOR' not in ARGUMENTS:
         ansi_colors(env)
 
+    # OSX errors if there are undefined symbols in a shared library.
+    # This is not desirable, because the symbols could be present in a
+    # different library, or in the main executable.
+    if sys.platform=='darwin' and 'clang' in env['CC']:
+        env.Append(SHLINKFLAGS=['-undefined','dynamic_lookup'])
+
     env.Append(CCFLAGS=['-pthread','-Wall','-Wextra','-pedantic'])
     env.Append(CXXFLAGS=['-std=c++14'])
     env.Append(LINKFLAGS=['-pthread'])
 
-    if 'OPTIMIZE' in ARGUMENTS:
+
+    if 'CODE_COVERAGE' in ARGUMENTS:
+        env.Append(CPPFLAGS=['--coverage'])
+        env.Append(LINKFLAGS=['--coverage'])
+    elif 'OPTIMIZE' in ARGUMENTS:
         env.Append(CCFLAGS=['-O'+ARGUMENTS['OPTIMIZE']])
     else:
         env.Append(CCFLAGS=['-O3'])
@@ -67,6 +81,7 @@ def default_environment():
     env.AddMethod(require_cuda, 'RequireCUDA')
     env.AddMethod(optional_cuda, 'OptionalCUDA')
     env.AddMethod(glob_src_dir, 'GlobSrcDir')
+    env.AddMethod(non_variant_dir, 'NonVariantDir')
 
     return env
 
@@ -115,7 +130,7 @@ def brief_output(env):
     env['SHLINKCOMSTR'] = '${DBLUE}Linking shared ${DCYAN}${TARGETS}${RESET_COLOR}'
 
 all_libs = []
-def shared_library_dir(env, target=None, source=None, add_to_all_libs=True, dependencies=None):
+def shared_library_dir(env, target=None, source=None, is_python_lib=False, dependencies=None):
     env = env.Clone()
 
     if source is None:
@@ -132,7 +147,9 @@ def shared_library_dir(env, target=None, source=None, add_to_all_libs=True, depe
         for dep in dependencies:
             env.Append(**dep.attributes.usage)
         if dependencies:
-            env.Append(RPATH=[Literal('\\$$ORIGIN')])
+            from_dir = env['pylib_dir'] if is_python_lib else env['lib_dir']
+            rel_path = from_dir.rel_path(env['lib_dir'])
+            env.Append(RPATH=[Literal(os.path.join('\\$$ORIGIN',rel_path))])
 
     if source.glob('include'):
         inc_dir = source.glob('include')[0]
@@ -160,9 +177,10 @@ def shared_library_dir(env, target=None, source=None, add_to_all_libs=True, depe
         'LIBS':[shlib_name],
         }
 
-    env.Install(env['lib_dir'], shlib)
-
-    if add_to_all_libs:
+    if is_python_lib:
+        env.Install(env['pylib_dir'], shlib)
+    else:
+        env.Install(env['lib_dir'], shlib)
         all_libs.append(shlib)
 
     return shlib
@@ -205,7 +223,7 @@ def python_library_dir(env, target=None, source=None, dependencies=None):
     py_env['SHLIBPREFIX'] = ''
 
     return shared_library_dir(py_env, target, source,
-                              add_to_all_libs=False, dependencies=dependencies)
+                              is_python_lib=True, dependencies=dependencies)
 
 
 def find_python_include(python_version = None):
@@ -547,6 +565,9 @@ def optional_cuda(env):
 def glob_src_dir(env, dir):
     result = Flatten([dir.glob(g) for g in env['source_file_globs']])
     return Flatten([dir.glob(g) for g in env['source_file_globs']])
+
+def non_variant_dir(env, dir):
+    return Dir(dir).RDirs('.')[-1]
 
 env = default_environment()
 

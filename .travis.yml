@@ -1,0 +1,177 @@
+language: cpp
+
+sudo: false
+
+matrix:
+  include:
+    # - os: linux
+    #   compiler: gcc
+    #   addons:
+    #     apt:
+    #       sources: ['ubuntu-toolchain-r-test']
+    #       packages: ['g++-4.7']
+    #   env:
+    #     - COMPILER=g++-4.7
+
+    # - os: linux
+    #   compiler: gcc
+    #   addons:
+    #     apt:
+    #       sources: ['ubuntu-toolchain-r-test']
+    #       packages: ['g++-4.8']
+    #   env:
+    #     - COMPILER=g++-4.8
+
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.9']
+      env:
+        - COMPILER=g++-4.9
+
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-5']
+      env:
+        - COMPILER=g++-5
+
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-6']
+      env:
+        - COMPILER=g++-6
+
+    # - os: linux
+    #   compiler: clang
+    #   env:
+    #     - COMPILER=clang++
+
+    # - os: linux
+    #   compiler: clang
+    #   addons:
+    #     apt:
+    #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+    #       packages: ['clang-3.5']
+    #   env:
+    #     - COMPILER=clang++-3.5
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']
+          packages: ['clang-3.6']
+      env:
+        - COMPILER=clang++-3.6
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.7']
+          packages: ['clang-3.7']
+      env:
+        - COMPILER=clang++-3.7
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.8']
+          packages: ['clang-3.8']
+      env:
+        - COMPILER=clang++-3.8
+
+    - os: linux
+      dist: trusty
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-3.9']
+          packages: ['clang-3.9', 'g++-6'] #Adding g++-6 so that the newer libstdc++ is present
+      env:
+        - COMPILER=clang++-3.9
+
+    - os: linux
+      dist: trusty
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0']
+          packages: ['clang-4.0', 'g++-6'] #Adding g++-6 so that the newer libstdc++ is present
+      env:
+        - COMPILER=clang++-4.0
+
+    - os: osx
+      osx_image: xcode6.4
+      compiler: clang
+      install:
+        - brew install scons
+      env:
+        - COMPILER=clang++
+
+    - os: osx
+      osx_image: xcode7.3
+      compiler: clang
+      install:
+        - brew install scons
+      env:
+        - COMPILER=clang++
+
+    - os: osx
+      osx_image: xcode8.3
+      compiler: clang
+      install:
+        - brew install scons
+      env:
+        - COMPILER=clang++
+
+    # Special target for deploying documentation to gh-pages
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0']
+          packages: ['g++-6', 'clang-4.0', 'doxygen']
+
+      install:
+        # Download lcov newer than 1.9 (http://gronlier.fr/blog/2015/01/adding-code-coverage-to-your-c-project/)
+        - export LCOV_ROOT="$HOME/lcov"
+        - mkdir -p "$LCOV_ROOT"
+        - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.13.orig.tar.gz --output-document="$LCOV_ROOT/lcov.tar.gz"
+        - tar xf "$LCOV_ROOT/lcov.tar.gz" --strip-components=1 -C $LCOV_ROOT
+        - export PATH="$LCOV_ROOT/bin:$PATH"
+        - which lcov
+
+      env:
+        - COMPILER=g++-6
+
+        # Contains GITHUB_TOKEN, for authorization to push to gh-pages
+        # To regenerate, instructions at http://stackoverflow.com/a/12778315/2689797
+        - secure: "PTWl1y2S1cRQTv5AWv3bJhUBqYKAI8mcxM+JBd1acE11v7xRzYN9nb9DCY8nMgOpN/HDRhDanrz3QgAnWJoHOXtwRp0kWakDi6QzehOtiFb/eaFNA1lfgqvCuDPurbP4Wd76N0JEbrnU/vl8BnRZphG7OLeeM9+8nnkOotzzN34ejm5VBqbXzi4ATiSHxYCfeKw/1wCMlyIF9jvFw6zjkta0Vzhuiq7xRnUU8ItbbWktZtLYs4YQYSyIwG7mwcEB8GAQqNLh9OfLTpZ9kFNcV3bJvD45ryClv1kaUtgL3eFmIo1+EH3LsaPs8oEEytaQagv7PHCqmt0yb9HJ6nJlS75NS1gvtWZozZUccVWDv8u9+lFuw3BwKSxrBcfmwU0/4reUMmdvL/Oizm5V5uPRT1AF9XSjFLf5slLz5jpgZy4pSYlkaAHGQyJ0xSC2xCz9kliXnZh5Em8Y0VrzdZo9lGKxBe9SKCRxLL/6g0xo+W8KEYrIC7Iq+RafIVSPijh6hKGI1MccgOlUfi3FxhqLG6ge8EdLplLOgsaWkvpSOG3dkmGg9pCdLINdINZCuH7RyMSJTkbcWA+77e2F3CVD0rB6lLxmn4K+Fzr57LWnb0qyr//aYT57UsjqAYoPsxT0hfJXfOp00ktykCy4dhkv+4BsisLyL3F0wH1uSRUHOlM="
+
+
+      after_success:
+        - scripts/make_docs.sh
+
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        github_token: $GITHUB_TOKEN
+        local_dir: docs
+        on:
+          branch: master
+
+
+
+script:
+- $COMPILER --version
+- CXX=$COMPILER scons VERBOSE=1 && bin/entendre_tests

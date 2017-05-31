@@ -1,7 +1,10 @@
 #pragma once
+
+#include <map>
 #include <memory>
 #include <iostream>
 
+#include "CPPNTypes.hh"
 
 template <typename T>
 class requires {
@@ -45,6 +48,19 @@ struct Probabilities {
   float genetic_distance_weights = 0.2;
   float genetic_distance_species_threshold = 3.0;
 
+  bool use_compositional_pattern_producing_networks = false;
+  std::map<ActivationFunction, float> cppn_odds = {
+    {ActivationFunction::Sigmoid, 1},
+    {ActivationFunction::Identity, 1},
+    {ActivationFunction::Tanh, 1},
+    {ActivationFunction::Relu, 1},
+    {ActivationFunction::Gaussian, 1},
+    {ActivationFunction::Sin, 1},
+    {ActivationFunction::Cos, 1},
+    {ActivationFunction::Abs, 1},
+    {ActivationFunction::Square, 1},
+  };
+  
   size_t nursery_age = 15;
   bool fixed_nursery_size = true;
   size_t number_of_children_given_in_nursery = 100;
