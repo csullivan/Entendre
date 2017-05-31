@@ -1,0 +1,95 @@
+/* Seed population built (size: 1022) */
+/* Expanded genome set built (size: 1024) */
+345.869 ms for Composite net construction. 
+4.34491 ms for construction of all networks individually. 
+0.29887 ms for composite net evaluation. 
+0.291456 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 0.975195 *~*~*~*~
+
+/* Seed population built (size: 1024) */
+/* Expanded genome set built (size: 2048) */
+363.274 ms for Composite net construction. 
+10.6654 ms for construction of all networks individually. 
+0.295383 ms for composite net evaluation. 
+0.622437 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 2.10722 *~*~*~*~
+
+/* Seed population built (size: 1004) */
+/* Expanded genome set built (size: 4096) */
+393.026 ms for Composite net construction. 
+18.5281 ms for construction of all networks individually. 
+0.281739 ms for composite net evaluation. 
+1.23412 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 4.38036 *~*~*~*~
+
+/* Seed population built (size: 1008) */
+/* Expanded genome set built (size: 8192) */
+402.077 ms for Composite net construction. 
+34.0084 ms for construction of all networks individually. 
+0.358186 ms for composite net evaluation. 
+2.47192 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 6.9012 *~*~*~*~
+
+/* Seed population built (size: 1014) */
+/* Expanded genome set built (size: 16384) */
+520.156 ms for Composite net construction. 
+85.1605 ms for construction of all networks individually. 
+0.502827 ms for composite net evaluation. 
+5.18523 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 10.3121 *~*~*~*~
+
+/* Seed population built (size: 1006) */
+/* Expanded genome set built (size: 32768) */
+859.537 ms for Composite net construction. 
+192.792 ms for construction of all networks individually. 
+0.730165 ms for composite net evaluation. 
+11.8302 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 16.2021 *~*~*~*~
+
+/* Seed population built (size: 1012) */
+/* Expanded genome set built (size: 65536) */
+1062.32 ms for Composite net construction. 
+288.559 ms for construction of all networks individually. 
+0.922249 ms for composite net evaluation. 
+/* Seed population built (size: 999) */
+/* Expanded genome set built (size: 131072) */
+1468.01 ms for Composite net construction. 
+520.404 ms for construction of all networks individually. 
+1.45943 ms for composite net evaluation. 
+38.4496 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 26.3456 *~*~*~*~
+
+/* Seed population built (size: 1001) */
+/* Expanded genome set built (size: 262144) */
+2934.05 ms for Composite net construction. 
+1136.32 ms for construction of all networks individually. 
+2.90357 ms for composite net evaluation. 
+82.2821 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 28.3383 *~*~*~*~
+
+/* Seed population built (size: 997) */
+/* Expanded genome set built (size: 524288) */
+5083.01 ms for Composite net construction. 
+2135.55 ms for construction of all networks individually. 
+4.98493 ms for composite net evaluation. 
+147.607 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 29.6107 *~*~*~*~
+
+/* Seed population built (size: 999) */
+/* Expanded genome set built (size: 1048576) */
+13837.7 ms for Composite net construction. 
+5795.49 ms for construction of all networks individually. 
+11.7972 ms for composite net evaluation. 
+347.101 ms for evaluation of all networks individually. 
+/* PASS: outputs from GPU and CPU implementations are identical. */
+~*~*~*~* GPU speed up: 29.4223 *~*~*~*~
+

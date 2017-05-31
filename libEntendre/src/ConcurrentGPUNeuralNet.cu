@@ -20,7 +20,7 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
 //#ifndef NDEBUG
   if (code != cudaSuccess) {
     fprintf(stderr,"cuda_assert: %s %s %d\n", cudaGetErrorString(code), file, line);
-    if (abort) exit(code);
+    if (abort) { throw code; }
   }
 //#endif
 }
@@ -256,7 +256,7 @@ void ConcurrentGPUNeuralNet::ConcurrentGPUNeuralNet::build_action_list() {
 
 ////////////////////////////////////////////////////////////////////////////
 
-void ConcurrentGPUNeuralNet::add_node(const NodeType& type) {
+void ConcurrentGPUNeuralNet::add_node(NodeType type, ActivationFunction func) {
   switch (type) {
   case NodeType::Bias:
     num_inputs++;
@@ -270,7 +270,6 @@ void ConcurrentGPUNeuralNet::add_node(const NodeType& type) {
     num_outputs++;
     nodes.push_back(0.0);
     break;
-
   case NodeType::Hidden:
     nodes.push_back(0.0);
     break;
@@ -346,7 +345,7 @@ __global__ void device_apply_connections(_float_* node, unsigned int* origin, un
   }
 }
 
-std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> inputs) {
+std::vector<_float_> ConcurrentGPUNeuralNet::host_evaluate(std::vector<_float_> inputs) {
   assert(inputs.size() == num_inputs-1);
   sort_connections();
 
@@ -380,7 +379,7 @@ std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> input
   return std::vector<_float_> (nodes.begin()+num_inputs,nodes.begin()+num_inputs+num_outputs);
 }
 
-std::vector<_float_> ConcurrentGPUNeuralNet::device_evaluate(std::vector<_float_> inputs, unsigned int num_threads) {
+std::vector<_float_> ConcurrentGPUNeuralNet::evaluate(std::vector<_float_> inputs) {
   assert(inputs.size() == num_inputs-1);
   sort_connections();
   unsigned int num_blocks = 0;
@@ -473,16 +472,27 @@ bool ConcurrentGPUNeuralNet::would_make_loop(unsigned int i, unsigned int j, uns
     }
 
   } else {
+    // if set number is not zero, then it is assumed the added connection is
+    // part of a subnet that is currently being added.
+
     std::map<unsigned int,unsigned int> subset_node_map;
     subset_node_map[i] = subset_node_map.size();
     subset_node_map[j] = subset_node_map.size();
-    for (auto const& conn : connections) {
-      if (conn.set == set) {
-        if (subset_node_map.count(conn.origin)==0) {
-          subset_node_map[conn.origin] = subset_node_map.size();
+
+    auto conn_iter = connections.end();
+    while (conn_iter-- != connections.begin()) {
+      auto conn_set = (*conn_iter).set;
+      if (conn_set != set){
+        break;
+      } else {
+        auto origin = (*conn_iter).origin;
+        auto dest = (*conn_iter).dest;
+
+        if (subset_node_map.count(origin)==0) {
+          subset_node_map[origin] = subset_node_map.size();
         }
-        if (subset_node_map.count(conn.dest)==0) {
-          subset_node_map[conn.dest] = subset_node_map.size();
+        if (subset_node_map.count(dest)==0) {
+          subset_node_map[dest] = subset_node_map.size();
         }
       }
     }
@@ -491,11 +501,12 @@ bool ConcurrentGPUNeuralNet::would_make_loop(unsigned int i, unsigned int j, uns
     reachable[subset_node_map[j]] = true;
 
     while (true) {
+      auto conn_start = conn_iter;
 
       bool found_new_node = false;
-      for (auto const& conn : connections) {
-        // only check reachability of nodes/connections within the same set
-        if (conn.set != set) { continue; }
+      while (++conn_start != connections.end()) {
+        auto const& conn = *conn_start;
+        assert(conn.set == set);
 
         // if the origin of this connection is reachable and its
         // desitination is not, then it should be made reachable
@@ -576,14 +587,14 @@ void ConcurrentGPUNeuralNet::print_network(std::ostream& os) const {
   }
   os << ss.str();
 
-  ss.str("");
-  ss << "\nConnection sets:\n";
-  int counter = 0;
-  int num = num_conn_to_apply[counter];
-  for (auto i=0u; i<connection_list.size(); i++) {
-    ss << connection_list.origin[i] << " -> " << connection_list.dest[i] << "\n";
-    if (i == num-1) { num += num_conn_to_apply[++counter]; ss << "\n";}
-  }
+  // ss.str("");
+  // ss << "\nConnection sets:\n";
+  // int counter = 0;
+  // int num = num_conn_to_apply[counter];
+  // for (auto i=0u; i<connection_list.size(); i++) {
+  //   ss << connection_list.origin[i] << " -> " << connection_list.dest[i] << "\n";
+  //   if (i == num-1) { num += num_conn_to_apply[++counter]; ss << "\n";}
+  // }
 
-  os << ss.str();
+  // os << ss.str();
 }

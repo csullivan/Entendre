@@ -78,13 +78,15 @@ int main() {
   auto prob = std::make_shared<Probabilities>();
   prob->new_connection_is_recurrent = 0;
   prob->keep_non_matching_father_gene = 0;
+  prob->population_size = 1000;
+  prob->number_of_children_given_in_nursery = 1000;
 
   Population pop(seed,
-                 std::make_shared<RNG_MersenneTwister>(12),
+                 std::make_shared<RNG_MersenneTwister>(100),
                  prob);
 
   //pop.SetNetType<ConsecutiveNeuralNet>();
-  pop.SetNetType<ConcurrentNeuralNet>();
+  pop.SetNetType<ConcurrentGPUNeuralNet>();
   pop.EnableCompositeNet(/*hetero_inputs = */false);
 
   auto max_generations = 1000u;
@@ -93,7 +95,7 @@ int main() {
   unsigned int generation;
 
   auto show = [&](){
-    auto best = pop.BestNet();
+    auto best = pop.BestNet<ConsecutiveNeuralNet>();
     if(!best) { return; }
     std::cout << " ----------- Gen " << generation << " ----------------" << std::endl;
     auto num_species = pop.NumSpecies();
@@ -126,7 +128,7 @@ int main() {
 
     auto next_gen = pop.Reproduce(fitness_factory);
 
-    auto best = pop.BestNet();
+    auto best = pop.BestNet<ConsecutiveNeuralNet>();
     bool have_winner = true;
     for(auto& input : inputs) {
       _float_ val = best->evaluate({input.a, input.b})[0];
@@ -158,7 +160,7 @@ int main() {
   } else {
     std::cout << "No winner found after " << generation << " generations" << std::endl;
     pop.Evaluate(fitness_factory);
-    std::cout << "Best: " << *pop.BestNet() << std::endl;
+    std::cout << "Best: " << *pop.BestNet<ConsecutiveNeuralNet>() << std::endl;
   }
 
   return 0;
