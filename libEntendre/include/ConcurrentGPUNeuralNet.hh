@@ -13,11 +13,10 @@ public:
 
   virtual void add_node(NodeType type, ActivationFunction func);
   virtual void add_connection(int origin, int dest, _float_ weight, unsigned int set=std::numeric_limits<unsigned int>::max());
-
   virtual unsigned int num_nodes() { return nodes.size(); }
   virtual unsigned int num_connections() { return connections.size(); }
-  virtual std::vector<_float_> evaluate(std::vector<_float_> inputs);
-  std::vector<_float_> device_evaluate(std::vector<_float_> inputs, unsigned int num_threads=16);
+  virtual std::vector<_float_> host_evaluate(std::vector<_float_> inputs);
+  std::vector<_float_> evaluate(std::vector<_float_> inputs);
 
   virtual std::unique_ptr<NeuralNet> clone() const {
     return std::unique_ptr<ConcurrentGPUNeuralNet>(new ConcurrentGPUNeuralNet(*this));
@@ -29,8 +28,6 @@ public:
     return connections[i];
   }
   virtual NodeType get_node_type(unsigned int i) const {
-    // TODO: Update this for CPPN node types.
-    // NodeType::Hidden was changed temporarily to NodeType::Sigmoid
     return (i<num_inputs) ? NodeType::Input :
       (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
   }
@@ -40,6 +37,8 @@ public:
   virtual ActivationFunction get_activation_func(unsigned int i) const {
     return ActivationFunction::Sigmoid;
   }
+
+  void set_threads_per_block(size_t nthreads) { num_threads = nthreads; }
 
 private:
   bool would_make_loop(unsigned int i, unsigned int j, unsigned int set=std::numeric_limits<unsigned int>::max());
@@ -52,7 +51,6 @@ private:
 
   size_t num_inputs = 0;
   size_t num_outputs = 0;
-
 
   struct Connections {
     Connections() { ; }
@@ -70,6 +68,7 @@ private:
   std::vector<unsigned int> action_list;
 
   // device pointers
+  unsigned int num_threads=32;
   _float_* node_ = nullptr;
   unsigned int* origin_ = nullptr;
   unsigned int* dest_ = nullptr;
