@@ -233,6 +233,8 @@ static_unique_ptr_cast( std::unique_ptr<Base, Del>&& p )
   return std::unique_ptr<Derived, Del>(d, std::move(p.get_deleter()));
 }
 
+#ifdef CUDA_ENABLED
+
 TEST(ConcurrentGPUNeuralNet,EvaluateLargeNetwork){
   auto sigmoid = [](_float_ val) {return 1/(1 + std::exp(-val));};
 
@@ -448,3 +450,5 @@ TEST(NeuralNet,CompositeNet) {
   }
 
 }
+
+#endif

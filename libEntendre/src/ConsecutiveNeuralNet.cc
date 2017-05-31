@@ -33,13 +33,13 @@ void ConsecutiveNeuralNet::load_input_vals(const std::vector<_float_>& inputs) {
       } else {
         node.value = 0;
       }
-      node.is_sigmoid = true;
+      node.is_activated = true;
       input_index++;
       break;
 
     case NodeType::Bias:
       node.value = 1;
-      node.is_sigmoid = true;
+      node.is_activated = true;
       break;
 
     default:
@@ -59,17 +59,18 @@ std::vector<_float_> ConsecutiveNeuralNet::read_output_vals() {
 }
 
 _float_ ConsecutiveNeuralNet::get_node_val(unsigned int i) {
-  if(!nodes[i].is_sigmoid) {
-    nodes[i].value = sigmoid(nodes[i].value);
-    nodes[i].is_sigmoid = true;
+  if(!nodes[i].is_activated) {
+    //nodes[i].value = sigmoid(nodes[i].value);
+    nodes[i].value = activate(nodes[i].func, nodes[i].value);
+    nodes[i].is_activated = true;
   }
   return nodes[i].value;
 }
 
 void ConsecutiveNeuralNet::add_to_val(unsigned int i, _float_ val) {
-  if(nodes[i].is_sigmoid) {
+  if(nodes[i].is_activated) {
     nodes[i].value = 0;
-    nodes[i].is_sigmoid = false;
+    nodes[i].is_activated = false;
   }
   nodes[i].value += val;
 }
@@ -90,8 +91,8 @@ void ConsecutiveNeuralNet::sort_connections(unsigned int first, unsigned int num
 
   for(size_t i = first; i<first+num_connections; i++) {
     // all nodes should start sigmoided
-    nodes[connections[i].origin].is_sigmoid = true;
-    nodes[connections[i].dest].is_sigmoid = true;
+    nodes[connections[i].origin].is_activated = true;
+    nodes[connections[i].dest].is_activated = true;
 
     size_t possible;
     for(possible = 0; possible<num_connections; possible++) {
@@ -183,16 +184,11 @@ void ConsecutiveNeuralNet::print_network(std::ostream& os) const {
       case NodeType::Output:
         ss << "O" << num_outputs++;
         break;
-      case NodeType::Hidden:
-        ss << "H" << num_hidden++;
-        break;
       case NodeType::Bias:
         ss << "B";
         break;
-
-      default:
-        std::cerr << "Type: " << int(nodes[i].type) << std::endl;
-        assert(false);
+      default: // all hidden nodes
+        ss << "H" << num_hidden++;
         break;
     }
     names[i] = ss.str();

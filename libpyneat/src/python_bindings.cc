@@ -90,7 +90,8 @@ PYBIND11_PLUGIN(pyneat) {
     .def_readwrite("mutation_prob_toggle_connection",&Probabilities::mutation_prob_toggle_connection)
     .def_readwrite("genetic_distance_structural",&Probabilities::genetic_distance_structural)
     .def_readwrite("genetic_distance_weights",&Probabilities::genetic_distance_weights)
-    .def_readwrite("genetic_distance_species_threshold",&Probabilities::genetic_distance_species_threshold);
+    .def_readwrite("genetic_distance_species_threshold",&Probabilities::genetic_distance_species_threshold)
+    .def_readwrite("use_compositional_pattern_producing_networks",&Probabilities::use_compositional_pattern_producing_networks);
 
   py::class_<ReachabilityChecker>(m, "ReachabilityChecker")
     .def(py::init<size_t>())
@@ -106,17 +107,35 @@ PYBIND11_PLUGIN(pyneat) {
     .def("NumPossibleRecurrentConnections",&ReachabilityChecker::NumPossibleRecurrentConnections);
 
   py::enum_<NodeType>(m, "NodeType")
+    .value("Bias",NodeType::Bias)
     .value("Input",NodeType::Input)
     .value("Output",NodeType::Output)
-    .value("Hidden",NodeType::Hidden)
-    .value("Bias",NodeType::Bias);
+    .value("Hidden",NodeType::Hidden);
+
+  py::enum_<ActivationFunction>(m, "ActivationFunction")
+    .value("Sigmoid",ActivationFunction::Sigmoid)
+    .value("Identity",ActivationFunction::Identity)
+    .value("Tanh",ActivationFunction::Tanh)
+    .value("Relu",ActivationFunction::Relu)
+    .value("Gaussian",ActivationFunction::Gaussian)
+    .value("Sin",ActivationFunction::Sin)
+    .value("Cos",ActivationFunction::Cos)
+    .value("Abs",ActivationFunction::Abs)
+    .value("Square",ActivationFunction::Square);
+      //.value("Cube",ActivationFunction::Cube);
+      //.value("Log",ActivationFunction::Log);
+      //.value("Exp",ActivationFunction::Exp);
 
   py::class_<Genome>(m, "Genome")
     .def(py::init<>())
     .def("AddNode",&Genome::AddNode)
     .def("AddConnection",&Genome::AddConnection)
     .def("Size",&Genome::Size)
-    .def_static("ConnectedSeed", &Genome::ConnectedSeed);
+    .def_static("ConnectedSeed", &Genome::ConnectedSeed,
+                py::arg("num_inputs"),
+                py::arg("num_outputs"),
+                py::arg("func") = ActivationFunction::Sigmoid)
+    ;
 
   py::class_<NeuralNet>(m, "NeuralNet")
     .def("evaluate", &NeuralNet::evaluate)
@@ -131,6 +150,14 @@ PYBIND11_PLUGIN(pyneat) {
                                node_types.push_back(net.get_node_type(i));
                              }
                              return node_types;
+                           })
+    .def_property_readonly("activation_functions",
+                           [](NeuralNet& net){
+                             std::vector<ActivationFunction> output;
+                             for (auto i=0u; i<net.num_nodes(); i++) {
+                               output.push_back(net.get_activation_func(i));
+                             }
+                             return output;
                            })
     .def_property_readonly("connections",
                            [](NeuralNet& net){

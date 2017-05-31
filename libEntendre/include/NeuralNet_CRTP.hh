@@ -8,6 +8,8 @@
 #include <cassert>
 #include <memory>
 #include <map>
+#include <string>
+#include <ostream>
 
 
 
@@ -23,7 +25,7 @@ public:
   virtual void add_connection(int origin, int dest, _float_ weight, unsigned int set=std::numeric_limits<unsigned int>::max());
   virtual unsigned int num_nodes() { return static_cast<T*>(this)->nodes.size(); }
   virtual unsigned int num_connections() { return static_cast<T*>(this)->connections.size(); }
-  auto& get_connections() { return static_cast<T*>(this)->connections; }
+  virtual std::vector<Connection>& get_connections() { return static_cast<T*>(this)->connections; }
 
   virtual void print_network(std::ostream& os) const { std::string str = "Needs Impl."; os << str; }
 

@@ -13,7 +13,7 @@ public:
 
   void sort_connections(unsigned int first=0, unsigned int num_connections=0) override;
   std::vector<_float_> evaluate(std::vector<_float_> inputs);
-  virtual void add_node(const NodeType& type);
+  virtual void add_node(NodeType type, ActivationFunction func);
 
 
   virtual Connection get_connection(unsigned int i) const {
@@ -24,7 +24,12 @@ public:
       (i >= nodes.size()-num_outputs) ? NodeType::Output : NodeType::Hidden;
   }
 
+  virtual ActivationFunction get_activation_func(unsigned int /*i*/) const {
+    return ActivationFunction::Sigmoid;
+  }
+
   virtual void print_network(std::ostream& os) const override;
+
 private:
   void clear_nodes(unsigned int* list, unsigned int n);
   void sigmoid_nodes(unsigned int* list, unsigned int n);

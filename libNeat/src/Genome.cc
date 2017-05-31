@@ -6,8 +6,10 @@
 #include <map>
 #include <sstream>
 
+#include "Hash.hh"
+
 Genome::Genome() : num_inputs(0), num_outputs(0),
-                   last_conn_innov(0), last_node_innov(0) { ; }
+                   last_innovation(0) { }
 
 void Genome::MakeNet(NeuralNet& net) const {
   AssertInputNodesFirst();
@@ -37,7 +39,7 @@ void Genome::MakeNet(NeuralNet& net) const {
   // which have a path to an output and from an input
   //NeuralNet net(node_genes);
   for (auto& gene: node_genes) {
-    net.add_node(gene.type);
+    net.add_node(gene.type, gene.func);
   }
   for(auto& gene : connection_genes) {
     if (gene.enabled) {
@@ -52,7 +54,8 @@ void Genome::MakeNet(NeuralNet& net) const {
 }
 
 
-Genome Genome::ConnectedSeed(int num_inputs, int num_outputs) {
+Genome Genome::ConnectedSeed(int num_inputs, int num_outputs,
+                             ActivationFunction func) {
   Genome output;
 
   output.AddNode(NodeType::Bias);
@@ -60,7 +63,7 @@ Genome Genome::ConnectedSeed(int num_inputs, int num_outputs) {
     output.AddNode(NodeType::Input);
   }
   for(int i=0; i<num_outputs; i++) {
-    output.AddNode(NodeType::Output);
+    output.AddNode(NodeType::Output, func);
   }
 
   for(int from=0; from<num_inputs+1; from++) {
@@ -84,8 +87,7 @@ Genome& Genome::operator=(const Genome& rhs) {
   this->connection_genes = rhs.connection_genes;
   this->connection_lookup = rhs.connection_lookup;
   this->connections_existing = rhs.connections_existing;
-  this->last_conn_innov = rhs.last_conn_innov;
-  this->last_node_innov = rhs.last_node_innov;
+  this->last_innovation = rhs.last_innovation;
   this->generator = rhs.generator;
   this->required_ = rhs.required_;
   return *this;
@@ -131,12 +133,11 @@ Genome Genome::GeneticAncestry() const {
     if(gene.type == NodeType::Input ||
        gene.type == NodeType::Bias ||
        gene.type == NodeType::Output) {
-      descendant.AddNodeByInnovation(gene.type, gene.innovation);
+      descendant.AddNodeByInnovation(gene.type, gene.func, gene.innovation);
     }
   }
 
-  descendant.last_conn_innov = this->last_conn_innov;
-  descendant.last_node_innov = this->last_node_innov;
+  descendant.last_innovation = this->last_innovation;
 
   return descendant;
 }
@@ -213,44 +214,26 @@ Genome& Genome::RandomizeWeights() {
   return *this;
 }
 
-Genome& Genome::AddNode(NodeType type) {
+Genome& Genome::AddNode(NodeType type, ActivationFunction func) {
   // User-defined nodes, no real innovation number
   // Instead, make something up to ensure unique ids for each.
 
-  unsigned long innovation = node_genes.size();
-  switch(type) {
-  case NodeType::Bias:
-    innovation = Hash(0, last_node_innov);
-    break;
-  case NodeType::Input:
-    innovation = Hash(1, last_node_innov);
-    break;
-  case NodeType::Output:
-    innovation = Hash(2, last_node_innov);
-    break;
-  case NodeType::Hidden:
-    innovation = Hash(3, last_node_innov);
-    break;
-  }
+  unsigned long innovation = Hasher::hash(last_innovation, type, func);
 
-  return AddNodeByInnovation(type, innovation);
+  return AddNodeByInnovation(type, func, innovation);
 }
 
-Genome& Genome::AddNodeByInnovation(NodeType type, unsigned long innovation) {
+Genome& Genome::AddNodeByInnovation(NodeType type, ActivationFunction func,
+                                    unsigned long innovation) {
   assert(node_lookup.count(innovation) == 0);
-  NodeGene gene(type, innovation);
+  NodeGene gene(type, func, innovation);
   AddNodeGene(gene);
   return *this;
 }
 
 Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
                               bool status, double weight) {
-  // first gene only
-  if (last_conn_innov == 0) {
-    last_conn_innov = Hash(origin,dest,0);
-  }
-
-  // // build look up table from innovation hash to vector index
+  // build look up table from innovation hash to vector index
   // node_lookup.insert({node_genes[origin].innovation, origin});
   // node_lookup.insert({node_genes[dest].innovation, dest});
 
@@ -263,7 +246,7 @@ Genome& Genome::AddConnection(unsigned long origin, unsigned long dest,
 void Genome::AddConnectionByInnovation(unsigned long origin, unsigned long dest,
                                        bool status, double weight) {
   ConnectionGene gene;
-  gene.innovation = Hash(origin, dest, last_conn_innov);
+  gene.innovation = Hasher::hash(last_innovation, origin, dest);
   gene.origin = origin;
   gene.dest = dest;
   gene.weight = weight;
@@ -306,7 +289,7 @@ void Genome::AddNodeGene(NodeGene gene) {
     node_genes.push_back(gene);
   }
 
-  last_node_innov = gene.innovation;
+  last_innovation = gene.innovation;
 
   AssertInputNodesFirst();
 }
@@ -327,7 +310,7 @@ void Genome::AddConnectionGene(ConnectionGene gene) {
   connection_lookup[gene.innovation] = connection_genes.size();
   connection_genes.push_back(gene);
   connections_existing.insert({gene.origin, gene.dest});
-  last_conn_innov = gene.innovation;
+  last_innovation = gene.innovation;
 }
 
 const NodeGene* Genome::GetNodeByN(unsigned int i) const {
@@ -468,8 +451,16 @@ void Genome::MutateNode() {
 
   // add a new node:
   // use the to-be disabled gene's innovation as ingredient for this new nodes innovation hash
-  auto new_node_innov = Hash(split_conn.innovation, last_node_innov);
-  AddNodeByInnovation(NodeType::Hidden, new_node_innov);
+  auto new_node_innov = Hasher::hash(last_innovation, split_conn.innovation);
+  // TODO:  1. HyperNEAT performs a random roulette choice based on probabilities
+  //        set for each activation function which are exposed in the parameters.
+  //        Currently, all activation functions have equal probability
+  //        2. Additionally, the node type should be used in innovation hashing
+  auto func = required()->use_compositional_pattern_producing_networks ?
+    ActivationFunction(random()*(int(ActivationFunction::MaxNodeType)+1)) :
+    ActivationFunction::Sigmoid;
+
+  AddNodeByInnovation(NodeType::Hidden, func, new_node_innov);
 
   // disable old gene
   GetConnByInnovation(split_conn.innovation)->enabled = false;
@@ -615,16 +606,11 @@ std::ostream& operator<<(std::ostream& os, const Genome& genome) {
       case NodeType::Output:
         ss << "O" << num_outputs++;
         break;
-      case NodeType::Hidden:
-        ss << "H" << num_hidden++;
-        break;
       case NodeType::Bias:
         ss << "B";
         break;
-
-      default:
-        std::cerr << "Type: " << int(genome.node_genes[i].type) << std::endl;
-        assert(false);
+      default: // all hidden nodes
+        ss << "H" << num_hidden++;
         break;
     }
     names[genome.node_genes[i].innovation] = ss.str();

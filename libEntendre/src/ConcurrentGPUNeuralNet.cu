@@ -256,8 +256,8 @@ void ConcurrentGPUNeuralNet::ConcurrentGPUNeuralNet::build_action_list() {
 
 ////////////////////////////////////////////////////////////////////////////
 
-void ConcurrentGPUNeuralNet::add_node(const NodeType& type) {
-switch (type) {
+void ConcurrentGPUNeuralNet::add_node(NodeType type, ActivationFunction func) {
+  switch (type) {
   case NodeType::Bias:
     num_inputs++;
     nodes.push_back(1.0);
@@ -273,7 +273,11 @@ switch (type) {
   case NodeType::Hidden:
     nodes.push_back(0.0);
     break;
-  };
+  }
+
+  // Only sigmoid nodes implementated for ConcurrentGPUNeuralNet
+  assert(func == ActivationFunction::Sigmoid);
+
 }
 
 _float_ sigmoid(_float_ val) {
@@ -491,12 +495,11 @@ bool ConcurrentGPUNeuralNet::would_make_loop(unsigned int i, unsigned int j, uns
           subset_node_map[dest] = subset_node_map.size();
         }
       }
-
     }
-
 
     std::vector<bool> reachable(subset_node_map.size(), false);
     reachable[subset_node_map[j]] = true;
+
     while (true) {
       auto conn_start = conn_iter;
 
