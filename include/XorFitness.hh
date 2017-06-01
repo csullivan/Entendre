@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 
 struct EachAnswer {
   EachAnswer(_float_ a, _float_ b)
