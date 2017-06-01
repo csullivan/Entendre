@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "Population.hh"
-#include "XorFitness.hh"
+#include "XorFitnessEvaluator.hh"
 #include "Timer.hh"
 #include "dummy.hh"
 #include "ArgParser.hh"
