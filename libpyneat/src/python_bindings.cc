@@ -136,9 +136,14 @@ PYBIND11_PLUGIN(pyneat) {
 
   py::class_<Genome>(m, "Genome")
     .def(py::init<>())
-    .def("AddNode",&Genome::AddNode)
+    .def("AddNode",&Genome::AddNode,
+         py::arg("type"),
+         py::arg("func") = ActivationFunction::Sigmoid)
     .def("AddConnection",&Genome::AddConnection)
     .def("Size",&Genome::Size)
+    .def("MakeNet_Consecutive", &Genome::MakeNet<ConsecutiveNeuralNet>)
+    .def("MakeNet_Concurrent", &Genome::MakeNet<ConcurrentNeuralNet>)
+    .def("MakeNet_ConcurrentGPU", &Genome::MakeNet<ConcurrentGPUNeuralNet>)
     .def_static("ConnectedSeed", &Genome::ConnectedSeed,
                 py::arg("num_inputs"),
                 py::arg("num_outputs"),
@@ -150,6 +155,7 @@ PYBIND11_PLUGIN(pyneat) {
     .def_property_readonly("num_nodes", &NeuralNet::num_nodes)
     .def_property_readonly("num_connections", &NeuralNet::num_connections)
     .def("get_node_type",&NeuralNet::get_node_type)
+    .def("get_activation_func",&NeuralNet::get_activation_func)
     .def("get_connection",&NeuralNet::get_connection)
     .def_property_readonly("node_types",
                            [](NeuralNet& net){
