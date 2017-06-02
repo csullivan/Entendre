@@ -17,6 +17,7 @@ protected:
 };
 
 struct Probabilities {
+  void reset() { *this = Probabilities(); }
 
   size_t population_size = 100;
   size_t min_size_for_champion = 5;
@@ -65,5 +66,4 @@ struct Probabilities {
   bool fixed_nursery_size = true;
   size_t number_of_children_given_in_nursery = 100;
   float species_survival_percentile = 0.3;
-
 };

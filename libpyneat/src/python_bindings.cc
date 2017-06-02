@@ -74,6 +74,7 @@ PYBIND11_PLUGIN(pyneat) {
 
   py::class_<Probabilities, std::shared_ptr<Probabilities> >(m, "Probabilities")
     .def(py::init<>())
+    .def("reset", &Probabilities::reset)
     .def_readwrite("population_size",&Probabilities::population_size)
     .def_readwrite("min_size_for_champion",&Probabilities::min_size_for_champion)
     .def_readwrite("culling_ratio",&Probabilities::culling_ratio)
