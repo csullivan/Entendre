@@ -10,6 +10,7 @@ PopulationBackgroundThread::PopulationBackgroundThread(Population pop)
 
 PopulationBackgroundThread::~PopulationBackgroundThread() {
   {
+    std::lock_guard<std::mutex> priority_lock(priority_mutex);
     std::lock_guard<std::mutex> lock(wake_worker_mutex);
     stop_worker = true;
     wake_worker_cond.notify_one();
@@ -19,6 +20,10 @@ PopulationBackgroundThread::~PopulationBackgroundThread() {
 
 void PopulationBackgroundThread::worker_loop() {
   while(true) {
+    // Intentional grab and release.  If the thread is attempting to
+    // stop, that takes priority.
+    { std::lock_guard<std::mutex> priority_lock(priority_mutex); }
+
     std::unique_lock<std::mutex> lock(wake_worker_mutex);
     wake_worker_cond.wait(lock, [this](){
         return stop_worker || num_generations;

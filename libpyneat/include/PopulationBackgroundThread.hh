@@ -36,6 +36,7 @@ private:
   Population current_pop;
   std::thread worker_thread;
 
+  std::mutex priority_mutex;
   std::condition_variable wake_worker_cond;
   std::mutex wake_worker_mutex;
 
