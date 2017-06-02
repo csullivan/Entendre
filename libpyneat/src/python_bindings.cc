@@ -16,10 +16,10 @@
 namespace py = pybind11;
 
 typedef std::map<ActivationFunction, float> cppn_odds_map;
-PYBIND11_MAKE_OPAQUE(cppn_odds_map);
+PYBIND11_MAKE_OPAQUE(cppn_odds_map)
 
-PYBIND11_PLUGIN(pyneat) {
-  py::module m("pyneat", "C++ implementation of NEAT");
+PYBIND11_MODULE(pyneat, m) {
+  m.doc() = "C++ implementation of NEAT";
 
   typedef std::function<double(NeuralNet&)> FitnessFunc;
   py::class_<FitnessFunc>(m, "CppFitnessFunc");
@@ -210,6 +210,4 @@ PYBIND11_PLUGIN(pyneat) {
     .def("get_next_generation",
          &PopulationBackgroundThread::get_next_generation)
     ;
-
-  return m.ptr();
 }

@@ -97,7 +97,6 @@ float Genome::GeneticDistance(const Genome& other) const {
   double weight_diffs = 0.0;
   unsigned long nUnshared = 0;
   unsigned long nShared = 0;
-  auto nGenes = std::max(connection_genes.size(),other.connection_genes.size());
 
   // loop over this genomes genes
   for (auto& gene : connection_genes) {
@@ -118,6 +117,10 @@ float Genome::GeneticDistance(const Genome& other) const {
       nUnshared++;
     }
   }
+
+  // NEAT paper says that we can divide nUnshared by nGenes for small
+  // nets, but this doesn't seem necessary in most cases.
+  // auto nGenes = std::max(connection_genes.size(),other.connection_genes.size());
 
   return
     required()->genetic_distance_structural*nUnshared +
