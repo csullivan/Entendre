@@ -125,3 +125,37 @@ TEST(Population, PruneEmptySpecies){
     EXPECT_EQ(gen2.GetSpecies()[1].id, 7u);
   }
 }
+
+TEST(Population, IsEvaluated){
+  auto adam = Genome::ConnectedSeed(1,1);
+
+  // Evaluation marks the population as evaluated
+  {
+    Population pop(adam,
+                   std::make_shared<RNG_MersenneTwister>(),
+                   std::make_shared<Probabilities>());
+
+    EXPECT_EQ(pop.IsEvaluated(), false);
+    pop.Evaluate(
+      [&](NeuralNet& net) {
+        auto outputs = net.evaluate({1.0});
+        return 1.0;
+      });
+    EXPECT_EQ(pop.IsEvaluated(), true);
+  }
+
+  // Reproduction marks the population as evaluated
+  {
+    Population pop(adam,
+                   std::make_shared<RNG_MersenneTwister>(),
+                   std::make_shared<Probabilities>());
+
+    EXPECT_EQ(pop.IsEvaluated(), false);
+    pop.Reproduce(
+      [&](NeuralNet& net) {
+        auto outputs = net.evaluate({1.0});
+        return 1.0;
+      });
+    EXPECT_EQ(pop.IsEvaluated(), true);
+  }
+}

@@ -7,6 +7,8 @@
 #include "Population.hh"
 #include "Requirements.hh"
 
+#include "PopulationBackgroundThread.hh"
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
@@ -200,6 +202,14 @@ PYBIND11_PLUGIN(pyneat) {
   py::enum_<ConnectionType>(m, "ConnectionType")
     .value("Normal", ConnectionType::Normal)
     .value("Recurrent", ConnectionType::Recurrent);
+
+  py::class_<PopulationBackgroundThread>(m, "PopulationBackgroundThread")
+    .def(py::init<Population>())
+    .def("perform_reproduction",
+         &PopulationBackgroundThread::perform_reproduction)
+    .def("get_next_generation",
+         &PopulationBackgroundThread::get_next_generation)
+    ;
 
   return m.ptr();
 }

@@ -43,6 +43,8 @@ public:
 
   void Evaluate(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory);
 
+  bool IsEvaluated() const;
+
 
   Population Reproduce(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
     Evaluate(evaluator_factory);

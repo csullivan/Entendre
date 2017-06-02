@@ -85,6 +85,17 @@ void Population::CalculateAdjustedFitness() {
   // }
 }
 
+bool Population::IsEvaluated() const {
+  for(auto& spec : species) {
+    for(auto& org : spec.organisms) {
+      return !std::isnan(org.fitness);
+    }
+  }
+
+  // There are no unevaluated networks, because there are no networks.
+  return true;
+}
+
 void Population::Evaluate(std::function<std::unique_ptr<FitnessEvaluator>(void)> evaluator_factory) {
   if (use_composite_net) {
     EvaluateComposite(evaluator_factory);
