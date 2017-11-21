@@ -37,7 +37,7 @@ struct Organism {
     converter = rhs.converter;
     return *this;
   }
-  NeuralNet* network() {
+  NeuralNet* network() const {
     if (net) { return net.get(); }
     net = converter->convert(genome);
     return net.get();
@@ -46,7 +46,7 @@ struct Organism {
   double adj_fitness;
   Genome genome;
 private:
-  std::unique_ptr<NeuralNet> net;
+  mutable std::unique_ptr<NeuralNet> net;
   std::shared_ptr<GenomeConverter> converter;
 };
 

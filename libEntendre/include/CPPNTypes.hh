@@ -2,6 +2,7 @@
 #include <map>
 #include <cmath>
 #include <functional>
+#include <string>
 
 typedef float _float_;
 
@@ -25,6 +26,21 @@ enum class NodeType {
     Hidden
     };
 
+inline std::string to_string(NodeType type) {
+  switch(type) {
+    case NodeType::Bias:
+      return "Bias";
+    case NodeType::Input:
+      return "Input";
+    case NodeType::Output:
+      return "Output";
+    case NodeType::Hidden:
+      return "Hidden";
+    default:
+      return "Unknown";
+  }
+}
+
 enum class ActivationFunction {
   Sigmoid,
     Identity,
@@ -39,6 +55,31 @@ enum class ActivationFunction {
   //Log,
   //Exp,
 };
+
+inline std::string to_string(ActivationFunction func) {
+  switch(func) {
+    case ActivationFunction::Sigmoid:
+      return "Sigmoid";
+    case ActivationFunction::Identity:
+      return "Identity";
+    case ActivationFunction::Tanh:
+      return "Tanh";
+    case ActivationFunction::Relu:
+      return "Relu";
+    case ActivationFunction::Gaussian:
+      return "Gaussian";
+    case ActivationFunction::Sin:
+      return "Sin";
+    case ActivationFunction::Cos:
+      return "Cos";
+    case ActivationFunction::Abs:
+      return "Abs";
+    case ActivationFunction::Square:
+      return "Square";
+    default:
+      return "Unknown";
+  }
+}
 
 namespace {
   static const _float_ max_exp_signal = std::log(std::numeric_limits<_float_>::max());

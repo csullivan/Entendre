@@ -5,6 +5,7 @@
 #include <cmath>
 #include <memory>
 #include <algorithm>
+#include <string>
 
 #include "CPPNTypes.hh"
 
@@ -20,6 +21,17 @@ struct Node {
 };
 
 enum class ConnectionType { Normal, Recurrent };
+
+inline std::string to_string(ConnectionType type) {
+  switch(type) {
+    case ConnectionType::Normal:
+      return "Normal";
+    case ConnectionType::Recurrent:
+      return "Recurrent";
+    default:
+      return "Unknown";
+  }
+}
 
 struct Connection {
   unsigned int origin;
