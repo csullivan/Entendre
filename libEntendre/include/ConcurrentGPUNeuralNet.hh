@@ -5,11 +5,12 @@
 #include <stdexcept>
 #include <functional>
 
-#ifdef CUDA_ENABLED
 class ConcurrentGPUNeuralNet : public NeuralNet {
 public:
 
   virtual ~ConcurrentGPUNeuralNet();
+
+  static void matmul();
 
   virtual void add_node(NodeType type, ActivationFunction func);
   virtual void add_connection(int origin, int dest, _float_ weight, unsigned int set=std::numeric_limits<unsigned int>::max());
@@ -75,7 +76,3 @@ private:
   _float_* weight_ = nullptr;
   unsigned int* action_list_ = nullptr;
 };
-
-#else
-typedef ConcurrentNeuralNet ConcurrentGPUNeuralNet;
-#endif

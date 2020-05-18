@@ -25,6 +25,21 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
 //#endif
 }
 
+
+
+
+__global__ void device_matmul() {
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+}
+
+static void ConcurrentGPUNeuralNet::matmul()
+{
+  constexpr size_t num_blocks = 1;
+  constexpr size_t num_threads = 32;
+  device_matmul<<<num_blocks,num_threads>>>();
+}
+
+
 ConcurrentGPUNeuralNet::~ConcurrentGPUNeuralNet() {
   if (node_) { cuda_assert(cudaFree(node_)); }
   if (origin_) { cuda_assert(cudaFree(origin_)); }
