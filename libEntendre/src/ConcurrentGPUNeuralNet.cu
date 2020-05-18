@@ -25,21 +25,86 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
 //#endif
 }
 
+#include <fstream>
 
+std::vector<float> read_matrix(std::string filename, size_t size)
+{
+  std::vector<float> vec(size,0);
 
-
-//__global__ void device_gemm(float* A, float* B, float* C, float* result) {
-__global__ void device_gemm() {
-  //int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  std::ifstream input_file(filename);
+  if (input_file.is_open())
+  {
+    size_t i = 0;
+    while(!input_file.eof())
+    {
+      input_file >> vec[i];
+      i++;
+    }
+  }
+  return vec;
 }
 
-void ConcurrentGPUNeuralNet::gemm()
+__global__ void device_gemm_a_b_(float* A, float* B, float* C)  {
+}
+__global__ void device_gemm_a_bt_(float* A, float* Bt, float* C)  {
+}
+__global__ void device_gemm_at_b_(float* At, float* B, float* C)  {
+
+}
+__global__ void device_gemm_at_bt_(float* At, float* Bt, float* C)  {
+}
+
+
+using Shape = std::vector<float>;
+
+size_t shapesize(const Shape& shape)
 {
+  size_t size=1;
+  for (auto& dim : shape)
+  {
+    size *= dim;
+  }
+  return size;
+}
+
+void ConcurrentGPUNeuralNet::gemm() {
   size_t num_blocks = 1;
   size_t num_threads = 32;
-  // cuda_assert(cudaMalloc((void**)&node_,nodes.size()*sizeof(_float_)));
-  // cuda_assert(cudaMemcpy(node_,nodes.data(),nodes.size()*sizeof(_float_),cudaMemcpyHostToDevice));
-  device_gemm<<<num_blocks,num_threads>>>();
+  Shape shapeA = {64,256};
+  Shape shapeAt = {256, 64};
+  Shape shapeB = {256,32};
+  Shape shapeBt = {32, 256};
+  Shape shapeC = {64, 32};
+
+  std::vector<float> A = read_matrix("a.dat", shapesize(shapeA));
+  std::vector<float> At = read_matrix("at.dat", shapesize(shapeAt));
+  std::vector<float> B = read_matrix("b.dat", shapesize(shapeB));
+  std::vector<float> Bt = read_matrix("bt.dat", shapesize(shapeBt));
+  std::vector<float> C_expected = read_matrix("c.dat", shapesize(shapeC));
+  std::vector<float> C(shapesize(shapeC), 0);
+
+  float* A_ = nullptr;
+  float* At_ = nullptr;
+  float* B_ = nullptr;
+  float* Bt_ = nullptr;
+  float* C_ = nullptr;
+  cuda_assert(cudaMalloc((void**)&A,shapesize(shapeA)*sizeof(float)));
+  cuda_assert(cudaMalloc((void**)&At,shapesize(shapeAt)*sizeof(float)));
+  cuda_assert(cudaMalloc((void**)&B,shapesize(shapeB)*sizeof(float)));
+  cuda_assert(cudaMalloc((void**)&Bt,shapesize(shapeBt)*sizeof(float)));
+  cuda_assert(cudaMalloc((void**)&C,shapesize(shapeC)*sizeof(float)));
+  cuda_assert(cudaMemcpy(A_,A.data(),shapesize(shapeA)*sizeof(float),cudaMemcpyHostToDevice));
+  cuda_assert(cudaMemcpy(At_,At.data(),shapesize(shapeAt)*sizeof(float),cudaMemcpyHostToDevice));
+  cuda_assert(cudaMemcpy(B_,B.data(),shapesize(shapeB)*sizeof(float),cudaMemcpyHostToDevice));
+  cuda_assert(cudaMemcpy(Bt_,Bt.data(),shapesize(shapeBt)*sizeof(float),cudaMemcpyHostToDevice));
+
+  device_gemm_at_b_<<<num_blocks,num_threads>>>(A_,Bt_,C_);
+
+  cuda_assert(cudaFree(A_));
+  cuda_assert(cudaFree(At_));
+  cuda_assert(cudaFree(B_));
+  cuda_assert(cudaFree(Bt_));
+  cuda_assert(cudaFree(C_));
 }
 
 
