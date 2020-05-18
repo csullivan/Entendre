@@ -28,15 +28,18 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
 
 
 
-__global__ void device_matmul() {
-  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+//__global__ void device_gemm(float* A, float* B, float* C, float* result) {
+__global__ void device_gemm() {
+  //int tid = threadIdx.x + blockIdx.x * blockDim.x;
 }
 
-static void ConcurrentGPUNeuralNet::matmul()
+void ConcurrentGPUNeuralNet::gemm()
 {
-  constexpr size_t num_blocks = 1;
-  constexpr size_t num_threads = 32;
-  device_matmul<<<num_blocks,num_threads>>>();
+  size_t num_blocks = 1;
+  size_t num_threads = 32;
+  // cuda_assert(cudaMalloc((void**)&node_,nodes.size()*sizeof(_float_)));
+  // cuda_assert(cudaMemcpy(node_,nodes.data(),nodes.size()*sizeof(_float_),cudaMemcpyHostToDevice));
+  device_gemm<<<num_blocks,num_threads>>>();
 }
 
 

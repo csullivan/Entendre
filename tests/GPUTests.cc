@@ -20,9 +20,9 @@ static_unique_ptr_cast( std::unique_ptr<Base, Del>&& p )
 template<typename NetType, bool use_gpu=false>
 std::vector<_float_> evaluation_performance(const Genome& genome, const std::vector<_float_>& inputs, unsigned int nTrials=1);
 
-TEST(ConcurrentGPUNeuralNet,matmul){
+TEST(ConcurrentGPUNeuralNet, GEMM){
   ConcurrentGPUNeuralNet gpu;
-  gpu.matmul();
+  gpu.gemm();
 }
 
 /*

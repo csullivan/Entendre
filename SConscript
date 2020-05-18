@@ -1,5 +1,7 @@
 Import('env')
 
+env['LIBPATH'] = ['/usr/local/cuda/lib64/']
+
 env.Append(CPPPATH=[Dir('include').RDirs('.')])
 env.Append(CPPPATH=['glog/include'])
 env.SharedLibraryDir('glog')

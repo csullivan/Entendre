@@ -10,7 +10,7 @@ public:
 
   virtual ~ConcurrentGPUNeuralNet();
 
-  static void matmul();
+  void gemm();
 
   virtual void add_node(NodeType type, ActivationFunction func);
   virtual void add_connection(int origin, int dest, _float_ weight, unsigned int set=std::numeric_limits<unsigned int>::max());
