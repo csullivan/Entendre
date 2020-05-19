@@ -12,6 +12,9 @@
 
 #include "logging.h"
 #include "math.h"
+#include <fstream>
+#include "Timer.hh"
+
 
 
 #define cuda_assert(ans) { cudaAssert((ans), __FILE__, __LINE__); }
@@ -24,8 +27,6 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
   }
 //#endif
 }
-
-#include <fstream>
 
 std::vector<float> read_matrix(std::string filename, size_t size)
 {
@@ -44,16 +45,70 @@ std::vector<float> read_matrix(std::string filename, size_t size)
   return vec;
 }
 
-__global__ void device_gemm_a_b_(float* A, float* B, float* C)  {
-}
-__global__ void device_gemm_a_bt_(float* A, float* Bt, float* C)  {
-}
-__global__ void device_gemm_at_b_(float* At, float* B, float* C)  {
 
-}
-__global__ void device_gemm_at_bt_(float* At, float* Bt, float* C)  {
+//block (1,1,1)
+//grid (1,1,1)
+__global__ void device_gemm_at_64x256_b_256x32_inner_1(float* A, float* B, float* C)  {
+  if (threadIdx.x == 0  && blockIdx.x == 0)
+  {
+    for (size_t i = 0; i < 64; i++)
+    {
+      for (size_t j = 0; j < 32; j++)
+      {
+        float* matC = C + i*32 + j;
+        for (size_t k = 0; k < 256; k++)
+        {
+          float* matA = A + (i*256 + k);
+          float* matB = B + (k*32 + j);
+          //printf("i = %d, j = %d, k = %d\n", i, j, k);
+          //C[i][j] += A[i][k]*B[k][j];
+          matC[0] += matA[0]*matB[0];
+        }
+      }
+    }
+  }
 }
 
+
+//block (1,1,1)
+//grid (1,1,1)
+__global__ void device_gemm_at_64x256_b_256x32_outer_1(float* A, float* B, float* C)  {
+  if (threadIdx.x == 0  && blockIdx.x == 0)
+  {
+    for (size_t k = 0; k < 256; k++)
+    {
+      for (size_t i = 0; i < 64; i++)
+      {
+        for (size_t j = 0; j < 32; j++)
+        {
+          float* matC = C + i*32 + j;
+          float* matA = A + (i*256 + k);
+          float* matB = B + (k*32 + j);
+          //printf("i = %d, j = %d, k = %d\n", i, j, k);
+          //C[i][j] += A[i][k]*B[k][j];
+          matC[0] += matA[0]*matB[0];
+        }
+      }
+    }
+  }
+}
+
+// block (32, 32, 1)
+// grid (2,1,1)
+__global__ void device_gemm_at_64x256_b_256x32_outer_2(float* A, float* B, float* C)  {
+
+  size_t i = threadIdx.x + blockIdx.x*blockDim.x;
+  size_t j = threadIdx.y;
+
+  for (size_t k = 0; k < 256; k++)
+  {
+    // printf("i = %d, j = %d, k = %d\n", i, j, k);
+    float* matC = C + i*32 + j;
+    float* matA = A + (i*256 + k);
+    float* matB = B + (k*32 + j);
+    matC[0] += matA[0]*matB[0];
+  }
+}
 
 using Shape = std::vector<float>;
 
@@ -67,9 +122,31 @@ size_t shapesize(const Shape& shape)
   return size;
 }
 
+template <typename T>
+void measure_perf(T global, dim3 grid, dim3 block, float* A_, float* B_, float* C_, std::vector<float>& C, const std::vector<float>& C_expected, Shape shapeC, size_t num_trials)
+{
+  for (size_t i = 0; i < num_trials; i++)
+  {
+    global<<<grid,block>>>(A_,B_,C_);
+  }
+
+  double tperformance = 0.0;
+  for (size_t i = 0; i < num_trials; i++)
+  {
+    cuda_assert(cudaMemset(C_, 0, shapesize(shapeC)*sizeof(float)));
+    Timer teval([&tperformance](long long elapsed) { tperformance+=elapsed; });
+    global<<<grid,block>>>(A_,B_,C_);
+    cuda_assert(cudaMemcpy(C.data(),C_, shapesize(shapeC)*sizeof(float),cudaMemcpyDeviceToHost));
+  }
+  std:: cout << tperformance/num_trials/1.0e6 << " ms\n";
+  for (auto i=0u; i<shapesize(shapeC); i++) {
+    assert(std::abs(C[i]-C_expected[i]) < 1e-4);
+  }
+
+  std::cout << "All values match!\n";
+}
+
 void ConcurrentGPUNeuralNet::gemm() {
-  size_t num_blocks = 1;
-  size_t num_threads = 32;
   Shape shapeA = {64,256};
   Shape shapeAt = {256, 64};
   Shape shapeB = {256,32};
@@ -88,17 +165,22 @@ void ConcurrentGPUNeuralNet::gemm() {
   float* B_ = nullptr;
   float* Bt_ = nullptr;
   float* C_ = nullptr;
-  cuda_assert(cudaMalloc((void**)&A,shapesize(shapeA)*sizeof(float)));
-  cuda_assert(cudaMalloc((void**)&At,shapesize(shapeAt)*sizeof(float)));
-  cuda_assert(cudaMalloc((void**)&B,shapesize(shapeB)*sizeof(float)));
-  cuda_assert(cudaMalloc((void**)&Bt,shapesize(shapeBt)*sizeof(float)));
-  cuda_assert(cudaMalloc((void**)&C,shapesize(shapeC)*sizeof(float)));
+  cuda_assert(cudaMalloc((void**)&A_,shapesize(shapeA)*sizeof(float)));
+  cuda_assert(cudaMalloc((void**)&At_,shapesize(shapeAt)*sizeof(float)));
+  cuda_assert(cudaMalloc((void**)&B_,shapesize(shapeB)*sizeof(float)));
+  cuda_assert(cudaMalloc((void**)&Bt_,shapesize(shapeBt)*sizeof(float)));
+  cuda_assert(cudaMalloc((void**)&C_,shapesize(shapeC)*sizeof(float)));
   cuda_assert(cudaMemcpy(A_,A.data(),shapesize(shapeA)*sizeof(float),cudaMemcpyHostToDevice));
   cuda_assert(cudaMemcpy(At_,At.data(),shapesize(shapeAt)*sizeof(float),cudaMemcpyHostToDevice));
   cuda_assert(cudaMemcpy(B_,B.data(),shapesize(shapeB)*sizeof(float),cudaMemcpyHostToDevice));
   cuda_assert(cudaMemcpy(Bt_,Bt.data(),shapesize(shapeBt)*sizeof(float),cudaMemcpyHostToDevice));
 
-  device_gemm_at_b_<<<num_blocks,num_threads>>>(A_,Bt_,C_);
+  std::cout << "device_gemm_at_64x256_b_256x32_inner_1: \n";
+  measure_perf(device_gemm_at_64x256_b_256x32_inner_1, dim3{1,1,1}, dim3{1,1,1}, A_,B_,C_,C,C_expected,shapeC,10);
+  std::cout << "device_gemm_at_64x256_b_256x32_outer_1: \n";
+  measure_perf(device_gemm_at_64x256_b_256x32_outer_1, dim3{1,1,1}, dim3{1,1,1}, A_,B_,C_,C,C_expected,shapeC,10);
+  std::cout << "device_gemm_at_64x256_b_256x32_outer_2: \n";
+  measure_perf(device_gemm_at_64x256_b_256x32_outer_2, dim3{2,1,1}, dim3{32,32,1}, A_,B_,C_,C,C_expected,shapeC,10);
 
   cuda_assert(cudaFree(A_));
   cuda_assert(cudaFree(At_));
